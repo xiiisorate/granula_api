@@ -50,6 +50,9 @@ coverage.html
 tmp/
 temp/
 
+# Development workspace
+codeeeeeeeee/
+
 # Keys and secrets (NEVER commit!)
 *.pem
 *.key
@@ -69,8 +72,4 @@ build/
 
 # Dependencies (each service has its own go.mod)
 # Don't commit downloaded modules
-
-# Development folder with working code
-codeeeeeeeee/
-codeeeeeeeeee/
 
