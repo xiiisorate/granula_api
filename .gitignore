@@ -70,3 +70,7 @@ build/
 # Dependencies (each service has its own go.mod)
 # Don't commit downloaded modules
 
+# Development folder with working code
+codeeeeeeeee/
+codeeeeeeeeee/
+
