@@ -274,40 +274,49 @@ func (c *WetZoneChecker) CheckOperation(ctx context.Context, scene *SceneData, o
 // MinAreaChecker checks minimum area rules.
 type MinAreaChecker struct{}
 
+// minAreaRequirements defines minimum area requirements by room type (in sqm).
+// Based on СП 54.13330.2016 and СНиП 31-01-2003.
+var minAreaRequirements = map[string]float64{
+	"LIVING":   14.0, // Жилая комната (единственная) - 14 кв.м
+	"BEDROOM":  8.0,  // Спальня - 8 кв.м
+	"KITCHEN":  5.0,  // Кухня - 5 кв.м
+	"BATHROOM": 3.8,  // Совмещённый санузел - 3.8 кв.м
+	"TOILET":   1.2,  // Отдельный туалет - 1.2 кв.м
+	"HALLWAY":  0.0,  // Коридор - нет минимума
+	"BALCONY":  0.0,  // Балкон - нет минимума
+}
+
 // Check checks minimum area rules.
 func (c *MinAreaChecker) Check(ctx context.Context, scene *SceneData, rules []*entity.Rule) []*entity.Violation {
 	violations := make([]*entity.Violation, 0)
 
+	// Skip if no rules or no rooms
+	if len(rules) == 0 || len(scene.Rooms) == 0 {
+		return violations
+	}
+
+	// Use first rule for creating violations (or find specific rule)
+	rule := rules[0]
+
 	for _, room := range scene.Rooms {
-		for _, rule := range rules {
-			var minArea float64
+		minArea, exists := minAreaRequirements[room.Type]
+		if !exists || minArea <= 0 {
+			continue
+		}
 
-			switch rule.Code {
-			case "SP-54-MIN-LIVING":
-				if room.Type == "LIVING" || room.Type == "BEDROOM" {
-					// Simplified: use min_area_multi for now
-					minArea = rule.GetFloatParameter("min_area_multi", 10.0)
-				}
-			case "SP-54-MIN-KITCHEN":
-				if room.Type == "KITCHEN" {
-					minArea = rule.GetFloatParameter("min_area", 5.0)
-				}
-			case "SP-54-MIN-BATHROOM":
-				if room.Type == "BATHROOM" {
-					minArea = rule.GetFloatParameter("min_area_combined", 3.8)
-				} else if room.Type == "TOILET" {
-					minArea = rule.GetFloatParameter("min_area_toilet", 1.2)
-				}
-			}
+		// Also check rule parameters for custom limits
+		if ruleMin := rule.GetFloatParameter("min_area_"+room.Type, 0); ruleMin > 0 {
+			minArea = ruleMin
+		}
 
-			if minArea > 0 && room.Area < minArea {
-				v := entity.NewViolation(rule, room.ID,
-					fmt.Sprintf("Площадь помещения (%.1f кв.м) меньше минимальной (%.1f кв.м)", room.Area, minArea))
-				v.WithElementType(entity.ElementTypeRoom)
-				v.WithPosition(room.Position.X, room.Position.Y)
-				v.WithSuggestion(fmt.Sprintf("Увеличьте площадь помещения минимум до %.1f кв.м", minArea))
-				violations = append(violations, v)
-			}
+		if room.Area < minArea {
+			v := entity.NewViolation(rule, room.ID,
+				fmt.Sprintf("Площадь помещения '%s' (%.1f кв.м) меньше минимальной (%.1f кв.м)",
+					room.Type, room.Area, minArea))
+			v.WithElementType(entity.ElementTypeRoom)
+			v.WithPosition(room.Position.X, room.Position.Y)
+			v.WithSuggestion(fmt.Sprintf("Увеличьте площадь помещения минимум до %.1f кв.м", minArea))
+			violations = append(violations, v)
 		}
 	}
 
