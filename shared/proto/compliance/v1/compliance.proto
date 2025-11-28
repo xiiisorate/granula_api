@@ -1,0 +1,484 @@
+// =============================================================================
+// Compliance Service Proto
+// =============================================================================
+// Сервис проверки соответствия планировки строительным нормам РФ:
+// - СНиП 31-01-2003 (жилые здания)
+// - ЖК РФ (Жилищный кодекс)
+// - СП 54.13330.2016 (актуализированный СНиП)
+// - Региональные нормы
+// 
+// Version: 1.0.0
+// =============================================================================
+
+syntax = "proto3";
+
+package compliance.v1;
+
+option go_package = "github.com/xiiisorate/granula_api/shared/gen/compliance/v1;compliancev1";
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Compliance Service
+// =============================================================================
+
+service ComplianceService {
+  // CheckCompliance — полная проверка сцены на соответствие нормам.
+  // Возвращает список всех нарушений и предупреждений.
+  rpc CheckCompliance(CheckComplianceRequest) returns (CheckComplianceResponse);
+  
+  // CheckOperation — проверка конкретной операции перед её применением.
+  // Используется для превентивной проверки (можно ли снести стену и т.д.).
+  rpc CheckOperation(CheckOperationRequest) returns (CheckOperationResponse);
+  
+  // GetRules — получить список всех правил проверки.
+  rpc GetRules(GetRulesRequest) returns (GetRulesResponse);
+  
+  // GetRule — получить детальную информацию о правиле.
+  rpc GetRule(GetRuleRequest) returns (Rule);
+  
+  // GetRuleCategories — получить список категорий правил.
+  rpc GetRuleCategories(GetRuleCategoriesRequest) returns (GetRuleCategoriesResponse);
+  
+  // GenerateReport — сгенерировать отчёт о соответствии.
+  rpc GenerateReport(GenerateReportRequest) returns (GenerateReportResponse);
+  
+  // ValidateScene — быстрая валидация сцены (только критические нарушения).
+  rpc ValidateScene(ValidateSceneRequest) returns (ValidateSceneResponse);
+}
+
+// =============================================================================
+// Check Compliance — полная проверка сцены
+// =============================================================================
+
+// CheckComplianceRequest — запрос на полную проверку сцены.
+message CheckComplianceRequest {
+  // ID сцены для проверки.
+  string scene_id = 1;
+  
+  // ID ветки (опционально, по умолчанию — активная ветка).
+  string branch_id = 2;
+  
+  // Опции проверки.
+  CheckOptions options = 3;
+}
+
+// CheckOptions — опции проверки.
+message CheckOptions {
+  // Категории правил для проверки (пустой = все).
+  repeated string categories = 1;
+  
+  // Минимальный уровень серьёзности для включения в результат.
+  Severity min_severity = 2;
+  
+  // Включить предложения по исправлению.
+  bool include_suggestions = 3;
+  
+  // Включить ссылки на нормативные документы.
+  bool include_references = 4;
+}
+
+// CheckComplianceResponse — результат полной проверки.
+message CheckComplianceResponse {
+  // Соответствует ли сцена нормам (нет критических нарушений).
+  bool compliant = 1;
+  
+  // Список нарушений.
+  repeated Violation violations = 2;
+  
+  // Статистика проверки.
+  ComplianceStats stats = 3;
+  
+  // Время проверки.
+  google.protobuf.Timestamp checked_at = 4;
+  
+  // Версия правил, использованная для проверки.
+  string rules_version = 5;
+}
+
+// ComplianceStats — статистика проверки.
+message ComplianceStats {
+  // Всего проверено правил.
+  int32 total_rules_checked = 1;
+  
+  // Количество критических нарушений (ERROR).
+  int32 errors_count = 2;
+  
+  // Количество предупреждений (WARNING).
+  int32 warnings_count = 3;
+  
+  // Количество информационных сообщений (INFO).
+  int32 info_count = 4;
+  
+  // Общая оценка соответствия (0-100).
+  int32 compliance_score = 5;
+}
+
+// =============================================================================
+// Check Operation — проверка операции
+// =============================================================================
+
+// CheckOperationRequest — запрос на проверку операции.
+message CheckOperationRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки (опционально).
+  string branch_id = 2;
+  
+  // Операция для проверки.
+  Operation operation = 3;
+}
+
+// Operation — операция над элементом сцены.
+message Operation {
+  // Тип операции.
+  OperationType type = 1;
+  
+  // ID элемента (для существующих элементов).
+  string element_id = 2;
+  
+  // Тип элемента.
+  ElementType element_type = 3;
+  
+  // Параметры операции (зависят от типа).
+  map<string, string> params = 4;
+  
+  // Новая позиция (для MOVE).
+  common.v1.Point2D new_position = 5;
+  
+  // Новые размеры (для RESIZE).
+  common.v1.Dimensions2D new_dimensions = 6;
+}
+
+// OperationType — тип операции.
+enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0;
+  
+  // Операции со стенами
+  OPERATION_TYPE_DEMOLISH_WALL = 1;      // Снос стены
+  OPERATION_TYPE_ADD_WALL = 2;           // Добавление стены
+  OPERATION_TYPE_MOVE_WALL = 3;          // Перенос стены
+  OPERATION_TYPE_ADD_OPENING = 4;        // Добавление проёма
+  OPERATION_TYPE_CLOSE_OPENING = 5;      // Закрытие проёма
+  
+  // Операции с комнатами
+  OPERATION_TYPE_MERGE_ROOMS = 6;        // Объединение комнат
+  OPERATION_TYPE_SPLIT_ROOM = 7;         // Разделение комнаты
+  OPERATION_TYPE_CHANGE_ROOM_TYPE = 8;   // Смена типа комнаты
+  
+  // Операции с мокрыми зонами
+  OPERATION_TYPE_MOVE_WET_ZONE = 9;      // Перенос мокрой зоны
+  OPERATION_TYPE_EXPAND_WET_ZONE = 10;   // Расширение мокрой зоны
+  
+  // Операции с инженерией
+  OPERATION_TYPE_MOVE_PLUMBING = 11;     // Перенос сантехники
+  OPERATION_TYPE_MOVE_VENTILATION = 12;  // Перенос вентиляции
+  
+  // Общие операции
+  OPERATION_TYPE_ADD_ELEMENT = 13;       // Добавление элемента
+  OPERATION_TYPE_REMOVE_ELEMENT = 14;    // Удаление элемента
+  OPERATION_TYPE_MOVE_ELEMENT = 15;      // Перемещение элемента
+  OPERATION_TYPE_RESIZE_ELEMENT = 16;    // Изменение размера
+}
+
+// ElementType — тип элемента сцены.
+enum ElementType {
+  ELEMENT_TYPE_UNSPECIFIED = 0;
+  ELEMENT_TYPE_WALL = 1;                 // Стена
+  ELEMENT_TYPE_LOAD_BEARING_WALL = 2;    // Несущая стена
+  ELEMENT_TYPE_ROOM = 3;                 // Комната
+  ELEMENT_TYPE_DOOR = 4;                 // Дверь
+  ELEMENT_TYPE_WINDOW = 5;               // Окно
+  ELEMENT_TYPE_WET_ZONE = 6;             // Мокрая зона
+  ELEMENT_TYPE_KITCHEN = 7;              // Кухня
+  ELEMENT_TYPE_BATHROOM = 8;             // Санузел
+  ELEMENT_TYPE_TOILET = 9;               // Туалет (сантехника)
+  ELEMENT_TYPE_SINK = 10;                // Раковина
+  ELEMENT_TYPE_BATHTUB = 11;             // Ванна
+  ELEMENT_TYPE_SHOWER = 12;              // Душ
+  ELEMENT_TYPE_STOVE = 13;               // Плита
+  ELEMENT_TYPE_VENTILATION = 14;         // Вентиляция
+  ELEMENT_TYPE_RADIATOR = 15;            // Радиатор
+  ELEMENT_TYPE_FURNITURE = 16;           // Мебель
+}
+
+// CheckOperationResponse — результат проверки операции.
+message CheckOperationResponse {
+  // Разрешена ли операция.
+  bool allowed = 1;
+  
+  // Список нарушений, если операция не разрешена.
+  repeated Violation violations = 2;
+  
+  // Предупреждения (операция разрешена, но есть риски).
+  repeated Violation warnings = 3;
+  
+  // Требуется ли согласование для этой операции.
+  bool requires_approval = 4;
+  
+  // Тип требуемого согласования.
+  ApprovalType approval_type = 5;
+}
+
+// ApprovalType — тип требуемого согласования.
+enum ApprovalType {
+  APPROVAL_TYPE_UNSPECIFIED = 0;
+  APPROVAL_TYPE_NONE = 1;                // Согласование не требуется
+  APPROVAL_TYPE_NOTIFICATION = 2;        // Уведомительный порядок (МФЦ)
+  APPROVAL_TYPE_PROJECT = 3;             // Нужен проект перепланировки
+  APPROVAL_TYPE_EXPERTISE = 4;           // Нужна экспертиза (несущие конструкции)
+  APPROVAL_TYPE_PROHIBITED = 5;          // Запрещено (нельзя согласовать)
+}
+
+// =============================================================================
+// Violation — нарушение нормы
+// =============================================================================
+
+// Violation — информация о нарушении.
+message Violation {
+  // Уникальный ID нарушения.
+  string id = 1;
+  
+  // ID правила, которое нарушено.
+  string rule_id = 2;
+  
+  // Код правила (например, "СНиП 31-01-2003 п.9.22").
+  string rule_code = 3;
+  
+  // Серьёзность нарушения.
+  Severity severity = 4;
+  
+  // Категория нарушения.
+  string category = 5;
+  
+  // Краткое описание нарушения.
+  string title = 6;
+  
+  // Подробное описание.
+  string description = 7;
+  
+  // ID элемента, вызвавшего нарушение.
+  string element_id = 8;
+  
+  // Тип элемента.
+  ElementType element_type = 9;
+  
+  // Позиция нарушения на плане.
+  common.v1.Point2D position = 10;
+  
+  // Предложение по исправлению.
+  string suggestion = 11;
+  
+  // Ссылки на нормативные документы.
+  repeated DocumentReference references = 12;
+}
+
+// Severity — серьёзность нарушения.
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO = 1;      // Информация (рекомендация)
+  SEVERITY_WARNING = 2;   // Предупреждение (можно согласовать)
+  SEVERITY_ERROR = 3;     // Ошибка (критическое нарушение)
+}
+
+// DocumentReference — ссылка на нормативный документ.
+message DocumentReference {
+  // Код документа (например, "СНиП 31-01-2003").
+  string code = 1;
+  
+  // Название документа.
+  string title = 2;
+  
+  // Пункт/статья.
+  string section = 3;
+  
+  // URL на текст документа (если есть).
+  string url = 4;
+}
+
+// =============================================================================
+// Rules — правила проверки
+// =============================================================================
+
+// GetRulesRequest — запрос списка правил.
+message GetRulesRequest {
+  // Фильтр по категории (опционально).
+  string category = 1;
+  
+  // Фильтр по серьёзности (опционально).
+  Severity severity = 2;
+  
+  // Только активные правила.
+  bool active_only = 3;
+  
+  // Пагинация.
+  common.v1.PaginationRequest pagination = 4;
+}
+
+// GetRulesResponse — список правил.
+message GetRulesResponse {
+  // Список правил.
+  repeated Rule rules = 1;
+  
+  // Метаданные пагинации.
+  common.v1.PaginationResponse pagination = 2;
+}
+
+// GetRuleRequest — запрос одного правила.
+message GetRuleRequest {
+  // ID правила.
+  string rule_id = 1;
+}
+
+// Rule — правило проверки.
+message Rule {
+  // Уникальный ID правила.
+  string id = 1;
+  
+  // Код правила (ссылка на норматив).
+  string code = 2;
+  
+  // Категория правила.
+  string category = 3;
+  
+  // Название правила.
+  string name = 4;
+  
+  // Подробное описание.
+  string description = 5;
+  
+  // Серьёзность нарушения этого правила.
+  Severity severity = 6;
+  
+  // Активно ли правило.
+  bool active = 7;
+  
+  // К каким типам элементов применяется.
+  repeated ElementType applies_to = 8;
+  
+  // К каким операциям применяется.
+  repeated OperationType applies_to_operations = 9;
+  
+  // Ссылки на нормативные документы.
+  repeated DocumentReference references = 10;
+  
+  // Версия правила.
+  string version = 11;
+  
+  // Дата последнего обновления.
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// GetRuleCategoriesRequest — запрос категорий правил.
+message GetRuleCategoriesRequest {}
+
+// GetRuleCategoriesResponse — список категорий.
+message GetRuleCategoriesResponse {
+  repeated RuleCategory categories = 1;
+}
+
+// RuleCategory — категория правил.
+message RuleCategory {
+  // ID категории.
+  string id = 1;
+  
+  // Название категории.
+  string name = 2;
+  
+  // Описание.
+  string description = 3;
+  
+  // Иконка (название иконки).
+  string icon = 4;
+  
+  // Количество правил в категории.
+  int32 rules_count = 5;
+}
+
+// =============================================================================
+// Report — отчёт о соответствии
+// =============================================================================
+
+// GenerateReportRequest — запрос на генерацию отчёта.
+message GenerateReportRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки (опционально).
+  string branch_id = 2;
+  
+  // Формат отчёта.
+  ReportFormat format = 3;
+  
+  // Опции отчёта.
+  ReportOptions options = 4;
+}
+
+// ReportFormat — формат отчёта.
+enum ReportFormat {
+  REPORT_FORMAT_UNSPECIFIED = 0;
+  REPORT_FORMAT_PDF = 1;
+  REPORT_FORMAT_JSON = 2;
+  REPORT_FORMAT_HTML = 3;
+}
+
+// ReportOptions — опции генерации отчёта.
+message ReportOptions {
+  // Включить схему планировки.
+  bool include_floor_plan = 1;
+  
+  // Включить детальное описание нарушений.
+  bool include_violation_details = 2;
+  
+  // Включить рекомендации по исправлению.
+  bool include_recommendations = 3;
+  
+  // Включить ссылки на нормативы.
+  bool include_references = 4;
+  
+  // Язык отчёта (ru, en).
+  string language = 5;
+}
+
+// GenerateReportResponse — сгенерированный отчёт.
+message GenerateReportResponse {
+  // Содержимое отчёта.
+  bytes content = 1;
+  
+  // Имя файла.
+  string filename = 2;
+  
+  // MIME тип.
+  string content_type = 3;
+  
+  // Размер в байтах.
+  int64 size = 4;
+}
+
+// =============================================================================
+// Validate Scene — быстрая валидация
+// =============================================================================
+
+// ValidateSceneRequest — запрос быстрой валидации.
+message ValidateSceneRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки (опционально).
+  string branch_id = 2;
+}
+
+// ValidateSceneResponse — результат быстрой валидации.
+message ValidateSceneResponse {
+  // Валидна ли сцена (нет критических ошибок).
+  bool valid = 1;
+  
+  // Критические ошибки (если есть).
+  repeated Violation critical_errors = 2;
+  
+  // Количество предупреждений.
+  int32 warnings_count = 3;
+}
+
