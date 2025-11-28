@@ -155,4 +155,3 @@ func main() {
 
 	log.Info("server stopped")
 }
-
