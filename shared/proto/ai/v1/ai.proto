@@ -1,107 +1,699 @@
+// =============================================================================
+// AI Service Proto
+// =============================================================================
+// Сервис AI-функциональности:
+// - Распознавание планировок из изображений
+// - Генерация вариантов планировки
+// - Интерактивный чат с AI-ассистентом
+// - Streaming ответы для real-time UX
+//
+// Использует OpenRouter API для LLM.
+// Version: 1.0.0
+// =============================================================================
+
 syntax = "proto3";
 
 package ai.v1;
 
-option go_package = "github.com/granula/shared/gen/ai/v1;aiv1";
+option go_package = "github.com/xiiisorate/granula_api/shared/gen/ai/v1;aiv1";
 
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 
-// AIService - сервис AI функциональности
+// =============================================================================
+// AI Service
+// =============================================================================
+
 service AIService {
-  // Распознать планировку
+  // ---------------------------------------------------------------------------
+  // Recognition — распознавание планировок
+  // ---------------------------------------------------------------------------
+  
+  // RecognizeFloorPlan — распознаёт планировку из изображения.
+  // Возвращает структурированные данные о стенах, комнатах, элементах.
   rpc RecognizeFloorPlan(RecognizeFloorPlanRequest) returns (RecognizeFloorPlanResponse);
   
-  // Генерировать варианты
+  // GetRecognitionStatus — получить статус задачи распознавания.
+  rpc GetRecognitionStatus(GetRecognitionStatusRequest) returns (GetRecognitionStatusResponse);
+  
+  // ---------------------------------------------------------------------------
+  // Generation — генерация вариантов
+  // ---------------------------------------------------------------------------
+  
+  // GenerateVariants — генерирует варианты планировки на основе промпта.
+  // Создаёт новые ветки с предложенными изменениями.
   rpc GenerateVariants(GenerateVariantsRequest) returns (GenerateVariantsResponse);
   
-  // Отправить сообщение в чат
-  rpc SendChatMessage(SendChatMessageRequest) returns (SendChatMessageResponse);
+  // GetGenerationStatus — получить статус задачи генерации.
+  rpc GetGenerationStatus(GetGenerationStatusRequest) returns (GetGenerationStatusResponse);
   
-  // Streaming ответа чата
-  rpc StreamChatResponse(ChatRequest) returns (stream ChatChunk);
+  // ---------------------------------------------------------------------------
+  // Chat — интерактивный чат
+  // ---------------------------------------------------------------------------
   
-  // Получить историю чата
+  // SendChatMessage — отправить сообщение и получить полный ответ.
+  rpc SendChatMessage(ChatMessageRequest) returns (ChatMessageResponse);
+  
+  // StreamChatResponse — отправить сообщение и получить streaming ответ.
+  // Server-side streaming для real-time отображения генерации.
+  rpc StreamChatResponse(ChatMessageRequest) returns (stream ChatChunk);
+  
+  // GetChatHistory — получить историю чата для сцены/ветки.
   rpc GetChatHistory(GetChatHistoryRequest) returns (GetChatHistoryResponse);
   
-  // Очистить историю чата
+  // ClearChatHistory — очистить историю чата.
   rpc ClearChatHistory(ClearChatHistoryRequest) returns (ClearChatHistoryResponse);
+  
+  // ---------------------------------------------------------------------------
+  // Context Management — управление контекстом
+  // ---------------------------------------------------------------------------
+  
+  // GetContext — получить текущий контекст AI для сцены.
+  rpc GetContext(GetContextRequest) returns (GetContextResponse);
+  
+  // UpdateContext — обновить контекст (например, после изменений сцены).
+  rpc UpdateContext(UpdateContextRequest) returns (UpdateContextResponse);
 }
 
-// RecognizeFloorPlanRequest - запрос распознавания планировки
+// =============================================================================
+// Recognition — распознавание планировок
+// =============================================================================
+
+// RecognizeFloorPlanRequest — запрос на распознавание планировки.
 message RecognizeFloorPlanRequest {
+  // ID планировки (floor_plan_id).
   string floor_plan_id = 1;
+  
+  // Изображение планировки (base64 или bytes).
+  bytes image_data = 2;
+  
+  // MIME тип изображения.
+  string image_type = 3;
+  
+  // Опции распознавания.
+  RecognitionOptions options = 4;
 }
 
-// RecognizeFloorPlanResponse - ответ распознавания планировки
+// RecognitionOptions — опции распознавания.
+message RecognitionOptions {
+  // Определять несущие стены (требует анализа).
+  bool detect_load_bearing = 1;
+  
+  // Определять мокрые зоны.
+  bool detect_wet_zones = 2;
+  
+  // Определять мебель и оборудование.
+  bool detect_furniture = 3;
+  
+  // Масштаб изображения (пикселей на метр). 0 = автоопределение.
+  float scale = 4;
+  
+  // Ориентация (0, 90, 180, 270). -1 = автоопределение.
+  int32 orientation = 5;
+  
+  // Уровень детализации (1-3, где 3 = максимум).
+  int32 detail_level = 6;
+}
+
+// RecognizeFloorPlanResponse — результат распознавания.
 message RecognizeFloorPlanResponse {
-  string job_id = 1;
-  string status = 2;
-}
-
-// GenerateVariantsRequest - запрос генерации вариантов
-message GenerateVariantsRequest {
-  string scene_id = 1;
-  string prompt = 2;
-  int32 count = 3;
-}
-
-// GenerateVariantsResponse - ответ генерации вариантов
-message GenerateVariantsResponse {
-  string job_id = 1;
-  repeated string variant_ids = 2;
-}
-
-// SendChatMessageRequest - запрос отправки сообщения
-message SendChatMessageRequest {
-  string scene_id = 1;
-  string message = 2;
-}
-
-// SendChatMessageResponse - ответ отправки сообщения
-message SendChatMessageResponse {
-  string message_id = 1;
-  string response = 2;
-}
-
-// ChatRequest - запрос чата
-message ChatRequest {
-  string scene_id = 1;
-  string message = 2;
-}
-
-// ChatChunk - чанк ответа чата
-message ChatChunk {
-  string content = 1;
-  bool is_final = 2;
-}
-
-// GetChatHistoryRequest - запрос истории чата
-message GetChatHistoryRequest {
-  string scene_id = 1;
-  common.v1.Pagination pagination = 2;
-}
-
-// GetChatHistoryResponse - ответ истории чата
-message GetChatHistoryResponse {
-  repeated ChatMessage messages = 1;
-  common.v1.Pagination pagination = 2;
-}
-
-// ClearChatHistoryRequest - запрос очистки истории
-message ClearChatHistoryRequest {
-  string scene_id = 1;
-}
-
-// ClearChatHistoryResponse - ответ очистки истории
-message ClearChatHistoryResponse {
+  // Успешно ли распознавание.
   bool success = 1;
+  
+  // ID задачи (для асинхронного отслеживания).
+  string job_id = 2;
+  
+  // Статус задачи.
+  JobStatus status = 3;
+  
+  // Распознанная сцена (если готово).
+  RecognizedScene scene = 4;
+  
+  // Общая уверенность распознавания (0-1).
+  float confidence = 5;
+  
+  // Предупреждения и замечания.
+  repeated string warnings = 6;
+  
+  // Ошибка (если не успешно).
+  string error = 7;
 }
 
-// ChatMessage - сообщение чата
-message ChatMessage {
+// RecognizedScene — результат распознавания сцены.
+message RecognizedScene {
+  // Общие размеры помещения.
+  common.v1.Dimensions2D dimensions = 1;
+  
+  // Общая площадь (кв.м).
+  float total_area = 2;
+  
+  // Распознанные стены.
+  repeated RecognizedWall walls = 3;
+  
+  // Распознанные комнаты.
+  repeated RecognizedRoom rooms = 4;
+  
+  // Распознанные проёмы (двери, окна).
+  repeated RecognizedOpening openings = 5;
+  
+  // Распознанное оборудование и мебель.
+  repeated RecognizedElement elements = 6;
+  
+  // Метаданные распознавания.
+  RecognitionMetadata metadata = 7;
+}
+
+// RecognizedWall — распознанная стена.
+message RecognizedWall {
+  // Временный ID (до создания в Scene).
+  string temp_id = 1;
+  
+  // Начальная точка.
+  common.v1.Point2D start = 2;
+  
+  // Конечная точка.
+  common.v1.Point2D end = 3;
+  
+  // Толщина в метрах.
+  float thickness = 4;
+  
+  // Является ли несущей.
+  bool is_load_bearing = 5;
+  
+  // Уверенность определения (0-1).
+  float confidence = 6;
+  
+  // Уверенность в определении несущей (0-1).
+  float load_bearing_confidence = 7;
+}
+
+// RecognizedRoom — распознанная комната.
+message RecognizedRoom {
+  // Временный ID.
+  string temp_id = 1;
+  
+  // Тип комнаты.
+  RoomType type = 2;
+  
+  // Контур комнаты (полигон).
+  common.v1.Polygon2D boundary = 3;
+  
+  // Площадь в кв.м.
+  float area = 4;
+  
+  // Является ли мокрой зоной.
+  bool is_wet_zone = 5;
+  
+  // Уверенность определения типа (0-1).
+  float confidence = 6;
+  
+  // ID стен, образующих комнату.
+  repeated string wall_ids = 7;
+}
+
+// RoomType — тип комнаты.
+enum RoomType {
+  ROOM_TYPE_UNSPECIFIED = 0;
+  ROOM_TYPE_LIVING = 1;           // Гостиная
+  ROOM_TYPE_BEDROOM = 2;          // Спальня
+  ROOM_TYPE_KITCHEN = 3;          // Кухня
+  ROOM_TYPE_BATHROOM = 4;         // Ванная
+  ROOM_TYPE_TOILET = 5;           // Туалет
+  ROOM_TYPE_COMBINED_BATHROOM = 6; // Совмещённый санузел
+  ROOM_TYPE_HALLWAY = 7;          // Коридор/прихожая
+  ROOM_TYPE_BALCONY = 8;          // Балкон
+  ROOM_TYPE_LOGGIA = 9;           // Лоджия
+  ROOM_TYPE_STORAGE = 10;         // Кладовая
+  ROOM_TYPE_LAUNDRY = 11;         // Постирочная
+  ROOM_TYPE_OFFICE = 12;          // Кабинет
+  ROOM_TYPE_CHILDREN = 13;        // Детская
+  ROOM_TYPE_DINING = 14;          // Столовая
+  ROOM_TYPE_KITCHEN_LIVING = 15;  // Кухня-гостиная
+}
+
+// RecognizedOpening — распознанный проём.
+message RecognizedOpening {
+  // Временный ID.
+  string temp_id = 1;
+  
+  // Тип проёма.
+  OpeningType type = 2;
+  
+  // Позиция центра.
+  common.v1.Point2D position = 3;
+  
+  // Ширина проёма.
+  float width = 4;
+  
+  // ID стены, в которой проём.
+  string wall_id = 5;
+  
+  // Уверенность (0-1).
+  float confidence = 6;
+}
+
+// OpeningType — тип проёма.
+enum OpeningType {
+  OPENING_TYPE_UNSPECIFIED = 0;
+  OPENING_TYPE_DOOR = 1;          // Дверь
+  OPENING_TYPE_WINDOW = 2;        // Окно
+  OPENING_TYPE_ARCH = 3;          // Арка
+  OPENING_TYPE_PASSAGE = 4;       // Проход без двери
+}
+
+// RecognizedElement — распознанный элемент (мебель, оборудование).
+message RecognizedElement {
+  // Временный ID.
+  string temp_id = 1;
+  
+  // Тип элемента.
+  string element_type = 2;
+  
+  // Позиция центра.
+  common.v1.Point2D position = 3;
+  
+  // Размеры.
+  common.v1.Dimensions2D dimensions = 4;
+  
+  // Угол поворота (градусы).
+  float rotation = 5;
+  
+  // ID комнаты, в которой находится.
+  string room_id = 6;
+  
+  // Уверенность (0-1).
+  float confidence = 7;
+}
+
+// RecognitionMetadata — метаданные распознавания.
+message RecognitionMetadata {
+  // Версия модели распознавания.
+  string model_version = 1;
+  
+  // Время обработки (мс).
+  int64 processing_time_ms = 2;
+  
+  // Разрешение исходного изображения.
+  common.v1.Dimensions2D source_resolution = 3;
+  
+  // Определённый масштаб.
+  float detected_scale = 4;
+  
+  // Определённая ориентация.
+  int32 detected_orientation = 5;
+}
+
+// GetRecognitionStatusRequest — запрос статуса распознавания.
+message GetRecognitionStatusRequest {
+  string job_id = 1;
+}
+
+// GetRecognitionStatusResponse — статус распознавания.
+message GetRecognitionStatusResponse {
+  // ID задачи.
+  string job_id = 1;
+  
+  // Статус.
+  JobStatus status = 2;
+  
+  // Прогресс (0-100).
+  int32 progress = 3;
+  
+  // Результат (если готов).
+  RecognizedScene scene = 4;
+  
+  // Ошибка (если не успешно).
+  string error = 5;
+}
+
+// JobStatus — статус асинхронной задачи.
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_PENDING = 1;     // В очереди
+  JOB_STATUS_PROCESSING = 2;  // Обрабатывается
+  JOB_STATUS_COMPLETED = 3;   // Завершено успешно
+  JOB_STATUS_FAILED = 4;      // Ошибка
+  JOB_STATUS_CANCELLED = 5;   // Отменено
+}
+
+// =============================================================================
+// Generation — генерация вариантов
+// =============================================================================
+
+// GenerateVariantsRequest — запрос на генерацию вариантов.
+message GenerateVariantsRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки (источник).
+  string branch_id = 2;
+  
+  // Промпт пользователя (что хочет изменить).
+  string prompt = 3;
+  
+  // Количество вариантов (1-5).
+  int32 variants_count = 4;
+  
+  // Опции генерации.
+  GenerationOptions options = 5;
+}
+
+// GenerationOptions — опции генерации.
+message GenerationOptions {
+  // Не изменять несущие стены.
+  bool preserve_load_bearing = 1;
+  
+  // Проверять соответствие нормам.
+  bool check_compliance = 2;
+  
+  // Сохранять мокрые зоны.
+  bool preserve_wet_zones = 3;
+  
+  // Обязательные типы комнат.
+  repeated RoomType required_rooms = 4;
+  
+  // Минимальные площади комнат (тип -> площадь).
+  map<string, float> min_room_areas = 5;
+  
+  // Стиль генерации.
+  GenerationStyle style = 6;
+  
+  // Бюджет (влияет на сложность решений). 0 = игнорировать.
+  float budget = 7;
+}
+
+// GenerationStyle — стиль генерации.
+enum GenerationStyle {
+  GENERATION_STYLE_UNSPECIFIED = 0;
+  GENERATION_STYLE_MINIMAL = 1;     // Минимальные изменения
+  GENERATION_STYLE_MODERATE = 2;    // Умеренные изменения
+  GENERATION_STYLE_CREATIVE = 3;    // Креативные решения
+}
+
+// GenerateVariantsResponse — результат генерации.
+message GenerateVariantsResponse {
+  // Успешно ли.
+  bool success = 1;
+  
+  // ID задачи (для асинхронного отслеживания).
+  string job_id = 2;
+  
+  // Статус.
+  JobStatus status = 3;
+  
+  // Сгенерированные варианты.
+  repeated GeneratedVariant variants = 4;
+  
+  // Ошибка (если не успешно).
+  string error = 5;
+}
+
+// GeneratedVariant — сгенерированный вариант.
+message GeneratedVariant {
+  // ID варианта.
   string id = 1;
+  
+  // ID созданной ветки.
+  string branch_id = 2;
+  
+  // Название варианта.
+  string name = 3;
+  
+  // Описание изменений.
+  string description = 4;
+  
+  // Оценка варианта (0-1).
+  float score = 5;
+  
+  // Список изменений.
+  repeated VariantChange changes = 6;
+  
+  // Соответствует ли нормам.
+  bool is_compliant = 7;
+  
+  // Примерная стоимость реализации.
+  float estimated_cost = 8;
+}
+
+// VariantChange — изменение в варианте.
+message VariantChange {
+  // Тип изменения.
+  string type = 1;
+  
+  // Описание.
+  string description = 2;
+  
+  // Затронутые элементы.
+  repeated string element_ids = 3;
+}
+
+// GetGenerationStatusRequest — запрос статуса генерации.
+message GetGenerationStatusRequest {
+  string job_id = 1;
+}
+
+// GetGenerationStatusResponse — статус генерации.
+message GetGenerationStatusResponse {
+  string job_id = 1;
+  JobStatus status = 2;
+  int32 progress = 3;
+  repeated GeneratedVariant variants = 4;
+  string error = 5;
+}
+
+// =============================================================================
+// Chat — интерактивный чат
+// =============================================================================
+
+// ChatMessageRequest — запрос отправки сообщения в чат.
+message ChatMessageRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки.
+  string branch_id = 2;
+  
+  // Сообщение пользователя.
+  string message = 3;
+  
+  // ID контекста (для продолжения разговора). Пустой = новый разговор.
+  string context_id = 4;
+  
+  // Прикреплённые файлы (например, референсы).
+  repeated ChatAttachment attachments = 5;
+}
+
+// ChatAttachment — прикреплённый файл.
+message ChatAttachment {
+  // Тип файла.
+  string type = 1;
+  
+  // URL или base64 данные.
+  string data = 2;
+  
+  // Имя файла.
+  string filename = 3;
+}
+
+// ChatMessageResponse — полный ответ чата (без streaming).
+message ChatMessageResponse {
+  // ID сообщения.
+  string message_id = 1;
+  
+  // Текст ответа.
+  string response = 2;
+  
+  // ID контекста (для продолжения).
+  string context_id = 3;
+  
+  // Предложенные действия.
+  repeated SuggestedAction actions = 4;
+  
+  // Время генерации (мс).
+  int64 generation_time_ms = 5;
+  
+  // Использованные токены.
+  TokenUsage token_usage = 6;
+}
+
+// ChatChunk — чанк streaming ответа.
+message ChatChunk {
+  // Часть текста ответа.
+  string content = 1;
+  
+  // Это последний чанк?
+  bool is_final = 2;
+  
+  // ID сообщения (в первом чанке).
+  string message_id = 3;
+  
+  // ID контекста (в первом чанке).
+  string context_id = 4;
+  
+  // Предложенные действия (в последнем чанке).
+  repeated SuggestedAction actions = 5;
+  
+  // Использованные токены (в последнем чанке).
+  TokenUsage token_usage = 6;
+  
+  // Индекс чанка.
+  int32 chunk_index = 7;
+}
+
+// SuggestedAction — предложенное AI действие.
+message SuggestedAction {
+  // ID действия.
+  string id = 1;
+  
+  // Тип действия.
+  string type = 2;
+  
+  // Описание для пользователя.
+  string description = 3;
+  
+  // Параметры действия (для API вызова).
+  map<string, string> params = 4;
+  
+  // Уверенность в рекомендации (0-1).
+  float confidence = 5;
+  
+  // Требует подтверждения пользователя.
+  bool requires_confirmation = 6;
+}
+
+// TokenUsage — использование токенов.
+message TokenUsage {
+  // Токены промпта.
+  int32 prompt_tokens = 1;
+  
+  // Токены ответа.
+  int32 completion_tokens = 2;
+  
+  // Всего токенов.
+  int32 total_tokens = 3;
+}
+
+// GetChatHistoryRequest — запрос истории чата.
+message GetChatHistoryRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки.
+  string branch_id = 2;
+  
+  // ID контекста (опционально, для конкретного разговора).
+  string context_id = 3;
+  
+  // Лимит сообщений.
+  int32 limit = 4;
+  
+  // Курсор для пагинации (ID последнего сообщения).
+  string cursor = 5;
+}
+
+// GetChatHistoryResponse — история чата.
+message GetChatHistoryResponse {
+  // Сообщения (от старых к новым).
+  repeated ChatHistoryMessage messages = 1;
+  
+  // Есть ли ещё сообщения.
+  bool has_more = 2;
+  
+  // Курсор для следующей страницы.
+  string next_cursor = 3;
+}
+
+// ChatHistoryMessage — сообщение из истории.
+message ChatHistoryMessage {
+  // ID сообщения.
+  string id = 1;
+  
+  // Роль: "user" или "assistant".
   string role = 2;
+  
+  // Содержимое.
   string content = 3;
-  int64 timestamp = 4;
+  
+  // Время отправки.
+  google.protobuf.Timestamp created_at = 4;
+  
+  // Предложенные действия (для assistant).
+  repeated SuggestedAction actions = 5;
+  
+  // Использованные токены (для assistant).
+  TokenUsage token_usage = 6;
+}
+
+// ClearChatHistoryRequest — запрос очистки истории.
+message ClearChatHistoryRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки.
+  string branch_id = 2;
+  
+  // ID контекста (опционально, для конкретного разговора).
+  string context_id = 3;
+}
+
+// ClearChatHistoryResponse — результат очистки.
+message ClearChatHistoryResponse {
+  // Количество удалённых сообщений.
+  int32 deleted_count = 1;
+}
+
+// =============================================================================
+// Context Management — управление контекстом
+// =============================================================================
+
+// GetContextRequest — запрос контекста AI.
+message GetContextRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки.
+  string branch_id = 2;
+}
+
+// GetContextResponse — текущий контекст.
+message GetContextResponse {
+  // ID контекста.
+  string context_id = 1;
+  
+  // Сводка сцены для AI.
+  string scene_summary = 2;
+  
+  // Активные ограничения/требования.
+  repeated string constraints = 3;
+  
+  // Размер контекста (токены).
+  int32 context_size = 4;
+  
+  // Последнее обновление.
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// UpdateContextRequest — запрос обновления контекста.
+message UpdateContextRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID ветки.
+  string branch_id = 2;
+  
+  // Принудительное обновление (даже если не изменилось).
+  bool force = 3;
+}
+
+// UpdateContextResponse — результат обновления.
+message UpdateContextResponse {
+  // ID контекста.
+  string context_id = 1;
+  
+  // Обновлён ли контекст.
+  bool updated = 2;
+  
+  // Новый размер контекста.
+  int32 context_size = 3;
 }
 
