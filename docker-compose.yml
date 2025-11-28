@@ -1,0 +1,384 @@
+# =============================================================================
+# Granula API - Docker Compose (Microservices Development)
+# =============================================================================
+# Usage:
+#   make infra-up      # Start only infrastructure
+#   make docker-up     # Start all services
+#   make docker-logs   # View logs
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # INFRASTRUCTURE
+  # ==========================================================================
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: granula-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: granula_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    container_name: granula-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: granula-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    container_name: granula-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc
+    container_name: granula-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/floor-plans --ignore-existing;
+      mc mb myminio/avatars --ignore-existing;
+      mc mb myminio/renders --ignore-existing;
+      mc mb myminio/documents --ignore-existing;
+      mc anonymous set download myminio/avatars;
+      exit 0;
+      "
+    networks:
+      - granula-network
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: granula-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # API GATEWAY
+  # ==========================================================================
+  
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: granula-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: development
+      APP_PORT: "8080"
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      AUTH_SERVICE_ADDR: auth-service:50051
+      USER_SERVICE_ADDR: user-service:50052
+      WORKSPACE_SERVICE_ADDR: workspace-service:50053
+      FLOOR_PLAN_SERVICE_ADDR: floor-plan-service:50054
+      SCENE_SERVICE_ADDR: scene-service:50055
+      BRANCH_SERVICE_ADDR: branch-service:50056
+      AI_SERVICE_ADDR: ai-service:50057
+      COMPLIANCE_SERVICE_ADDR: compliance-service:50058
+      REQUEST_SERVICE_ADDR: request-service:50059
+      NOTIFICATION_SERVICE_ADDR: notification-service:50060
+      LOG_LEVEL: debug
+    depends_on:
+      - auth-service
+      - redis
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # CORE SERVICES (Developer 1)
+  # ==========================================================================
+  
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: granula-auth
+    ports:
+      - "50051:50051"
+    environment:
+      GRPC_PORT: "50051"
+      POSTGRES_DSN: postgres://granula:granula_secret@postgres:5432/auth_db?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 168h
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: granula-user
+    ports:
+      - "50052:50052"
+    environment:
+      GRPC_PORT: "50052"
+      POSTGRES_DSN: postgres://granula:granula_secret@postgres:5432/users_db?sslmode=disable
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: avatars
+      S3_USE_SSL: "false"
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  workspace-service:
+    build:
+      context: .
+      dockerfile: workspace-service/Dockerfile
+    container_name: granula-workspace
+    ports:
+      - "50053:50053"
+    environment:
+      GRPC_PORT: "50053"
+      POSTGRES_DSN: postgres://granula:granula_secret@postgres:5432/workspaces_db?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  request-service:
+    build:
+      context: .
+      dockerfile: request-service/Dockerfile
+    container_name: granula-request
+    ports:
+      - "50059:50059"
+    environment:
+      GRPC_PORT: "50059"
+      POSTGRES_DSN: postgres://granula:granula_secret@postgres:5432/requests_db?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: granula-notification
+    ports:
+      - "50060:50060"
+    environment:
+      GRPC_PORT: "50060"
+      POSTGRES_DSN: postgres://granula:granula_secret@postgres:5432/notifications_db?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # AI/3D SERVICES (Developer 2)
+  # ==========================================================================
+  
+  floor-plan-service:
+    build:
+      context: .
+      dockerfile: floor-plan-service/Dockerfile
+    container_name: granula-floor-plan
+    ports:
+      - "50054:50054"
+    environment:
+      GRPC_PORT: "50054"
+      POSTGRES_DSN: postgres://granula:granula_secret@postgres:5432/floor_plans_db?sslmode=disable
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: floor-plans
+      S3_USE_SSL: "false"
+      AI_SERVICE_ADDR: ai-service:50057
+      SCENE_SERVICE_ADDR: scene-service:50055
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  scene-service:
+    build:
+      context: .
+      dockerfile: scene-service/Dockerfile
+    container_name: granula-scene
+    ports:
+      - "50055:50055"
+    environment:
+      GRPC_PORT: "50055"
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DATABASE: scenes_db
+      COMPLIANCE_SERVICE_ADDR: compliance-service:50058
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: debug
+    depends_on:
+      - mongodb
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  branch-service:
+    build:
+      context: .
+      dockerfile: branch-service/Dockerfile
+    container_name: granula-branch
+    ports:
+      - "50056:50056"
+    environment:
+      GRPC_PORT: "50056"
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DATABASE: branches_db
+      SCENE_SERVICE_ADDR: scene-service:50055
+      LOG_LEVEL: debug
+    depends_on:
+      - mongodb
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: ai-service/Dockerfile
+    container_name: granula-ai
+    ports:
+      - "50057:50057"
+    environment:
+      GRPC_PORT: "50057"
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DATABASE: ai_db
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: anthropic/claude-sonnet-4
+      BRANCH_SERVICE_ADDR: branch-service:50056
+      AI_WORKERS_COUNT: "5"
+      LOG_LEVEL: debug
+    depends_on:
+      - mongodb
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+  compliance-service:
+    build:
+      context: .
+      dockerfile: compliance-service/Dockerfile
+    container_name: granula-compliance
+    ports:
+      - "50058:50058"
+    environment:
+      GRPC_PORT: "50058"
+      POSTGRES_DSN: postgres://granula:granula_secret@postgres:5432/compliance_db?sslmode=disable
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - granula-network
+    restart: unless-stopped
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  granula-network:
+    driver: bridge
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  minio_data:
+

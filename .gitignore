@@ -1,0 +1,72 @@
+# =============================================================================
+# Granula API - Git Ignore
+# =============================================================================
+
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+go.work
+go.work.sum
+vendor/
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Generated
+shared/gen/
+
+# Test
+coverage.out
+coverage.html
+*.test
+*.prof
+
+# Temp
+tmp/
+temp/
+
+# Keys and secrets (NEVER commit!)
+*.pem
+*.key
+*.crt
+ed25519
+ed25519.pub
+id_rsa
+id_rsa.pub
+*.p12
+
+# Docker
+.docker/
+
+# Build
+dist/
+build/
+
+# Dependencies (each service has its own go.mod)
+# Don't commit downloaded modules
+

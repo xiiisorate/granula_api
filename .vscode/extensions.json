@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+        "golang.go",
+        "eamodio.gitlens",
+        "zxh404.vscode-proto3",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "streetsidesoftware.code-spell-checker",
+        "humao.rest-client"
+    ]
+}

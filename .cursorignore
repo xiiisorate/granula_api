@@ -1,0 +1,14 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+
+# Keys and secrets
+ed25519
+ed25519.pub
+*.pem
+*.key
+.env
+.env.*
+
+# Generated
+shared/gen/
+bin/
+vendor/
