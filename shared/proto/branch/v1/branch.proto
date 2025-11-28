@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package branch.v1;
+
+option go_package = "github.com/granula/shared/gen/branch/v1;branchv1";
+
+import "common/v1/common.proto";
+
+// BranchService - сервис управления ветками
+service BranchService {
+  // Создать ветку
+  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse);
+  
+  // Получить ветку
+  rpc GetBranch(GetBranchRequest) returns (GetBranchResponse);
+  
+  // Список веток
+  rpc ListBranches(ListBranchesRequest) returns (ListBranchesResponse);
+  
+  // Обновить ветку
+  rpc UpdateBranch(UpdateBranchRequest) returns (UpdateBranchResponse);
+  
+  // Удалить ветку
+  rpc DeleteBranch(DeleteBranchRequest) returns (DeleteBranchResponse);
+  
+  // Активировать ветку
+  rpc ActivateBranch(ActivateBranchRequest) returns (ActivateBranchResponse);
+}
+
+// CreateBranchRequest - запрос создания ветки
+message CreateBranchRequest {
+  string scene_id = 1;
+  string name = 2;
+  string parent_branch_id = 3;
+}
+
+// CreateBranchResponse - ответ создания ветки
+message CreateBranchResponse {
+  Branch branch = 1;
+}
+
+// GetBranchRequest - запрос получения ветки
+message GetBranchRequest {
+  string branch_id = 1;
+}
+
+// GetBranchResponse - ответ получения ветки
+message GetBranchResponse {
+  Branch branch = 1;
+}
+
+// ListBranchesRequest - запрос списка веток
+message ListBranchesRequest {
+  string scene_id = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// ListBranchesResponse - ответ списка веток
+message ListBranchesResponse {
+  repeated Branch branches = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// UpdateBranchRequest - запрос обновления ветки
+message UpdateBranchRequest {
+  string branch_id = 1;
+  string name = 2;
+  BranchDelta delta = 3;
+}
+
+// UpdateBranchResponse - ответ обновления ветки
+message UpdateBranchResponse {
+  Branch branch = 1;
+}
+
+// DeleteBranchRequest - запрос удаления ветки
+message DeleteBranchRequest {
+  string branch_id = 1;
+}
+
+// DeleteBranchResponse - ответ удаления ветки
+message DeleteBranchResponse {
+  bool success = 1;
+}
+
+// ActivateBranchRequest - запрос активации ветки
+message ActivateBranchRequest {
+  string branch_id = 1;
+}
+
+// ActivateBranchResponse - ответ активации ветки
+message ActivateBranchResponse {
+  Branch branch = 1;
+}
+
+// Branch - модель ветки
+message Branch {
+  string id = 1;
+  string scene_id = 2;
+  string name = 3;
+  string parent_branch_id = 4;
+  bool is_active = 5;
+  BranchDelta delta = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+// BranchDelta - изменения в ветке
+message BranchDelta {
+  repeated string added_elements = 1;
+  repeated string removed_elements = 2;
+  repeated string modified_elements = 3;
+}
+

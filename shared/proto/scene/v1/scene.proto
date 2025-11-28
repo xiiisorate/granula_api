@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package scene.v1;
+
+option go_package = "github.com/granula/shared/gen/scene/v1;scenev1";
+
+import "common/v1/common.proto";
+
+// SceneService - сервис управления сценами
+service SceneService {
+  // Создать сцену
+  rpc CreateScene(CreateSceneRequest) returns (CreateSceneResponse);
+  
+  // Получить сцену
+  rpc GetScene(GetSceneRequest) returns (GetSceneResponse);
+  
+  // Список сцен
+  rpc ListScenes(ListScenesRequest) returns (ListScenesResponse);
+  
+  // Обновить сцену
+  rpc UpdateScene(UpdateSceneRequest) returns (UpdateSceneResponse);
+  
+  // Удалить сцену
+  rpc DeleteScene(DeleteSceneRequest) returns (DeleteSceneResponse);
+  
+  // Обновить элементы сцены
+  rpc UpdateElements(UpdateElementsRequest) returns (UpdateElementsResponse);
+}
+
+// CreateSceneRequest - запрос создания сцены
+message CreateSceneRequest {
+  string workspace_id = 1;
+  string floor_plan_id = 2;
+  string name = 3;
+}
+
+// CreateSceneResponse - ответ создания сцены
+message CreateSceneResponse {
+  Scene scene = 1;
+}
+
+// GetSceneRequest - запрос получения сцены
+message GetSceneRequest {
+  string scene_id = 1;
+}
+
+// GetSceneResponse - ответ получения сцены
+message GetSceneResponse {
+  Scene scene = 1;
+}
+
+// ListScenesRequest - запрос списка сцен
+message ListScenesRequest {
+  string workspace_id = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// ListScenesResponse - ответ списка сцен
+message ListScenesResponse {
+  repeated Scene scenes = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// UpdateSceneRequest - запрос обновления сцены
+message UpdateSceneRequest {
+  string scene_id = 1;
+  string name = 2;
+}
+
+// UpdateSceneResponse - ответ обновления сцены
+message UpdateSceneResponse {
+  Scene scene = 1;
+}
+
+// DeleteSceneRequest - запрос удаления сцены
+message DeleteSceneRequest {
+  string scene_id = 1;
+}
+
+// DeleteSceneResponse - ответ удаления сцены
+message DeleteSceneResponse {
+  bool success = 1;
+}
+
+// UpdateElementsRequest - запрос обновления элементов
+message UpdateElementsRequest {
+  string scene_id = 1;
+  repeated Element elements = 2;
+}
+
+// UpdateElementsResponse - ответ обновления элементов
+message UpdateElementsResponse {
+  Scene scene = 1;
+}
+
+// Scene - модель сцены
+message Scene {
+  string id = 1;
+  string workspace_id = 2;
+  string floor_plan_id = 3;
+  string name = 4;
+  repeated Element elements = 5;
+  int64 created_at = 6;
+  int64 updated_at = 7;
+}
+
+// Element - элемент сцены
+message Element {
+  string id = 1;
+  string type = 2;
+  map<string, string> properties = 3;
+}
+

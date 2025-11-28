@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/granula/shared/gen/common/v1;commonv1";
+
+// Общие типы и сообщения для всех сервисов
+
+// Статус операции
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_SUCCESS = 1;
+  STATUS_ERROR = 2;
+}
+
+// Базовая ошибка
+message Error {
+  string code = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+// Пустой ответ
+message Empty {}
+
+// Метаданные запроса
+message RequestMetadata {
+  string request_id = 1;
+  string user_id = 2;
+  string workspace_id = 3;
+  int64 timestamp = 4;
+}
+
+// Пагинация
+message Pagination {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total = 3;
+}
+
+// Сортировка
+message Sort {
+  string field = 1;
+  bool ascending = 2;
+}
+

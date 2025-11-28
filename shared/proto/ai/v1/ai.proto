@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package ai.v1;
+
+option go_package = "github.com/granula/shared/gen/ai/v1;aiv1";
+
+import "common/v1/common.proto";
+
+// AIService - сервис AI функциональности
+service AIService {
+  // Распознать планировку
+  rpc RecognizeFloorPlan(RecognizeFloorPlanRequest) returns (RecognizeFloorPlanResponse);
+  
+  // Генерировать варианты
+  rpc GenerateVariants(GenerateVariantsRequest) returns (GenerateVariantsResponse);
+  
+  // Отправить сообщение в чат
+  rpc SendChatMessage(SendChatMessageRequest) returns (SendChatMessageResponse);
+  
+  // Streaming ответа чата
+  rpc StreamChatResponse(ChatRequest) returns (stream ChatChunk);
+  
+  // Получить историю чата
+  rpc GetChatHistory(GetChatHistoryRequest) returns (GetChatHistoryResponse);
+  
+  // Очистить историю чата
+  rpc ClearChatHistory(ClearChatHistoryRequest) returns (ClearChatHistoryResponse);
+}
+
+// RecognizeFloorPlanRequest - запрос распознавания планировки
+message RecognizeFloorPlanRequest {
+  string floor_plan_id = 1;
+}
+
+// RecognizeFloorPlanResponse - ответ распознавания планировки
+message RecognizeFloorPlanResponse {
+  string job_id = 1;
+  string status = 2;
+}
+
+// GenerateVariantsRequest - запрос генерации вариантов
+message GenerateVariantsRequest {
+  string scene_id = 1;
+  string prompt = 2;
+  int32 count = 3;
+}
+
+// GenerateVariantsResponse - ответ генерации вариантов
+message GenerateVariantsResponse {
+  string job_id = 1;
+  repeated string variant_ids = 2;
+}
+
+// SendChatMessageRequest - запрос отправки сообщения
+message SendChatMessageRequest {
+  string scene_id = 1;
+  string message = 2;
+}
+
+// SendChatMessageResponse - ответ отправки сообщения
+message SendChatMessageResponse {
+  string message_id = 1;
+  string response = 2;
+}
+
+// ChatRequest - запрос чата
+message ChatRequest {
+  string scene_id = 1;
+  string message = 2;
+}
+
+// ChatChunk - чанк ответа чата
+message ChatChunk {
+  string content = 1;
+  bool is_final = 2;
+}
+
+// GetChatHistoryRequest - запрос истории чата
+message GetChatHistoryRequest {
+  string scene_id = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// GetChatHistoryResponse - ответ истории чата
+message GetChatHistoryResponse {
+  repeated ChatMessage messages = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// ClearChatHistoryRequest - запрос очистки истории
+message ClearChatHistoryRequest {
+  string scene_id = 1;
+}
+
+// ClearChatHistoryResponse - ответ очистки истории
+message ClearChatHistoryResponse {
+  bool success = 1;
+}
+
+// ChatMessage - сообщение чата
+message ChatMessage {
+  string id = 1;
+  string role = 2;
+  string content = 3;
+  int64 timestamp = 4;
+}
+

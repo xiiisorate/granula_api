@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package compliance.v1;
+
+option go_package = "github.com/granula/shared/gen/compliance/v1;compliancev1";
+
+import "common/v1/common.proto";
+
+// ComplianceService - сервис проверки соответствия
+service ComplianceService {
+  // Проверить соответствие
+  rpc CheckCompliance(CheckComplianceRequest) returns (CheckComplianceResponse);
+  
+  // Проверить операцию
+  rpc CheckOperation(CheckOperationRequest) returns (CheckOperationResponse);
+  
+  // Получить правила
+  rpc GetRules(GetRulesRequest) returns (GetRulesResponse);
+  
+  // Получить правило
+  rpc GetRule(GetRuleRequest) returns (GetRuleResponse);
+  
+  // Сгенерировать отчёт
+  rpc GenerateReport(GenerateReportRequest) returns (GenerateReportResponse);
+}
+
+// CheckComplianceRequest - запрос проверки соответствия
+message CheckComplianceRequest {
+  string scene_id = 1;
+}
+
+// CheckComplianceResponse - ответ проверки соответствия
+message CheckComplianceResponse {
+  bool compliant = 1;
+  repeated Violation violations = 2;
+}
+
+// CheckOperationRequest - запрос проверки операции
+message CheckOperationRequest {
+  string scene_id = 1;
+  string operation = 2;
+  map<string, string> parameters = 3;
+}
+
+// CheckOperationResponse - ответ проверки операции
+message CheckOperationResponse {
+  bool allowed = 1;
+  repeated string violations = 2;
+}
+
+// GetRulesRequest - запрос получения правил
+message GetRulesRequest {
+  string category = 1;
+}
+
+// GetRulesResponse - ответ получения правил
+message GetRulesResponse {
+  repeated Rule rules = 1;
+}
+
+// GetRuleRequest - запрос получения правила
+message GetRuleRequest {
+  string rule_id = 1;
+}
+
+// GetRuleResponse - ответ получения правила
+message GetRuleResponse {
+  Rule rule = 1;
+}
+
+// GenerateReportRequest - запрос генерации отчёта
+message GenerateReportRequest {
+  string scene_id = 1;
+}
+
+// GenerateReportResponse - ответ генерации отчёта
+message GenerateReportResponse {
+  string report_id = 1;
+  string report_url = 2;
+}
+
+// Violation - нарушение
+message Violation {
+  string rule_id = 1;
+  string message = 2;
+  string severity = 3;
+}
+
+// Rule - правило
+message Rule {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string category = 4;
+  string code = 5;
+}
+

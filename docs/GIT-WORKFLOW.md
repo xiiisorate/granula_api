@@ -286,20 +286,33 @@ git checkout dev/shared
 | `scripts/init-databases.sql` | |
 | `Makefile` | |
 
+**Асинхронная работа над proto файлами:**
+
+Каждый разработчик работает со своими файлами параллельно:
+
+- **D1**: `common.proto`, `auth.proto`, `user.proto`, `workspace.proto`, `floor_plan.proto`, `request.proto`, `notification.proto`
+- **D2**: `scene.proto`, `branch.proto`, `ai.proto`, `compliance.proto`
+
 **Синхронизация во время работы над shared:**
 
 ```bash
 # Перед началом работы
 git pull origin dev/shared
 
-# После каждого логического блока
-git add .
-git commit -m "feat(shared): add auth.proto"
+# После каждого логического блока (работайте только со своими файлами!)
+git add shared/proto/your-service/v1/your-service.proto
+git commit -m "feat(shared): add Register method to auth.proto"
 git push origin dev/shared
 
-# Получение изменений партнёра
+# Получение изменений партнёра (каждые 30-60 минут)
 git pull origin dev/shared
 ```
+
+**Важно:**
+- Каждый работает только со своими proto файлами
+- Частые коммиты и синхронизация (каждые 30-60 минут)
+- Если нужно изменить `common.proto` - согласуйте с партнёром
+- Подробнее: см. `shared/proto/README.md`
 
 **Завершение shared:**
 
