@@ -195,7 +195,7 @@ func (s *AuthServer) LogoutAll(ctx context.Context, req *LogoutAllRequest) (*Log
 	// Get user ID from context (set by auth middleware in gateway)
 	userID, ok := ctx.Value("user_id").(uuid.UUID)
 	if !ok {
-		return nil, errors.ErrUnauthenticated
+		return nil, errors.Unauthenticated("user not authenticated")
 	}
 
 	count, err := s.authService.LogoutAll(userID)

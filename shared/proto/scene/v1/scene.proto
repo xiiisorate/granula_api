@@ -1,0 +1,226 @@
+// Scene Service API
+// Управление 3D сценами и элементами
+
+syntax = "proto3";
+
+package scene.v1;
+
+option go_package = "github.com/xiiisorate/granula_api/shared/gen/scene/v1;scenev1";
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
+
+// SceneService manages 3D scenes and elements.
+service SceneService {
+  // Scene operations
+  rpc CreateScene(CreateSceneRequest) returns (CreateSceneResponse);
+  rpc GetScene(GetSceneRequest) returns (GetSceneResponse);
+  rpc UpdateScene(UpdateSceneRequest) returns (UpdateSceneResponse);
+  rpc DeleteScene(DeleteSceneRequest) returns (DeleteSceneResponse);
+  rpc ListScenes(ListScenesRequest) returns (ListScenesResponse);
+  
+  // Element operations
+  rpc CreateElement(CreateElementRequest) returns (CreateElementResponse);
+  rpc GetElement(GetElementRequest) returns (GetElementResponse);
+  rpc UpdateElement(UpdateElementRequest) returns (UpdateElementResponse);
+  rpc DeleteElement(DeleteElementRequest) returns (DeleteElementResponse);
+  rpc ListElements(ListElementsRequest) returns (ListElementsResponse);
+  
+  // Compliance
+  rpc CheckCompliance(CheckComplianceRequest) returns (CheckComplianceResponse);
+}
+
+// Element type
+enum ElementType {
+  ELEMENT_TYPE_UNSPECIFIED = 0;
+  ELEMENT_TYPE_WALL = 1;
+  ELEMENT_TYPE_ROOM = 2;
+  ELEMENT_TYPE_DOOR = 3;
+  ELEMENT_TYPE_WINDOW = 4;
+  ELEMENT_TYPE_FURNITURE = 5;
+  ELEMENT_TYPE_FIXTURE = 6;
+  ELEMENT_TYPE_DECOR = 7;
+}
+
+// Scene entity
+message Scene {
+  string id = 1;
+  string workspace_id = 2;
+  string owner_id = 3;
+  string floor_plan_id = 4;
+  string name = 5;
+  string description = 6;
+  common.v1.Dimensions2D dimensions = 7;
+  string main_branch_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// Element entity
+message Element {
+  string id = 1;
+  string scene_id = 2;
+  string branch_id = 3;
+  ElementType type = 4;
+  string name = 5;
+  common.v1.Point3D position = 6;
+  common.v1.Rotation3D rotation = 7;
+  common.v1.Dimensions3D dimensions = 8;
+  string parent_id = 9;
+  int64 version = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// Violation from compliance check
+message Violation {
+  string id = 1;
+  string rule_id = 2;
+  string severity = 3;
+  string title = 4;
+  string description = 5;
+  repeated string element_ids = 6;
+}
+
+// Create scene request
+message CreateSceneRequest {
+  string workspace_id = 1;
+  string owner_id = 2;
+  string floor_plan_id = 3;
+  string name = 4;
+  string description = 5;
+  common.v1.Dimensions2D dimensions = 6;
+}
+
+// Create scene response
+message CreateSceneResponse {
+  bool success = 1;
+  Scene scene = 2;
+}
+
+// Get scene request
+message GetSceneRequest {
+  string id = 1;
+}
+
+// Get scene response
+message GetSceneResponse {
+  Scene scene = 1;
+}
+
+// Update scene request
+message UpdateSceneRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+// Update scene response
+message UpdateSceneResponse {
+  bool success = 1;
+  Scene scene = 2;
+}
+
+// Delete scene request
+message DeleteSceneRequest {
+  string id = 1;
+}
+
+// Delete scene response
+message DeleteSceneResponse {
+  bool success = 1;
+}
+
+// List scenes request
+message ListScenesRequest {
+  string workspace_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+// List scenes response
+message ListScenesResponse {
+  repeated Scene scenes = 1;
+  int32 total = 2;
+}
+
+// Create element request
+message CreateElementRequest {
+  string scene_id = 1;
+  string branch_id = 2;
+  ElementType type = 3;
+  string name = 4;
+  common.v1.Point3D position = 5;
+  common.v1.Rotation3D rotation = 6;
+  common.v1.Dimensions3D dimensions = 7;
+  string parent_id = 8;
+}
+
+// Create element response
+message CreateElementResponse {
+  bool success = 1;
+  Element element = 2;
+}
+
+// Get element request
+message GetElementRequest {
+  string id = 1;
+}
+
+// Get element response
+message GetElementResponse {
+  Element element = 1;
+}
+
+// Update element request
+message UpdateElementRequest {
+  string id = 1;
+  string name = 2;
+  common.v1.Point3D position = 3;
+  common.v1.Rotation3D rotation = 4;
+  common.v1.Dimensions3D dimensions = 5;
+}
+
+// Update element response
+message UpdateElementResponse {
+  bool success = 1;
+  Element element = 2;
+}
+
+// Delete element request
+message DeleteElementRequest {
+  string id = 1;
+}
+
+// Delete element response
+message DeleteElementResponse {
+  bool success = 1;
+}
+
+// List elements request
+message ListElementsRequest {
+  string branch_id = 1;
+  ElementType type = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+// List elements response
+message ListElementsResponse {
+  repeated Element elements = 1;
+}
+
+// Check compliance request
+message CheckComplianceRequest {
+  string scene_id = 1;
+  string branch_id = 2;
+}
+
+// Check compliance response
+message CheckComplianceResponse {
+  bool is_compliant = 1;
+  repeated Violation violations = 2;
+  int32 total_checks = 3;
+  int32 passed_checks = 4;
+  int32 failed_checks = 5;
+}

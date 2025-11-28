@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package workspace.v1;
+
+option go_package = "github.com/granula/shared/gen/workspace/v1;workspacev1";
+
+import "common/v1/common.proto";
+
+// WorkspaceService - сервис управления воркспейсами
+service WorkspaceService {
+  // Создать воркспейс
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse);
+  
+  // Получить воркспейс
+  rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse);
+  
+  // Список воркспейсов
+  rpc ListWorkspaces(ListWorkspacesRequest) returns (ListWorkspacesResponse);
+  
+  // Обновить воркспейс
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse);
+  
+  // Удалить воркспейс
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse);
+  
+  // Добавить участника
+  rpc AddMember(AddMemberRequest) returns (AddMemberResponse);
+  
+  // Удалить участника
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+}
+
+// CreateWorkspaceRequest - запрос создания воркспейса
+message CreateWorkspaceRequest {
+  string name = 1;
+  string description = 2;
+}
+
+// CreateWorkspaceResponse - ответ создания воркспейса
+message CreateWorkspaceResponse {
+  Workspace workspace = 1;
+}
+
+// GetWorkspaceRequest - запрос получения воркспейса
+message GetWorkspaceRequest {
+  string workspace_id = 1;
+}
+
+// GetWorkspaceResponse - ответ получения воркспейса
+message GetWorkspaceResponse {
+  Workspace workspace = 1;
+}
+
+// ListWorkspacesRequest - запрос списка воркспейсов
+message ListWorkspacesRequest {
+  string user_id = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// ListWorkspacesResponse - ответ списка воркспейсов
+message ListWorkspacesResponse {
+  repeated Workspace workspaces = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// UpdateWorkspaceRequest - запрос обновления воркспейса
+message UpdateWorkspaceRequest {
+  string workspace_id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+// UpdateWorkspaceResponse - ответ обновления воркспейса
+message UpdateWorkspaceResponse {
+  Workspace workspace = 1;
+}
+
+// DeleteWorkspaceRequest - запрос удаления воркспейса
+message DeleteWorkspaceRequest {
+  string workspace_id = 1;
+}
+
+// DeleteWorkspaceResponse - ответ удаления воркспейса
+message DeleteWorkspaceResponse {
+  bool success = 1;
+}
+
+// AddMemberRequest - запрос добавления участника
+message AddMemberRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+// AddMemberResponse - ответ добавления участника
+message AddMemberResponse {
+  Member member = 1;
+}
+
+// RemoveMemberRequest - запрос удаления участника
+message RemoveMemberRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+}
+
+// RemoveMemberResponse - ответ удаления участника
+message RemoveMemberResponse {
+  bool success = 1;
+}
+
+// Workspace - модель воркспейса
+message Workspace {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string owner_id = 4;
+  repeated Member members = 5;
+  int64 created_at = 6;
+  int64 updated_at = 7;
+}
+
+// Member - участник воркспейса
+message Member {
+  string user_id = 1;
+  string role = 2;
+  int64 joined_at = 3;
+}
+

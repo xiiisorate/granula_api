@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package request.v1;
+
+option go_package = "github.com/granula/shared/gen/request/v1;requestv1";
+
+import "common/v1/common.proto";
+
+// RequestService - сервис управления заявками
+service RequestService {
+  // Создать заявку
+  rpc CreateRequest(CreateRequestRequest) returns (CreateRequestResponse);
+  
+  // Получить заявку
+  rpc GetRequest(GetRequestRequest) returns (GetRequestResponse);
+  
+  // Список заявок
+  rpc ListRequests(ListRequestsRequest) returns (ListRequestsResponse);
+  
+  // Обновить заявку
+  rpc UpdateRequest(UpdateRequestRequest) returns (UpdateRequestResponse);
+  
+  // Отменить заявку
+  rpc CancelRequest(CancelRequestRequest) returns (CancelRequestResponse);
+  
+  // Назначить эксперта
+  rpc AssignExpert(AssignExpertRequest) returns (AssignExpertResponse);
+  
+  // Обновить статус
+  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
+}
+
+// CreateRequestRequest - запрос создания заявки
+message CreateRequestRequest {
+  string workspace_id = 1;
+  string title = 2;
+  string description = 3;
+  string category = 4;
+}
+
+// CreateRequestResponse - ответ создания заявки
+message CreateRequestResponse {
+  Request request = 1;
+}
+
+// GetRequestRequest - запрос получения заявки
+message GetRequestRequest {
+  string request_id = 1;
+}
+
+// GetRequestResponse - ответ получения заявки
+message GetRequestResponse {
+  Request request = 1;
+}
+
+// ListRequestsRequest - запрос списка заявок
+message ListRequestsRequest {
+  string workspace_id = 1;
+  string status = 2;
+  common.v1.Pagination pagination = 3;
+}
+
+// ListRequestsResponse - ответ списка заявок
+message ListRequestsResponse {
+  repeated Request requests = 1;
+  common.v1.Pagination pagination = 2;
+}
+
+// UpdateRequestRequest - запрос обновления заявки
+message UpdateRequestRequest {
+  string request_id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+// UpdateRequestResponse - ответ обновления заявки
+message UpdateRequestResponse {
+  Request request = 1;
+}
+
+// CancelRequestRequest - запрос отмены заявки
+message CancelRequestRequest {
+  string request_id = 1;
+}
+
+// CancelRequestResponse - ответ отмены заявки
+message CancelRequestResponse {
+  bool success = 1;
+}
+
+// AssignExpertRequest - запрос назначения эксперта
+message AssignExpertRequest {
+  string request_id = 1;
+  string expert_id = 2;
+}
+
+// AssignExpertResponse - ответ назначения эксперта
+message AssignExpertResponse {
+  Request request = 1;
+}
+
+// UpdateStatusRequest - запрос обновления статуса
+message UpdateStatusRequest {
+  string request_id = 1;
+  string status = 2;
+  string comment = 3;
+}
+
+// UpdateStatusResponse - ответ обновления статуса
+message UpdateStatusResponse {
+  Request request = 1;
+}
+
+// Request - модель заявки
+message Request {
+  string id = 1;
+  string workspace_id = 2;
+  string title = 3;
+  string description = 4;
+  string category = 5;
+  string status = 6;
+  string expert_id = 7;
+  int64 created_at = 8;
+  int64 updated_at = 9;
+}
+

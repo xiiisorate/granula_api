@@ -25,7 +25,7 @@ func NewUserService(userRepo *repository.UserRepository) *UserService {
 func (s *UserService) GetProfile(userID uuid.UUID) (*repository.UserProfile, error) {
 	profile, err := s.userRepo.FindByID(userID)
 	if err != nil {
-		return nil, errors.ErrUserNotFound
+		return nil, errors.NotFound("user", userID.String())
 	}
 	return profile, nil
 }
@@ -40,14 +40,14 @@ type UpdateProfileInput struct {
 func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput) (*repository.UserProfile, error) {
 	profile, err := s.userRepo.FindByID(userID)
 	if err != nil {
-		return nil, errors.ErrUserNotFound
+		return nil, errors.NotFound("user", userID.String())
 	}
 
 	// Update name if provided
 	if input.Name != nil {
 		name := strings.TrimSpace(*input.Name)
 		if len(name) < 2 || len(name) > 255 {
-			return nil, errors.ErrInvalidName
+			return nil, errors.InvalidArgument("name", "must be between 2 and 255 characters")
 		}
 		profile.Name = name
 	}
@@ -57,7 +57,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate language
 		if input.Settings.Language != "" {
 			if !isValidLanguage(input.Settings.Language) {
-				return nil, errors.NewInvalidArgumentError("invalid language")
+				return nil, errors.InvalidArgument("language", "invalid language")
 			}
 			profile.Settings.Language = input.Settings.Language
 		}
@@ -65,7 +65,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate theme
 		if input.Settings.Theme != "" {
 			if !isValidTheme(input.Settings.Theme) {
-				return nil, errors.NewInvalidArgumentError("invalid theme")
+				return nil, errors.InvalidArgument("theme", "invalid theme")
 			}
 			profile.Settings.Theme = input.Settings.Theme
 		}
@@ -73,7 +73,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate units
 		if input.Settings.Units != "" {
 			if !isValidUnits(input.Settings.Units) {
-				return nil, errors.NewInvalidArgumentError("invalid units")
+				return nil, errors.InvalidArgument("units", "invalid units")
 			}
 			profile.Settings.Units = input.Settings.Units
 		}
@@ -85,7 +85,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 	}
 
 	if err := s.userRepo.Update(profile); err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to update profile").WithCause(err)
 	}
 
 	return profile, nil
@@ -103,17 +103,17 @@ type ChangePasswordInput struct {
 func (s *UserService) ChangePassword(input *ChangePasswordInput) error {
 	// Verify current password
 	if err := bcrypt.CompareHashAndPassword([]byte(input.PasswordHash), []byte(input.CurrentPassword)); err != nil {
-		return errors.ErrInvalidPassword
+		return errors.Unauthenticated("invalid current password")
 	}
 
 	// Validate new password
 	if len(input.NewPassword) < 8 {
-		return errors.ErrWeakPassword
+		return errors.InvalidArgument("password", "must be at least 8 characters")
 	}
 
 	// Check if new password is same as old
 	if err := bcrypt.CompareHashAndPassword([]byte(input.PasswordHash), []byte(input.NewPassword)); err == nil {
-		return errors.NewInvalidArgumentError("new password must be different")
+		return errors.InvalidArgument("password", "new password must be different")
 	}
 
 	return nil

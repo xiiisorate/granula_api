@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/xiiisorate/granula_api/auth-service/internal/repository"
-	"github.com/xiiisorate/github.com/xiiisorate/github.com/xiiisorate/granula_api/shared/pkg/errors"
+	"github.com/xiiisorate/granula_api/shared/pkg/errors"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -61,29 +61,29 @@ func (s *AuthService) Register(input *RegisterInput) (*AuthResult, error) {
 
 	// Validate email
 	if !isValidEmail(email) {
-		return nil, errors.ErrInvalidEmail
+		return nil, errors.InvalidArgument("email", "invalid email format")
 	}
 
 	// Check if email exists
 	if s.userRepo.EmailExists(email) {
-		return nil, errors.ErrEmailExists
+		return nil, errors.AlreadyExists("user", "email", email)
 	}
 
 	// Validate password
 	if len(input.Password) < 8 {
-		return nil, errors.ErrWeakPassword
+		return nil, errors.InvalidArgument("password", "must be at least 8 characters")
 	}
 
 	// Validate name
 	name := strings.TrimSpace(input.Name)
 	if len(name) < 2 || len(name) > 255 {
-		return nil, errors.ErrInvalidName
+		return nil, errors.InvalidArgument("name", "must be between 2 and 255 characters")
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to hash password").WithCause(err)
 	}
 
 	// Create user
@@ -95,7 +95,7 @@ func (s *AuthService) Register(input *RegisterInput) (*AuthResult, error) {
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to create user").WithCause(err)
 	}
 
 	// Generate tokens
@@ -110,12 +110,12 @@ func (s *AuthService) Login(input *LoginInput) (*AuthResult, error) {
 	// Find user
 	user, err := s.userRepo.FindByEmail(email)
 	if err != nil {
-		return nil, errors.ErrInvalidPassword
+		return nil, errors.Unauthenticated("invalid email or password")
 	}
 
 	// Check password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)); err != nil {
-		return nil, errors.ErrInvalidPassword
+		return nil, errors.Unauthenticated("invalid email or password")
 	}
 
 	// Generate tokens
@@ -137,7 +137,7 @@ func (s *AuthService) RefreshToken(refreshTokenString string) (*AuthResult, erro
 	// Find token
 	tokenRecord, err := s.tokenRepo.FindByToken(refreshTokenString)
 	if err != nil || !tokenRecord.IsValid() {
-		return nil, errors.ErrInvalidToken
+		return nil, errors.Unauthenticated("invalid or expired refresh token")
 	}
 
 	// Revoke old token
@@ -162,13 +162,13 @@ func (s *AuthService) generateTokens(user *repository.User, deviceID, userAgent,
 	// Generate access token
 	accessToken, expiresAt, err := s.jwtSvc.GenerateAccessToken(user)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to generate access token").WithCause(err)
 	}
 
 	// Generate refresh token
 	refreshToken, refreshExpiresAt, err := s.jwtSvc.GenerateRefreshToken(user)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to generate refresh token").WithCause(err)
 	}
 
 	// Save refresh token
@@ -182,7 +182,7 @@ func (s *AuthService) generateTokens(user *repository.User, deviceID, userAgent,
 	}
 
 	if err := s.tokenRepo.Create(tokenRecord); err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to save refresh token").WithCause(err)
 	}
 
 	return &AuthResult{

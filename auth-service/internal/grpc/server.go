@@ -6,7 +6,7 @@ import (
 
 	"github.com/xiiisorate/granula_api/auth-service/internal/repository"
 	"github.com/xiiisorate/granula_api/auth-service/internal/service"
-	"github.com/xiiisorate/github.com/xiiisorate/github.com/xiiisorate/granula_api/shared/pkg/errors"
+	"github.com/xiiisorate/granula_api/shared/pkg/errors"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -195,7 +195,7 @@ func (s *AuthServer) LogoutAll(ctx context.Context, req *LogoutAllRequest) (*Log
 	// Get user ID from context (set by auth middleware in gateway)
 	userID, ok := ctx.Value("user_id").(uuid.UUID)
 	if !ok {
-		return nil, errors.ErrUnauthenticated
+		return nil, errors.Unauthenticated("user not authenticated")
 	}
 
 	count, err := s.authService.LogoutAll(userID)

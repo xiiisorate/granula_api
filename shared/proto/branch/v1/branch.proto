@@ -1,0 +1,141 @@
+// Branch Service API
+// Управление ветками сцен (версионирование планировок)
+
+syntax = "proto3";
+
+package branch.v1;
+
+option go_package = "github.com/xiiisorate/granula_api/shared/gen/branch/v1;branchv1";
+
+import "google/protobuf/timestamp.proto";
+
+// BranchService manages scene branches for versioning.
+service BranchService {
+  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse);
+  rpc GetBranch(GetBranchRequest) returns (GetBranchResponse);
+  rpc ListBranches(ListBranchesRequest) returns (ListBranchesResponse);
+  rpc DeleteBranch(DeleteBranchRequest) returns (DeleteBranchResponse);
+  rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse);
+  rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
+  rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse);
+  rpc RestoreSnapshot(RestoreSnapshotRequest) returns (RestoreSnapshotResponse);
+}
+
+// Branch entity
+message Branch {
+  string id = 1;
+  string scene_id = 2;
+  string name = 3;
+  string description = 4;
+  string parent_branch_id = 5;
+  bool is_main = 6;
+  BranchStatus status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+enum BranchStatus {
+  BRANCH_STATUS_UNSPECIFIED = 0;
+  BRANCH_STATUS_ACTIVE = 1;
+  BRANCH_STATUS_MERGED = 2;
+  BRANCH_STATUS_ARCHIVED = 3;
+}
+
+// Snapshot for undo/redo
+message Snapshot {
+  string id = 1;
+  string branch_id = 2;
+  string name = 3;
+  int32 version = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// Diff between branches
+message BranchDiff {
+  repeated ElementChange added = 1;
+  repeated ElementChange modified = 2;
+  repeated ElementChange deleted = 3;
+  int32 total_changes = 4;
+}
+
+message ElementChange {
+  string element_id = 1;
+  string element_type = 2;
+  string description = 3;
+}
+
+// Requests/Responses
+message CreateBranchRequest {
+  string scene_id = 1;
+  string parent_branch_id = 2;
+  string name = 3;
+  string description = 4;
+}
+
+message CreateBranchResponse {
+  bool success = 1;
+  Branch branch = 2;
+}
+
+message GetBranchRequest {
+  string id = 1;
+}
+
+message GetBranchResponse {
+  Branch branch = 1;
+}
+
+message ListBranchesRequest {
+  string scene_id = 1;
+}
+
+message ListBranchesResponse {
+  repeated Branch branches = 1;
+}
+
+message DeleteBranchRequest {
+  string id = 1;
+}
+
+message DeleteBranchResponse {
+  bool success = 1;
+}
+
+message MergeBranchRequest {
+  string source_branch_id = 1;
+  string target_branch_id = 2;
+  bool delete_source = 3;
+}
+
+message MergeBranchResponse {
+  bool success = 1;
+  int32 changes_merged = 2;
+  repeated string conflicts = 3;
+}
+
+message GetDiffRequest {
+  string source_branch_id = 1;
+  string target_branch_id = 2;
+}
+
+message GetDiffResponse {
+  BranchDiff diff = 1;
+}
+
+message CreateSnapshotRequest {
+  string branch_id = 1;
+  string name = 2;
+}
+
+message CreateSnapshotResponse {
+  bool success = 1;
+  Snapshot snapshot = 2;
+}
+
+message RestoreSnapshotRequest {
+  string snapshot_id = 1;
+}
+
+message RestoreSnapshotResponse {
+  bool success = 1;
+}

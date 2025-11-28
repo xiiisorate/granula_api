@@ -40,7 +40,7 @@ func (s *NotificationService) Create(input *CreateInput) (*repository.Notificati
 	}
 
 	if err := s.notifRepo.Create(notif); err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to create notification").WithCause(err)
 	}
 
 	return notif, nil
@@ -73,17 +73,17 @@ func (s *NotificationService) GetList(input *GetListInput) (*NotificationListRes
 
 	notifications, err := s.notifRepo.FindByUserID(input.UserID, input.Limit, input.Offset, input.UnreadOnly, input.Type)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to list notifications").WithCause(err)
 	}
 
 	unreadCount, err := s.notifRepo.CountUnreadByUserID(input.UserID)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to count unread notifications").WithCause(err)
 	}
 
 	total, err := s.notifRepo.CountByUserID(input.UserID)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to count notifications").WithCause(err)
 	}
 
 	return &NotificationListResult{
@@ -103,12 +103,12 @@ type UnreadCountResult struct {
 func (s *NotificationService) GetUnreadCount(userID uuid.UUID) (*UnreadCountResult, error) {
 	unreadCount, err := s.notifRepo.CountUnreadByUserID(userID)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to count unread notifications").WithCause(err)
 	}
 
 	byType, err := s.notifRepo.CountUnreadByType(userID)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to count notifications by type").WithCause(err)
 	}
 
 	return &UnreadCountResult{
@@ -121,16 +121,16 @@ func (s *NotificationService) GetUnreadCount(userID uuid.UUID) (*UnreadCountResu
 func (s *NotificationService) MarkAsRead(userID, notifID uuid.UUID) (*repository.Notification, error) {
 	notif, err := s.notifRepo.FindByID(notifID)
 	if err != nil {
-		return nil, errors.ErrNotFound
+		return nil, errors.NotFound("notification", notifID.String())
 	}
 
 	// Verify ownership
 	if notif.UserID != userID {
-		return nil, errors.ErrNotFound
+		return nil, errors.NotFound("notification", notifID.String())
 	}
 
 	if err := s.notifRepo.MarkAsRead(notifID); err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.Internal("failed to mark notification as read").WithCause(err)
 	}
 
 	notif.MarkAsRead()
@@ -153,12 +153,12 @@ func (s *NotificationService) MarkAllAsRead(input *MarkAllAsReadInput) (int64, e
 func (s *NotificationService) Delete(userID, notifID uuid.UUID) error {
 	notif, err := s.notifRepo.FindByID(notifID)
 	if err != nil {
-		return errors.ErrNotFound
+		return errors.NotFound("notification", notifID.String())
 	}
 
 	// Verify ownership
 	if notif.UserID != userID {
-		return errors.ErrNotFound
+		return errors.NotFound("notification", notifID.String())
 	}
 
 	return s.notifRepo.Delete(notifID)
@@ -168,4 +168,3 @@ func (s *NotificationService) Delete(userID, notifID uuid.UUID) error {
 func (s *NotificationService) DeleteAllRead(userID uuid.UUID) (int64, error) {
 	return s.notifRepo.DeleteReadByUserID(userID)
 }
-

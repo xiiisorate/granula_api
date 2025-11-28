@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/granula/shared/gen/auth/v1;authv1";
+
+import "common/v1/common.proto";
+
+// AuthService - сервис аутентификации
+service AuthService {
+  // Регистрация нового пользователя
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  
+  // Логин по email/password
+  rpc Login(LoginRequest) returns (LoginResponse);
+  
+  // Валидация JWT токена (для Gateway)
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // Обновление токена
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  
+  // Выход из системы
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  
+  // Выход из всех устройств
+  rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse);
+}
+
+// RegisterRequest - запрос регистрации
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+}
+
+// RegisterResponse - ответ регистрации
+message RegisterResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  int64 expires_in = 4;
+}
+
+// LoginRequest - запрос входа
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  string device_id = 3;
+}
+
+// LoginResponse - ответ входа
+message LoginResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  int64 expires_in = 4;
+}
+
+// ValidateTokenRequest - запрос валидации токена
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+// ValidateTokenResponse - ответ валидации токена
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  repeated string roles = 3;
+}
+
+// RefreshTokenRequest - запрос обновления токена
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// RefreshTokenResponse - ответ обновления токена
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in = 3;
+}
+
+// LogoutRequest - запрос выхода
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+// LogoutResponse - ответ выхода
+message LogoutResponse {
+  bool success = 1;
+}
+
+// LogoutAllRequest - запрос выхода из всех устройств
+message LogoutAllRequest {
+  // Пусто, user_id берется из токена
+}
+
+// LogoutAllResponse - ответ выхода из всех устройств
+message LogoutAllResponse {
+  bool success = 1;
+  int32 sessions_revoked = 2;
+}
+

@@ -1,0 +1,182 @@
+// Floor Plan Service API
+// Управление планировками: загрузка, хранение, распознавание
+
+syntax = "proto3";
+
+package floorplan.v1;
+
+option go_package = "github.com/xiiisorate/granula_api/shared/gen/floorplan/v1;floorplanv1";
+
+import "google/protobuf/timestamp.proto";
+
+// FloorPlanService manages floor plan documents.
+service FloorPlanService {
+  // Upload a new floor plan
+  rpc Upload(UploadRequest) returns (UploadResponse);
+  
+  // Get a floor plan by ID
+  rpc Get(GetRequest) returns (GetResponse);
+  
+  // List floor plans in a workspace
+  rpc List(ListRequest) returns (ListResponse);
+  
+  // Update floor plan metadata
+  rpc Update(UpdateRequest) returns (UpdateResponse);
+  
+  // Delete a floor plan
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  
+  // Start AI recognition
+  rpc StartRecognition(StartRecognitionRequest) returns (StartRecognitionResponse);
+  
+  // Get recognition status
+  rpc GetRecognitionStatus(GetRecognitionStatusRequest) returns (GetRecognitionStatusResponse);
+  
+  // Get presigned download URL
+  rpc GetDownloadURL(GetDownloadURLRequest) returns (GetDownloadURLResponse);
+}
+
+// Floor plan status
+enum FloorPlanStatus {
+  FLOOR_PLAN_STATUS_UNSPECIFIED = 0;
+  FLOOR_PLAN_STATUS_UPLOADED = 1;
+  FLOOR_PLAN_STATUS_PROCESSING = 2;
+  FLOOR_PLAN_STATUS_RECOGNIZED = 3;
+  FLOOR_PLAN_STATUS_CONFIRMED = 4;
+  FLOOR_PLAN_STATUS_FAILED = 5;
+}
+
+// Floor plan entity
+message FloorPlan {
+  string id = 1;
+  string workspace_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string description = 5;
+  FloorPlanStatus status = 6;
+  optional string recognition_job_id = 7;
+  optional string scene_id = 8;
+  FileInfo file_info = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// File information
+message FileInfo {
+  string id = 1;
+  string original_name = 2;
+  string mime_type = 3;
+  int64 size = 4;
+  int32 width = 5;
+  int32 height = 6;
+}
+
+// Recognition options
+message RecognitionOptions {
+  bool detect_load_bearing = 1;
+  bool detect_wet_zones = 2;
+  bool detect_furniture = 3;
+  float scale = 4;
+  int32 orientation = 5;
+  int32 detail_level = 6;
+}
+
+// Upload request
+message UploadRequest {
+  string workspace_id = 1;
+  string owner_id = 2;
+  string name = 3;
+  string description = 4;
+  string file_name = 5;
+  string mime_type = 6;
+  bytes file_data = 7;
+}
+
+// Upload response
+message UploadResponse {
+  bool success = 1;
+  FloorPlan floor_plan = 2;
+}
+
+// Get request
+message GetRequest {
+  string id = 1;
+}
+
+// Get response
+message GetResponse {
+  FloorPlan floor_plan = 1;
+}
+
+// List request
+message ListRequest {
+  string workspace_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+// List response
+message ListResponse {
+  repeated FloorPlan floor_plans = 1;
+  int32 total = 2;
+}
+
+// Update request
+message UpdateRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+// Update response
+message UpdateResponse {
+  bool success = 1;
+  FloorPlan floor_plan = 2;
+}
+
+// Delete request
+message DeleteRequest {
+  string id = 1;
+}
+
+// Delete response
+message DeleteResponse {
+  bool success = 1;
+}
+
+// Start recognition request
+message StartRecognitionRequest {
+  string floor_plan_id = 1;
+  RecognitionOptions options = 2;
+}
+
+// Start recognition response
+message StartRecognitionResponse {
+  bool success = 1;
+  string job_id = 2;
+}
+
+// Get recognition status request
+message GetRecognitionStatusRequest {
+  string job_id = 1;
+}
+
+// Get recognition status response
+message GetRecognitionStatusResponse {
+  string job_id = 1;
+  string status = 2;
+  int32 progress = 3;
+  string error = 4;
+}
+
+// Get download URL request
+message GetDownloadURLRequest {
+  string floor_plan_id = 1;
+}
+
+// Get download URL response
+message GetDownloadURLResponse {
+  string url = 1;
+  int32 expires_in = 2; // seconds
+}
+
