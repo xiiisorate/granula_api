@@ -273,3 +273,4 @@ func BenchmarkNewSnapshot(b *testing.B) {
 		NewSnapshot(branchID, "Snapshot", 1, data)
 	}
 }
+
