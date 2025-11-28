@@ -1,14 +1,5 @@
-// =============================================================================
-// Scene Service Proto
-// =============================================================================
-// Сервис управления 3D сценами планировок:
-// - CRUD операции со сценами
-// - Управление элементами (стены, комнаты, мебель)
-// - Применение операций с проверкой compliance
-// - Статистика и экспорт
-//
-// Version: 1.0.0
-// =============================================================================
+// Scene Service API
+// Управление 3D сценами и элементами
 
 syntax = "proto3";
 
@@ -16,925 +7,220 @@ package scene.v1;
 
 option go_package = "github.com/xiiisorate/granula_api/shared/gen/scene/v1;scenev1";
 
-import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
 
-// =============================================================================
-// Scene Service
-// =============================================================================
-
+// SceneService manages 3D scenes and elements.
 service SceneService {
-  // ---------------------------------------------------------------------------
-  // CRUD Operations
-  // ---------------------------------------------------------------------------
+  // Scene operations
+  rpc CreateScene(CreateSceneRequest) returns (CreateSceneResponse);
+  rpc GetScene(GetSceneRequest) returns (GetSceneResponse);
+  rpc UpdateScene(UpdateSceneRequest) returns (UpdateSceneResponse);
+  rpc DeleteScene(DeleteSceneRequest) returns (DeleteSceneResponse);
+  rpc ListScenes(ListScenesRequest) returns (ListScenesResponse);
   
-  // Create — создать новую сцену.
-  rpc Create(CreateSceneRequest) returns (CreateSceneResponse);
+  // Element operations
+  rpc CreateElement(CreateElementRequest) returns (CreateElementResponse);
+  rpc GetElement(GetElementRequest) returns (GetElementResponse);
+  rpc UpdateElement(UpdateElementRequest) returns (UpdateElementResponse);
+  rpc DeleteElement(DeleteElementRequest) returns (DeleteElementResponse);
+  rpc ListElements(ListElementsRequest) returns (ListElementsResponse);
   
-  // Get — получить сцену по ID.
-  rpc Get(GetSceneRequest) returns (GetSceneResponse);
-  
-  // List — получить список сцен воркспейса.
-  rpc List(ListScenesRequest) returns (ListScenesResponse);
-  
-  // Update — обновить метаданные сцены.
-  rpc Update(UpdateSceneRequest) returns (UpdateSceneResponse);
-  
-  // Delete — удалить сцену.
-  rpc Delete(DeleteSceneRequest) returns (DeleteSceneResponse);
-  
-  // ---------------------------------------------------------------------------
-  // Element Operations
-  // ---------------------------------------------------------------------------
-  
-  // GetElements — получить все элементы сцены.
-  rpc GetElements(GetElementsRequest) returns (GetElementsResponse);
-  
-  // UpdateElements — пакетное обновление элементов.
-  rpc UpdateElements(UpdateElementsRequest) returns (UpdateElementsResponse);
-  
-  // ApplyOperation — применить операцию к элементу.
-  rpc ApplyOperation(ApplyOperationRequest) returns (ApplyOperationResponse);
-  
-  // UndoOperation — отменить последнюю операцию.
-  rpc UndoOperation(UndoOperationRequest) returns (UndoOperationResponse);
-  
-  // RedoOperation — повторить отменённую операцию.
-  rpc RedoOperation(RedoOperationRequest) returns (RedoOperationResponse);
-  
-  // ---------------------------------------------------------------------------
-  // Scene Utilities
-  // ---------------------------------------------------------------------------
-  
-  // Duplicate — создать копию сцены.
-  rpc Duplicate(DuplicateSceneRequest) returns (DuplicateSceneResponse);
-  
-  // GetStats — получить статистику сцены.
-  rpc GetStats(GetSceneStatsRequest) returns (GetSceneStatsResponse);
-  
-  // Export — экспортировать сцену в файл.
-  rpc Export(ExportSceneRequest) returns (ExportSceneResponse);
-  
-  // Import — импортировать сцену из файла.
-  rpc Import(ImportSceneRequest) returns (ImportSceneResponse);
+  // Compliance
+  rpc CheckCompliance(CheckComplianceRequest) returns (CheckComplianceResponse);
 }
 
-// =============================================================================
-// Scene Entity
-// =============================================================================
+// Element type
+enum ElementType {
+  ELEMENT_TYPE_UNSPECIFIED = 0;
+  ELEMENT_TYPE_WALL = 1;
+  ELEMENT_TYPE_ROOM = 2;
+  ELEMENT_TYPE_DOOR = 3;
+  ELEMENT_TYPE_WINDOW = 4;
+  ELEMENT_TYPE_FURNITURE = 5;
+  ELEMENT_TYPE_FIXTURE = 6;
+  ELEMENT_TYPE_DECOR = 7;
+}
 
-// Scene — 3D сцена планировки.
+// Scene entity
 message Scene {
-  // Уникальный ID сцены.
   string id = 1;
-  
-  // ID воркспейса.
   string workspace_id = 2;
-  
-  // ID исходной планировки (floor_plan).
-  string floor_plan_id = 3;
-  
-  // Название сцены.
-  string name = 4;
-  
-  // Описание.
+  string owner_id = 3;
+  string floor_plan_id = 4;
+  string name = 5;
+  string description = 6;
+  common.v1.Dimensions2D dimensions = 7;
+  string main_branch_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// Element entity
+message Element {
+  string id = 1;
+  string scene_id = 2;
+  string branch_id = 3;
+  ElementType type = 4;
+  string name = 5;
+  common.v1.Point3D position = 6;
+  common.v1.Rotation3D rotation = 7;
+  common.v1.Dimensions3D dimensions = 8;
+  string parent_id = 9;
+  int64 version = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// Violation from compliance check
+message Violation {
+  string id = 1;
+  string rule_id = 2;
+  string severity = 3;
+  string title = 4;
   string description = 5;
-  
-  // Элементы сцены.
-  SceneElements elements = 6;
-  
-  // Настройки отображения.
-  DisplaySettings display_settings = 7;
-  
-  // ID активной ветки.
-  string active_branch_id = 8;
-  
-  // Общие размеры (bounding box).
-  common.v1.Dimensions2D dimensions = 9;
-  
-  // Статистика.
-  SceneStats stats = 10;
-  
-  // Результат последней проверки compliance.
-  ComplianceStatus compliance_status = 11;
-  
-  // Метаданные аудита.
-  common.v1.AuditInfo audit = 12;
+  repeated string element_ids = 6;
 }
 
-// SceneElements — все элементы сцены.
-message SceneElements {
-  // Стены.
-  repeated Wall walls = 1;
-  
-  // Комнаты.
-  repeated Room rooms = 2;
-  
-  // Проёмы (двери, окна).
-  repeated Opening openings = 3;
-  
-  // Оборудование (сантехника, вентиляция).
-  repeated Equipment equipment = 4;
-  
-  // Мебель.
-  repeated Furniture furniture = 5;
-}
-
-// =============================================================================
-// Wall — стена
-// =============================================================================
-
-// Wall — элемент стены.
-message Wall {
-  // Уникальный ID.
-  string id = 1;
-  
-  // Начальная точка.
-  common.v1.Point2D start = 2;
-  
-  // Конечная точка.
-  common.v1.Point2D end = 3;
-  
-  // Толщина (метры).
-  float thickness = 4;
-  
-  // Высота (метры). По умолчанию = высота потолка.
-  float height = 5;
-  
-  // Тип стены.
-  WallType type = 6;
-  
-  // Является ли несущей.
-  bool is_load_bearing = 7;
-  
-  // Материал.
-  string material = 8;
-  
-  // Связанные проёмы (ID).
-  repeated string opening_ids = 9;
-  
-  // Состояние (оригинал, новая, к сносу).
-  ElementState state = 10;
-  
-  // Метаданные (произвольные данные).
-  map<string, string> metadata = 11;
-}
-
-// WallType — тип стены.
-enum WallType {
-  WALL_TYPE_UNSPECIFIED = 0;
-  WALL_TYPE_INTERIOR = 1;       // Внутренняя перегородка
-  WALL_TYPE_EXTERIOR = 2;       // Наружная стена
-  WALL_TYPE_LOAD_BEARING = 3;   // Несущая стена
-  WALL_TYPE_PARTITION = 4;      // Лёгкая перегородка
-}
-
-// ElementState — состояние элемента (для отображения изменений).
-enum ElementState {
-  ELEMENT_STATE_UNSPECIFIED = 0;
-  ELEMENT_STATE_ORIGINAL = 1;   // Существующий элемент
-  ELEMENT_STATE_NEW = 2;        // Новый элемент
-  ELEMENT_STATE_MODIFIED = 3;   // Изменённый
-  ELEMENT_STATE_DEMOLISHED = 4; // К сносу/удалению
-}
-
-// =============================================================================
-// Room — комната
-// =============================================================================
-
-// Room — комната/помещение.
-message Room {
-  // Уникальный ID.
-  string id = 1;
-  
-  // Тип комнаты.
-  RoomType type = 2;
-  
-  // Название (пользовательское).
-  string name = 3;
-  
-  // Контур комнаты (полигон).
-  common.v1.Polygon2D boundary = 4;
-  
-  // Площадь (кв.м).
-  float area = 5;
-  
-  // Периметр (м).
-  float perimeter = 6;
-  
-  // Высота потолка (м).
-  float ceiling_height = 7;
-  
-  // Является ли мокрой зоной.
-  bool is_wet_zone = 8;
-  
-  // Имеет ли окна.
-  bool has_windows = 9;
-  
-  // ID стен, образующих комнату.
-  repeated string wall_ids = 10;
-  
-  // ID проёмов в комнате.
-  repeated string opening_ids = 11;
-  
-  // ID оборудования в комнате.
-  repeated string equipment_ids = 12;
-  
-  // ID мебели в комнате.
-  repeated string furniture_ids = 13;
-  
-  // Состояние.
-  ElementState state = 14;
-  
-  // Цвет заливки (для отображения).
-  string fill_color = 15;
-  
-  // Метаданные.
-  map<string, string> metadata = 16;
-}
-
-// RoomType — тип комнаты.
-enum RoomType {
-  ROOM_TYPE_UNSPECIFIED = 0;
-  ROOM_TYPE_LIVING = 1;           // Гостиная
-  ROOM_TYPE_BEDROOM = 2;          // Спальня
-  ROOM_TYPE_KITCHEN = 3;          // Кухня
-  ROOM_TYPE_BATHROOM = 4;         // Ванная
-  ROOM_TYPE_TOILET = 5;           // Туалет
-  ROOM_TYPE_COMBINED_BATHROOM = 6; // Совмещённый санузел
-  ROOM_TYPE_HALLWAY = 7;          // Коридор/прихожая
-  ROOM_TYPE_BALCONY = 8;          // Балкон
-  ROOM_TYPE_LOGGIA = 9;           // Лоджия
-  ROOM_TYPE_STORAGE = 10;         // Кладовая
-  ROOM_TYPE_LAUNDRY = 11;         // Постирочная
-  ROOM_TYPE_OFFICE = 12;          // Кабинет
-  ROOM_TYPE_CHILDREN = 13;        // Детская
-  ROOM_TYPE_DINING = 14;          // Столовая
-  ROOM_TYPE_KITCHEN_LIVING = 15;  // Кухня-гостиная
-  ROOM_TYPE_WARDROBE = 16;        // Гардеробная
-}
-
-// =============================================================================
-// Opening — проём
-// =============================================================================
-
-// Opening — дверь или окно.
-message Opening {
-  // Уникальный ID.
-  string id = 1;
-  
-  // Тип проёма.
-  OpeningType type = 2;
-  
-  // Позиция центра проёма.
-  common.v1.Point2D position = 3;
-  
-  // Ширина (м).
-  float width = 4;
-  
-  // Высота (м).
-  float height = 5;
-  
-  // Высота от пола (м).
-  float elevation = 6;
-  
-  // ID стены, в которой проём.
-  string wall_id = 7;
-  
-  // Угол поворота (для отображения).
-  float rotation = 8;
-  
-  // Направление открывания (для дверей).
-  DoorSwing door_swing = 9;
-  
-  // Состояние.
-  ElementState state = 10;
-  
-  // Метаданные.
-  map<string, string> metadata = 11;
-}
-
-// OpeningType — тип проёма.
-enum OpeningType {
-  OPENING_TYPE_UNSPECIFIED = 0;
-  OPENING_TYPE_DOOR_SINGLE = 1;       // Одностворчатая дверь
-  OPENING_TYPE_DOOR_DOUBLE = 2;       // Двустворчатая дверь
-  OPENING_TYPE_DOOR_SLIDING = 3;      // Раздвижная дверь
-  OPENING_TYPE_DOOR_POCKET = 4;       // Дверь-пенал
-  OPENING_TYPE_WINDOW = 5;            // Окно
-  OPENING_TYPE_WINDOW_FLOOR = 6;      // Панорамное окно
-  OPENING_TYPE_ARCH = 7;              // Арка
-  OPENING_TYPE_PASSAGE = 8;           // Проход без двери
-}
-
-// DoorSwing — направление открывания двери.
-enum DoorSwing {
-  DOOR_SWING_UNSPECIFIED = 0;
-  DOOR_SWING_LEFT_IN = 1;   // Влево внутрь
-  DOOR_SWING_LEFT_OUT = 2;  // Влево наружу
-  DOOR_SWING_RIGHT_IN = 3;  // Вправо внутрь
-  DOOR_SWING_RIGHT_OUT = 4; // Вправо наружу
-}
-
-// =============================================================================
-// Equipment — оборудование
-// =============================================================================
-
-// Equipment — инженерное оборудование.
-message Equipment {
-  // Уникальный ID.
-  string id = 1;
-  
-  // Тип оборудования.
-  EquipmentType type = 2;
-  
-  // Позиция.
-  common.v1.Point2D position = 3;
-  
-  // Размеры.
-  common.v1.Dimensions2D dimensions = 4;
-  
-  // Угол поворота (градусы).
-  float rotation = 5;
-  
-  // ID комнаты.
-  string room_id = 6;
-  
-  // Требует подключения к коммуникациям.
-  bool requires_plumbing = 7;
-  bool requires_electricity = 8;
-  bool requires_gas = 9;
-  bool requires_ventilation = 10;
-  
-  // Состояние.
-  ElementState state = 11;
-  
-  // Бренд/модель.
-  string model = 12;
-  
-  // Метаданные.
-  map<string, string> metadata = 13;
-}
-
-// EquipmentType — тип оборудования.
-enum EquipmentType {
-  EQUIPMENT_TYPE_UNSPECIFIED = 0;
-  
-  // Сантехника
-  EQUIPMENT_TYPE_TOILET = 1;          // Унитаз
-  EQUIPMENT_TYPE_BIDET = 2;           // Биде
-  EQUIPMENT_TYPE_SINK = 3;            // Раковина
-  EQUIPMENT_TYPE_BATHTUB = 4;         // Ванна
-  EQUIPMENT_TYPE_SHOWER = 5;          // Душевая кабина
-  EQUIPMENT_TYPE_WASHING_MACHINE = 6; // Стиральная машина
-  
-  // Кухня
-  EQUIPMENT_TYPE_STOVE = 7;           // Плита
-  EQUIPMENT_TYPE_OVEN = 8;            // Духовка
-  EQUIPMENT_TYPE_HOOD = 9;            // Вытяжка
-  EQUIPMENT_TYPE_DISHWASHER = 10;     // Посудомоечная машина
-  EQUIPMENT_TYPE_REFRIGERATOR = 11;   // Холодильник
-  EQUIPMENT_TYPE_KITCHEN_SINK = 12;   // Кухонная мойка
-  
-  // Отопление/вентиляция
-  EQUIPMENT_TYPE_RADIATOR = 13;       // Радиатор
-  EQUIPMENT_TYPE_BOILER = 14;         // Котёл
-  EQUIPMENT_TYPE_AIR_CONDITIONER = 15; // Кондиционер
-  EQUIPMENT_TYPE_VENTILATION = 16;    // Вентиляционное отверстие
-}
-
-// =============================================================================
-// Furniture — мебель
-// =============================================================================
-
-// Furniture — элемент мебели.
-message Furniture {
-  // Уникальный ID.
-  string id = 1;
-  
-  // Тип мебели.
-  FurnitureType type = 2;
-  
-  // Название (пользовательское).
-  string name = 3;
-  
-  // Позиция.
-  common.v1.Point2D position = 4;
-  
-  // Размеры.
-  common.v1.Dimensions3D dimensions = 5;
-  
-  // Угол поворота (градусы).
-  float rotation = 6;
-  
-  // ID комнаты.
-  string room_id = 7;
-  
-  // Слой отображения (для z-order).
-  int32 layer = 8;
-  
-  // Цвет (hex).
-  string color = 9;
-  
-  // Состояние.
-  ElementState state = 10;
-  
-  // Метаданные.
-  map<string, string> metadata = 11;
-}
-
-// FurnitureType — тип мебели.
-enum FurnitureType {
-  FURNITURE_TYPE_UNSPECIFIED = 0;
-  
-  // Спальня
-  FURNITURE_TYPE_BED_SINGLE = 1;
-  FURNITURE_TYPE_BED_DOUBLE = 2;
-  FURNITURE_TYPE_BED_KING = 3;
-  FURNITURE_TYPE_WARDROBE = 4;
-  FURNITURE_TYPE_DRESSER = 5;
-  FURNITURE_TYPE_NIGHTSTAND = 6;
-  
-  // Гостиная
-  FURNITURE_TYPE_SOFA = 7;
-  FURNITURE_TYPE_ARMCHAIR = 8;
-  FURNITURE_TYPE_COFFEE_TABLE = 9;
-  FURNITURE_TYPE_TV_STAND = 10;
-  FURNITURE_TYPE_BOOKSHELF = 11;
-  
-  // Кухня/столовая
-  FURNITURE_TYPE_DINING_TABLE = 12;
-  FURNITURE_TYPE_DINING_CHAIR = 13;
-  FURNITURE_TYPE_KITCHEN_CABINET = 14;
-  FURNITURE_TYPE_KITCHEN_ISLAND = 15;
-  
-  // Офис
-  FURNITURE_TYPE_DESK = 16;
-  FURNITURE_TYPE_OFFICE_CHAIR = 17;
-  
-  // Общее
-  FURNITURE_TYPE_SHELF = 18;
-  FURNITURE_TYPE_CABINET = 19;
-  FURNITURE_TYPE_PLANT = 20;
-}
-
-// =============================================================================
-// Display Settings
-// =============================================================================
-
-// DisplaySettings — настройки отображения сцены.
-message DisplaySettings {
-  // Режим отображения.
-  DisplayMode mode = 1;
-  
-  // Показывать размеры.
-  bool show_dimensions = 2;
-  
-  // Показывать площади комнат.
-  bool show_room_areas = 3;
-  
-  // Показывать названия комнат.
-  bool show_room_names = 4;
-  
-  // Показывать мебель.
-  bool show_furniture = 5;
-  
-  // Показывать изменения (diff с оригиналом).
-  bool show_changes = 6;
-  
-  // Подсвечивать нарушения compliance.
-  bool highlight_violations = 7;
-  
-  // Масштаб отображения.
-  float scale = 8;
-  
-  // Смещение камеры.
-  common.v1.Point2D camera_offset = 9;
-  
-  // Цветовая схема.
-  string color_scheme = 10;
-}
-
-// DisplayMode — режим отображения.
-enum DisplayMode {
-  DISPLAY_MODE_UNSPECIFIED = 0;
-  DISPLAY_MODE_2D = 1;           // 2D план
-  DISPLAY_MODE_3D = 2;           // 3D вид
-  DISPLAY_MODE_SPLIT = 3;        // 2D + 3D
-}
-
-// =============================================================================
-// Scene Stats
-// =============================================================================
-
-// SceneStats — статистика сцены.
-message SceneStats {
-  // Общая площадь (кв.м).
-  float total_area = 1;
-  
-  // Жилая площадь (кв.м).
-  float living_area = 2;
-  
-  // Количество комнат.
-  int32 rooms_count = 3;
-  
-  // Площади по типам комнат.
-  map<string, float> area_by_room_type = 4;
-  
-  // Количество стен.
-  int32 walls_count = 5;
-  
-  // Количество несущих стен.
-  int32 load_bearing_walls_count = 6;
-  
-  // Количество проёмов.
-  int32 openings_count = 7;
-  
-  // Количество изменений от оригинала.
-  int32 changes_count = 8;
-}
-
-// ComplianceStatus — статус соответствия нормам.
-message ComplianceStatus {
-  // Соответствует ли нормам.
-  bool is_compliant = 1;
-  
-  // Количество нарушений.
-  int32 violations_count = 2;
-  
-  // Количество предупреждений.
-  int32 warnings_count = 3;
-  
-  // Последняя проверка.
-  google.protobuf.Timestamp last_check = 4;
-}
-
-// =============================================================================
-// Request/Response Messages
-// =============================================================================
-
-// CreateSceneRequest — запрос создания сцены.
+// Create scene request
 message CreateSceneRequest {
-  // ID воркспейса.
   string workspace_id = 1;
-  
-  // ID исходной планировки (опционально).
-  string floor_plan_id = 2;
-  
-  // Название сцены.
-  string name = 3;
-  
-  // Описание.
-  string description = 4;
-  
-  // Начальные элементы (если создаём не из floor_plan).
-  SceneElements elements = 5;
-  
-  // Размеры (если без floor_plan).
+  string owner_id = 2;
+  string floor_plan_id = 3;
+  string name = 4;
+  string description = 5;
   common.v1.Dimensions2D dimensions = 6;
 }
 
-// CreateSceneResponse — ответ создания сцены.
+// Create scene response
 message CreateSceneResponse {
-  // Созданная сцена.
-  Scene scene = 1;
+  bool success = 1;
+  Scene scene = 2;
 }
 
-// GetSceneRequest — запрос получения сцены.
+// Get scene request
 message GetSceneRequest {
-  // ID сцены.
-  string scene_id = 1;
-  
-  // ID ветки (опционально, по умолчанию — активная).
-  string branch_id = 2;
-  
-  // Включить элементы.
-  bool include_elements = 3;
-  
-  // Включить статистику.
-  bool include_stats = 4;
+  string id = 1;
 }
 
-// GetSceneResponse — ответ получения сцены.
+// Get scene response
 message GetSceneResponse {
   Scene scene = 1;
 }
 
-// ListScenesRequest — запрос списка сцен.
-message ListScenesRequest {
-  // ID воркспейса.
-  string workspace_id = 1;
-  
-  // Пагинация.
-  common.v1.PaginationRequest pagination = 2;
-  
-  // Сортировка.
-  common.v1.SortField sort = 3;
-}
-
-// ListScenesResponse — список сцен.
-message ListScenesResponse {
-  repeated Scene scenes = 1;
-  common.v1.PaginationResponse pagination = 2;
-}
-
-// UpdateSceneRequest — запрос обновления сцены.
+// Update scene request
 message UpdateSceneRequest {
-  // ID сцены.
-  string scene_id = 1;
-  
-  // Новое название (опционально).
-  optional string name = 2;
-  
-  // Новое описание (опционально).
-  optional string description = 3;
-  
-  // Новые настройки отображения (опционально).
-  DisplaySettings display_settings = 4;
+  string id = 1;
+  string name = 2;
+  string description = 3;
 }
 
-// UpdateSceneResponse — ответ обновления.
+// Update scene response
 message UpdateSceneResponse {
-  Scene scene = 1;
+  bool success = 1;
+  Scene scene = 2;
 }
 
-// DeleteSceneRequest — запрос удаления сцены.
+// Delete scene request
 message DeleteSceneRequest {
-  string scene_id = 1;
+  string id = 1;
 }
 
-// DeleteSceneResponse — ответ удаления.
+// Delete scene response
 message DeleteSceneResponse {
   bool success = 1;
 }
 
-// GetElementsRequest — запрос элементов сцены.
-message GetElementsRequest {
-  string scene_id = 1;
-  string branch_id = 2;
-  
-  // Фильтр по типам элементов (пустой = все).
-  repeated string element_types = 3;
-}
-
-// GetElementsResponse — элементы сцены.
-message GetElementsResponse {
-  SceneElements elements = 1;
-}
-
-// UpdateElementsRequest — пакетное обновление элементов.
-message UpdateElementsRequest {
-  string scene_id = 1;
-  string branch_id = 2;
-  
-  // Элементы для добавления.
-  SceneElements add = 3;
-  
-  // Элементы для обновления.
-  SceneElements update = 4;
-  
-  // ID элементов для удаления.
-  repeated string remove_ids = 5;
-}
-
-// UpdateElementsResponse — результат обновления.
-message UpdateElementsResponse {
-  // Обновлённые элементы.
-  SceneElements elements = 1;
-  
-  // Статус compliance после изменений.
-  ComplianceStatus compliance_status = 2;
-}
-
-// ApplyOperationRequest — применить операцию.
-message ApplyOperationRequest {
-  string scene_id = 1;
-  string branch_id = 2;
-  
-  // Операция.
-  Operation operation = 3;
-  
-  // Проверять compliance перед применением.
-  bool check_compliance = 4;
-}
-
-// Operation — операция над элементом.
-message Operation {
-  // Тип операции.
-  OperationType type = 1;
-  
-  // ID целевого элемента (для существующих).
-  string element_id = 2;
-  
-  // Данные операции (зависит от типа).
-  oneof data {
-    AddWallData add_wall = 3;
-    DemolishWallData demolish_wall = 4;
-    MoveElementData move_element = 5;
-    ResizeElementData resize_element = 6;
-    AddOpeningData add_opening = 7;
-    ChangeRoomTypeData change_room_type = 8;
-    AddEquipmentData add_equipment = 9;
-    AddFurnitureData add_furniture = 10;
-  }
-}
-
-// OperationType — тип операции.
-enum OperationType {
-  OPERATION_TYPE_UNSPECIFIED = 0;
-  OPERATION_TYPE_ADD_WALL = 1;
-  OPERATION_TYPE_DEMOLISH_WALL = 2;
-  OPERATION_TYPE_MOVE_ELEMENT = 3;
-  OPERATION_TYPE_RESIZE_ELEMENT = 4;
-  OPERATION_TYPE_ADD_OPENING = 5;
-  OPERATION_TYPE_CLOSE_OPENING = 6;
-  OPERATION_TYPE_CHANGE_ROOM_TYPE = 7;
-  OPERATION_TYPE_ADD_EQUIPMENT = 8;
-  OPERATION_TYPE_REMOVE_EQUIPMENT = 9;
-  OPERATION_TYPE_ADD_FURNITURE = 10;
-  OPERATION_TYPE_REMOVE_FURNITURE = 11;
-}
-
-// AddWallData — данные для добавления стены.
-message AddWallData {
-  common.v1.Point2D start = 1;
-  common.v1.Point2D end = 2;
-  float thickness = 3;
-  WallType type = 4;
-}
-
-// DemolishWallData — данные для сноса стены.
-message DemolishWallData {
-  // Стена помечается как DEMOLISHED, не удаляется.
-  bool soft_delete = 1;
-}
-
-// MoveElementData — данные для перемещения.
-message MoveElementData {
-  common.v1.Point2D new_position = 1;
-}
-
-// ResizeElementData — данные для изменения размера.
-message ResizeElementData {
-  common.v1.Dimensions2D new_dimensions = 1;
-}
-
-// AddOpeningData — данные для добавления проёма.
-message AddOpeningData {
-  string wall_id = 1;
-  common.v1.Point2D position = 2;
-  float width = 3;
-  float height = 4;
-  OpeningType type = 5;
-}
-
-// ChangeRoomTypeData — данные для смены типа комнаты.
-message ChangeRoomTypeData {
-  RoomType new_type = 1;
-  string new_name = 2;
-}
-
-// AddEquipmentData — данные для добавления оборудования.
-message AddEquipmentData {
-  EquipmentType type = 1;
-  common.v1.Point2D position = 2;
-  float rotation = 3;
-  string room_id = 4;
-}
-
-// AddFurnitureData — данные для добавления мебели.
-message AddFurnitureData {
-  FurnitureType type = 1;
-  string name = 2;
-  common.v1.Point2D position = 3;
-  common.v1.Dimensions3D dimensions = 4;
-  float rotation = 5;
-  string room_id = 6;
-}
-
-// ApplyOperationResponse — результат применения операции.
-message ApplyOperationResponse {
-  // Успешно ли применена операция.
-  bool success = 1;
-  
-  // ID операции (для undo).
-  string operation_id = 2;
-  
-  // Обновлённые элементы.
-  SceneElements affected_elements = 3;
-  
-  // Статус compliance.
-  ComplianceStatus compliance_status = 4;
-  
-  // Ошибка (если не успешно).
-  string error = 5;
-  
-  // Нарушения compliance (если check_compliance=true).
-  repeated ComplianceViolation violations = 6;
-}
-
-// ComplianceViolation — краткая информация о нарушении.
-message ComplianceViolation {
-  string rule_code = 1;
-  string message = 2;
-  string severity = 3;
-}
-
-// UndoOperationRequest — отменить операцию.
-message UndoOperationRequest {
-  string scene_id = 1;
-  string branch_id = 2;
-}
-
-// UndoOperationResponse — результат отмены.
-message UndoOperationResponse {
-  bool success = 1;
-  string operation_id = 2;
-  SceneElements affected_elements = 3;
-}
-
-// RedoOperationRequest — повторить операцию.
-message RedoOperationRequest {
-  string scene_id = 1;
-  string branch_id = 2;
-}
-
-// RedoOperationResponse — результат повтора.
-message RedoOperationResponse {
-  bool success = 1;
-  string operation_id = 2;
-  SceneElements affected_elements = 3;
-}
-
-// DuplicateSceneRequest — создать копию сцены.
-message DuplicateSceneRequest {
-  string scene_id = 1;
-  string new_name = 2;
-  string branch_id = 3; // Какую ветку копировать
-}
-
-// DuplicateSceneResponse — результат копирования.
-message DuplicateSceneResponse {
-  Scene scene = 1;
-}
-
-// GetSceneStatsRequest — запрос статистики.
-message GetSceneStatsRequest {
-  string scene_id = 1;
-  string branch_id = 2;
-}
-
-// GetSceneStatsResponse — статистика сцены.
-message GetSceneStatsResponse {
-  SceneStats stats = 1;
-  ComplianceStatus compliance_status = 2;
-}
-
-// ExportSceneRequest — экспорт сцены.
-message ExportSceneRequest {
-  string scene_id = 1;
-  string branch_id = 2;
-  ExportFormat format = 3;
-  ExportOptions options = 4;
-}
-
-// ExportFormat — формат экспорта.
-enum ExportFormat {
-  EXPORT_FORMAT_UNSPECIFIED = 0;
-  EXPORT_FORMAT_JSON = 1;
-  EXPORT_FORMAT_DXF = 2;
-  EXPORT_FORMAT_SVG = 3;
-  EXPORT_FORMAT_PNG = 4;
-  EXPORT_FORMAT_PDF = 5;
-}
-
-// ExportOptions — опции экспорта.
-message ExportOptions {
-  bool include_furniture = 1;
-  bool include_dimensions = 2;
-  bool include_room_names = 3;
-  float scale = 4;
-  int32 dpi = 5; // Для растровых форматов
-}
-
-// ExportSceneResponse — результат экспорта.
-message ExportSceneResponse {
-  bytes content = 1;
-  string filename = 2;
-  string content_type = 3;
-}
-
-// ImportSceneRequest — импорт сцены.
-message ImportSceneRequest {
+// List scenes request
+message ListScenesRequest {
   string workspace_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+// List scenes response
+message ListScenesResponse {
+  repeated Scene scenes = 1;
+  int32 total = 2;
+}
+
+// Create element request
+message CreateElementRequest {
+  string scene_id = 1;
+  string branch_id = 2;
+  ElementType type = 3;
+  string name = 4;
+  common.v1.Point3D position = 5;
+  common.v1.Rotation3D rotation = 6;
+  common.v1.Dimensions3D dimensions = 7;
+  string parent_id = 8;
+}
+
+// Create element response
+message CreateElementResponse {
+  bool success = 1;
+  Element element = 2;
+}
+
+// Get element request
+message GetElementRequest {
+  string id = 1;
+}
+
+// Get element response
+message GetElementResponse {
+  Element element = 1;
+}
+
+// Update element request
+message UpdateElementRequest {
+  string id = 1;
   string name = 2;
-  bytes content = 3;
-  string content_type = 4;
+  common.v1.Point3D position = 3;
+  common.v1.Rotation3D rotation = 4;
+  common.v1.Dimensions3D dimensions = 5;
 }
 
-// ImportSceneResponse — результат импорта.
-message ImportSceneResponse {
-  Scene scene = 1;
-  repeated string warnings = 2;
+// Update element response
+message UpdateElementResponse {
+  bool success = 1;
+  Element element = 2;
 }
 
+// Delete element request
+message DeleteElementRequest {
+  string id = 1;
+}
+
+// Delete element response
+message DeleteElementResponse {
+  bool success = 1;
+}
+
+// List elements request
+message ListElementsRequest {
+  string branch_id = 1;
+  ElementType type = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+// List elements response
+message ListElementsResponse {
+  repeated Element elements = 1;
+}
+
+// Check compliance request
+message CheckComplianceRequest {
+  string scene_id = 1;
+  string branch_id = 2;
+}
+
+// Check compliance response
+message CheckComplianceResponse {
+  bool is_compliant = 1;
+  repeated Violation violations = 2;
+  int32 total_checks = 3;
+  int32 passed_checks = 4;
+  int32 failed_checks = 5;
+}

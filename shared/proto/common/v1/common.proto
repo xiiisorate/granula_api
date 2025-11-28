@@ -136,6 +136,18 @@ message Dimensions3D {
   double depth = 3;
 }
 
+// Rotation3D — вращение в 3D (углы Эйлера в градусах).
+message Rotation3D {
+  // Угол вращения вокруг оси X (pitch) в градусах.
+  double x = 1;
+  
+  // Угол вращения вокруг оси Y (yaw) в градусах.
+  double y = 2;
+  
+  // Угол вращения вокруг оси Z (roll) в градусах.
+  double z = 3;
+}
+
 // BoundingBox2D — ограничивающий прямоугольник в 2D.
 message BoundingBox2D {
   // Минимальная точка (левый нижний угол).
