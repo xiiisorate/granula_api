@@ -139,4 +139,3 @@ type ElementChange struct {
 	ElementType string
 	Description string
 }
-
