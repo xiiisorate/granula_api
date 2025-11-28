@@ -1,15 +1,5 @@
-// =============================================================================
-// Branch Service Proto
-// =============================================================================
-// Сервис управления ветками дизайна (версионирование планировок):
-// - Древовидная структура веток
-// - Delta-based хранение изменений
-// - Сравнение и слияние веток
-// - Снапшоты для быстрого доступа
-//
-// Аналогия с Git: main branch → feature branches → merge
-// Version: 1.0.0
-// =============================================================================
+// Branch Service API
+// Управление ветками сцен (версионирование планировок)
 
 syntax = "proto3";
 
@@ -17,702 +7,135 @@ package branch.v1;
 
 option go_package = "github.com/xiiisorate/granula_api/shared/gen/branch/v1;branchv1";
 
-import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-// =============================================================================
-// Branch Service
-// =============================================================================
-
+// BranchService manages scene branches for versioning.
 service BranchService {
-  // ---------------------------------------------------------------------------
-  // CRUD Operations
-  // ---------------------------------------------------------------------------
-  
-  // Create — создать новую ветку.
-  rpc Create(CreateBranchRequest) returns (CreateBranchResponse);
-  
-  // Get — получить ветку по ID.
-  rpc Get(GetBranchRequest) returns (GetBranchResponse);
-  
-  // List — получить список веток сцены.
-  rpc List(ListBranchesRequest) returns (ListBranchesResponse);
-  
-  // GetTree — получить дерево веток (иерархия).
-  rpc GetTree(GetBranchTreeRequest) returns (GetBranchTreeResponse);
-  
-  // Update — обновить метаданные ветки.
-  rpc Update(UpdateBranchRequest) returns (UpdateBranchResponse);
-  
-  // Delete — удалить ветку.
-  rpc Delete(DeleteBranchRequest) returns (DeleteBranchResponse);
-  
-  // ---------------------------------------------------------------------------
-  // Branch Operations
-  // ---------------------------------------------------------------------------
-  
-  // Activate — сделать ветку активной.
-  rpc Activate(ActivateBranchRequest) returns (ActivateBranchResponse);
-  
-  // Duplicate — создать копию ветки.
-  rpc Duplicate(DuplicateBranchRequest) returns (DuplicateBranchResponse);
-  
-  // ---------------------------------------------------------------------------
-  // Delta Operations
-  // ---------------------------------------------------------------------------
-  
-  // GetDelta — получить дельту изменений ветки.
-  rpc GetDelta(GetDeltaRequest) returns (GetDeltaResponse);
-  
-  // UpdateDelta — обновить дельту (добавить изменения).
-  rpc UpdateDelta(UpdateDeltaRequest) returns (UpdateDeltaResponse);
-  
-  // ---------------------------------------------------------------------------
-  // Compare & Merge
-  // ---------------------------------------------------------------------------
-  
-  // Compare — сравнить две ветки.
-  rpc Compare(CompareBranchesRequest) returns (CompareBranchesResponse);
-  
-  // Merge — слить ветку в другую.
-  rpc Merge(MergeBranchesRequest) returns (MergeBranchesResponse);
-  
-  // GetMergePreview — предпросмотр результата слияния.
-  rpc GetMergePreview(GetMergePreviewRequest) returns (GetMergePreviewResponse);
-  
-  // ---------------------------------------------------------------------------
-  // Snapshots
-  // ---------------------------------------------------------------------------
-  
-  // CreateSnapshot — создать снапшот текущего состояния.
+  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse);
+  rpc GetBranch(GetBranchRequest) returns (GetBranchResponse);
+  rpc ListBranches(ListBranchesRequest) returns (ListBranchesResponse);
+  rpc DeleteBranch(DeleteBranchRequest) returns (DeleteBranchResponse);
+  rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse);
+  rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
   rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse);
-  
-  // GetSnapshot — получить снапшот.
-  rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
-  
-  // RestoreSnapshot — восстановить состояние из снапшота.
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns (RestoreSnapshotResponse);
-  
-  // ListSnapshots — список снапшотов ветки.
-  rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
 }
 
-// =============================================================================
-// Branch Entity
-// =============================================================================
-
-// Branch — ветка дизайна (версия планировки).
+// Branch entity
 message Branch {
-  // Уникальный ID ветки.
   string id = 1;
-  
-  // ID сцены.
   string scene_id = 2;
-  
-  // ID родительской ветки (null для корневой).
-  string parent_id = 3;
-  
-  // Название ветки.
-  string name = 4;
-  
-  // Описание.
-  string description = 5;
-  
-  // Тип ветки.
-  BranchType type = 6;
-  
-  // Статус ветки.
+  string name = 3;
+  string description = 4;
+  string parent_branch_id = 5;
+  bool is_main = 6;
   BranchStatus status = 7;
-  
-  // Является ли активной (выбранной для работы).
-  bool is_active = 8;
-  
-  // Является ли корневой (main branch).
-  bool is_root = 9;
-  
-  // Цвет для отображения в UI.
-  string color = 10;
-  
-  // Иконка.
-  string icon = 11;
-  
-  // Источник создания.
-  BranchSource source = 12;
-  
-  // Метаданные аудита.
-  common.v1.AuditInfo audit = 13;
-  
-  // Статистика ветки.
-  BranchStats stats = 14;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
 }
 
-// BranchType — тип ветки.
-enum BranchType {
-  BRANCH_TYPE_UNSPECIFIED = 0;
-  BRANCH_TYPE_MAIN = 1;         // Основная ветка (исходная планировка)
-  BRANCH_TYPE_USER = 2;         // Пользовательская ветка
-  BRANCH_TYPE_AI_GENERATED = 3; // Сгенерированная AI
-  BRANCH_TYPE_SNAPSHOT = 4;     // Снапшот (точка сохранения)
-}
-
-// BranchStatus — статус ветки.
 enum BranchStatus {
   BRANCH_STATUS_UNSPECIFIED = 0;
-  BRANCH_STATUS_ACTIVE = 1;     // Активная (можно редактировать)
-  BRANCH_STATUS_ARCHIVED = 2;   // Архивная (только чтение)
-  BRANCH_STATUS_MERGED = 3;     // Слита в другую ветку
-  BRANCH_STATUS_DELETED = 4;    // Помечена на удаление
+  BRANCH_STATUS_ACTIVE = 1;
+  BRANCH_STATUS_MERGED = 2;
+  BRANCH_STATUS_ARCHIVED = 3;
 }
 
-// BranchSource — источник создания ветки.
-message BranchSource {
-  // Тип источника.
-  SourceType type = 1;
-  
-  // ID промпта (для AI-генерации).
-  string prompt_id = 2;
-  
-  // Текст промпта.
-  string prompt_text = 3;
-  
-  // ID исходной ветки (для дублирования).
-  string source_branch_id = 4;
-}
-
-// SourceType — тип источника.
-enum SourceType {
-  SOURCE_TYPE_UNSPECIFIED = 0;
-  SOURCE_TYPE_MANUAL = 1;       // Создана вручную
-  SOURCE_TYPE_AI_GENERATION = 2; // AI генерация
-  SOURCE_TYPE_DUPLICATE = 3;    // Копирование
-  SOURCE_TYPE_IMPORT = 4;       // Импорт
-  SOURCE_TYPE_RECOGNITION = 5;  // Распознавание планировки
-}
-
-// BranchStats — статистика ветки.
-message BranchStats {
-  // Количество изменений от родителя.
-  int32 changes_count = 1;
-  
-  // Количество добавленных элементов.
-  int32 added_elements = 2;
-  
-  // Количество удалённых элементов.
-  int32 removed_elements = 3;
-  
-  // Количество изменённых элементов.
-  int32 modified_elements = 4;
-  
-  // Глубина в дереве.
-  int32 depth = 5;
-  
-  // Количество дочерних веток.
-  int32 children_count = 6;
-  
-  // Количество снапшотов.
-  int32 snapshots_count = 7;
-}
-
-// =============================================================================
-// Delta — изменения относительно родительской ветки
-// =============================================================================
-
-// BranchDelta — дельта изменений ветки.
-message BranchDelta {
-  // ID ветки.
-  string branch_id = 1;
-  
-  // ID родительской ветки.
-  string parent_id = 2;
-  
-  // Список изменений.
-  repeated DeltaChange changes = 3;
-  
-  // Время последнего изменения.
-  google.protobuf.Timestamp updated_at = 4;
-  
-  // Размер дельты (для оптимизации).
-  int32 size = 5;
-}
-
-// DeltaChange — отдельное изменение.
-message DeltaChange {
-  // ID изменения (для отмены).
-  string id = 1;
-  
-  // Тип изменения.
-  ChangeType type = 2;
-  
-  // ID элемента.
-  string element_id = 3;
-  
-  // Тип элемента.
-  string element_type = 4;
-  
-  // Значение до изменения (JSON).
-  string before = 5;
-  
-  // Значение после изменения (JSON).
-  string after = 6;
-  
-  // Время изменения.
-  google.protobuf.Timestamp timestamp = 7;
-  
-  // ID пользователя, сделавшего изменение.
-  string user_id = 8;
-  
-  // Описание изменения.
-  string description = 9;
-}
-
-// ChangeType — тип изменения.
-enum ChangeType {
-  CHANGE_TYPE_UNSPECIFIED = 0;
-  CHANGE_TYPE_ADD = 1;      // Добавление элемента
-  CHANGE_TYPE_UPDATE = 2;   // Обновление элемента
-  CHANGE_TYPE_DELETE = 3;   // Удаление элемента
-  CHANGE_TYPE_MOVE = 4;     // Перемещение элемента
-  CHANGE_TYPE_RESIZE = 5;   // Изменение размера
-}
-
-// =============================================================================
-// Snapshot — снапшот состояния
-// =============================================================================
-
-// Snapshot — снапшот (точка сохранения).
+// Snapshot for undo/redo
 message Snapshot {
-  // ID снапшота.
   string id = 1;
-  
-  // ID ветки.
   string branch_id = 2;
-  
-  // Название снапшота.
   string name = 3;
-  
-  // Описание.
-  string description = 4;
-  
-  // Полное состояние сцены (JSON).
-  string scene_data = 5;
-  
-  // Время создания.
-  google.protobuf.Timestamp created_at = 6;
-  
-  // Кто создал.
-  string created_by = 7;
-  
-  // Автоматический снапшот (перед слиянием и т.д.).
-  bool is_auto = 8;
+  int32 version = 4;
+  google.protobuf.Timestamp created_at = 5;
 }
 
-// =============================================================================
-// Branch Tree — дерево веток
-// =============================================================================
-
-// BranchTreeNode — узел дерева веток.
-message BranchTreeNode {
-  // Ветка.
-  Branch branch = 1;
-  
-  // Дочерние ветки.
-  repeated BranchTreeNode children = 2;
-}
-
-// =============================================================================
-// Compare Result — результат сравнения веток
-// =============================================================================
-
-// BranchComparison — результат сравнения двух веток.
-message BranchComparison {
-  // Исходная ветка.
-  string source_branch_id = 1;
-  
-  // Целевая ветка.
-  string target_branch_id = 2;
-  
-  // Общий предок.
-  string common_ancestor_id = 3;
-  
-  // Изменения только в source.
-  repeated DeltaChange source_only = 4;
-  
-  // Изменения только в target.
-  repeated DeltaChange target_only = 5;
-  
-  // Конфликты (изменён один и тот же элемент).
-  repeated MergeConflict conflicts = 6;
-  
-  // Статистика сравнения.
-  ComparisonStats stats = 7;
-}
-
-// MergeConflict — конфликт слияния.
-message MergeConflict {
-  // ID элемента.
-  string element_id = 1;
-  
-  // Тип элемента.
-  string element_type = 2;
-  
-  // Изменение в source.
-  DeltaChange source_change = 3;
-  
-  // Изменение в target.
-  DeltaChange target_change = 4;
-  
-  // Тип конфликта.
-  ConflictType conflict_type = 5;
-  
-  // Предложенное решение.
-  ConflictResolution suggested_resolution = 6;
-}
-
-// ConflictType — тип конфликта.
-enum ConflictType {
-  CONFLICT_TYPE_UNSPECIFIED = 0;
-  CONFLICT_TYPE_BOTH_MODIFIED = 1;  // Оба изменили элемент
-  CONFLICT_TYPE_MODIFY_DELETE = 2;  // Один изменил, другой удалил
-  CONFLICT_TYPE_BOTH_ADDED = 3;     // Оба добавили похожие элементы
-}
-
-// ConflictResolution — вариант разрешения конфликта.
-message ConflictResolution {
-  // Тип решения.
-  ResolutionType type = 1;
-  
-  // Итоговое значение (JSON).
-  string resolved_value = 2;
-  
-  // Описание.
-  string description = 3;
-}
-
-// ResolutionType — тип разрешения конфликта.
-enum ResolutionType {
-  RESOLUTION_TYPE_UNSPECIFIED = 0;
-  RESOLUTION_TYPE_KEEP_SOURCE = 1;  // Оставить из source
-  RESOLUTION_TYPE_KEEP_TARGET = 2;  // Оставить из target
-  RESOLUTION_TYPE_MERGE = 3;        // Объединить
-  RESOLUTION_TYPE_MANUAL = 4;       // Требует ручного решения
-}
-
-// ComparisonStats — статистика сравнения.
-message ComparisonStats {
-  int32 source_only_count = 1;
-  int32 target_only_count = 2;
-  int32 conflicts_count = 3;
+// Diff between branches
+message BranchDiff {
+  repeated ElementChange added = 1;
+  repeated ElementChange modified = 2;
+  repeated ElementChange deleted = 3;
   int32 total_changes = 4;
 }
 
-// =============================================================================
-// Request/Response Messages
-// =============================================================================
+message ElementChange {
+  string element_id = 1;
+  string element_type = 2;
+  string description = 3;
+}
 
-// CreateBranchRequest — создать ветку.
+// Requests/Responses
 message CreateBranchRequest {
-  // ID сцены.
   string scene_id = 1;
-  
-  // ID родительской ветки (обязательно, кроме root).
-  string parent_id = 2;
-  
-  // Название.
+  string parent_branch_id = 2;
   string name = 3;
-  
-  // Описание.
   string description = 4;
-  
-  // Тип ветки.
-  BranchType type = 5;
-  
-  // Цвет.
-  string color = 6;
-  
-  // Источник создания.
-  BranchSource source = 7;
-  
-  // Сделать активной сразу.
-  bool activate = 8;
 }
 
-// CreateBranchResponse
 message CreateBranchResponse {
-  Branch branch = 1;
+  bool success = 1;
+  Branch branch = 2;
 }
 
-// GetBranchRequest
 message GetBranchRequest {
-  string branch_id = 1;
-  
-  // Включить статистику.
-  bool include_stats = 2;
+  string id = 1;
 }
 
-// GetBranchResponse
 message GetBranchResponse {
   Branch branch = 1;
 }
 
-// ListBranchesRequest — список веток сцены.
 message ListBranchesRequest {
   string scene_id = 1;
-  
-  // Фильтр по статусу.
-  BranchStatus status = 2;
-  
-  // Фильтр по типу.
-  BranchType type = 3;
-  
-  // Только активные.
-  bool active_only = 4;
-  
-  // Пагинация.
-  common.v1.PaginationRequest pagination = 5;
 }
 
-// ListBranchesResponse
 message ListBranchesResponse {
   repeated Branch branches = 1;
-  common.v1.PaginationResponse pagination = 2;
 }
 
-// GetBranchTreeRequest — получить дерево веток.
-message GetBranchTreeRequest {
-  string scene_id = 1;
-  
-  // Максимальная глубина (0 = без ограничений).
-  int32 max_depth = 2;
-}
-
-// GetBranchTreeResponse
-message GetBranchTreeResponse {
-  // Корневой узел (main branch).
-  BranchTreeNode root = 1;
-  
-  // Общее количество веток.
-  int32 total_branches = 2;
-}
-
-// UpdateBranchRequest
-message UpdateBranchRequest {
-  string branch_id = 1;
-  optional string name = 2;
-  optional string description = 3;
-  optional string color = 4;
-}
-
-// UpdateBranchResponse
-message UpdateBranchResponse {
-  Branch branch = 1;
-}
-
-// DeleteBranchRequest
 message DeleteBranchRequest {
-  string branch_id = 1;
-  
-  // Удалить все дочерние ветки.
-  bool delete_children = 2;
-  
-  // Принудительное удаление (даже если есть дочерние).
-  bool force = 3;
+  string id = 1;
 }
 
-// DeleteBranchResponse
 message DeleteBranchResponse {
   bool success = 1;
-  
-  // Количество удалённых веток (включая дочерние).
-  int32 deleted_count = 2;
 }
 
-// ActivateBranchRequest — сделать ветку активной.
-message ActivateBranchRequest {
-  string branch_id = 1;
-}
-
-// ActivateBranchResponse
-message ActivateBranchResponse {
-  Branch branch = 1;
-  
-  // Предыдущая активная ветка.
-  string previous_active_id = 2;
-}
-
-// DuplicateBranchRequest — копировать ветку.
-message DuplicateBranchRequest {
-  string branch_id = 1;
-  string new_name = 2;
-  
-  // Копировать в ту же родительскую ветку.
-  bool same_parent = 3;
-  
-  // Или указать другого родителя.
-  string new_parent_id = 4;
-}
-
-// DuplicateBranchResponse
-message DuplicateBranchResponse {
-  Branch branch = 1;
-}
-
-// GetDeltaRequest — получить дельту ветки.
-message GetDeltaRequest {
-  string branch_id = 1;
-  
-  // Получить изменения начиная с определённого момента.
-  google.protobuf.Timestamp since = 2;
-  
-  // Лимит изменений.
-  int32 limit = 3;
-}
-
-// GetDeltaResponse
-message GetDeltaResponse {
-  BranchDelta delta = 1;
-}
-
-// UpdateDeltaRequest — добавить изменения в дельту.
-message UpdateDeltaRequest {
-  string branch_id = 1;
-  
-  // Изменения для добавления.
-  repeated DeltaChange changes = 2;
-}
-
-// UpdateDeltaResponse
-message UpdateDeltaResponse {
-  BranchDelta delta = 1;
-}
-
-// CompareBranchesRequest — сравнить ветки.
-message CompareBranchesRequest {
-  // Исходная ветка.
+message MergeBranchRequest {
   string source_branch_id = 1;
-  
-  // Целевая ветка.
   string target_branch_id = 2;
+  bool delete_source = 3;
 }
 
-// CompareBranchesResponse
-message CompareBranchesResponse {
-  BranchComparison comparison = 1;
-}
-
-// MergeBranchesRequest — слить ветки.
-message MergeBranchesRequest {
-  // Ветка-источник (будет слита в target).
-  string source_branch_id = 1;
-  
-  // Целевая ветка.
-  string target_branch_id = 2;
-  
-  // Разрешения конфликтов.
-  repeated ConflictResolutionInput resolutions = 3;
-  
-  // Создать снапшот перед слиянием.
-  bool create_snapshot = 4;
-  
-  // Удалить source после слияния.
-  bool delete_source = 5;
-}
-
-// ConflictResolutionInput — выбор пользователя для разрешения конфликта.
-message ConflictResolutionInput {
-  // ID элемента.
-  string element_id = 1;
-  
-  // Выбранный тип разрешения.
-  ResolutionType resolution = 2;
-  
-  // Кастомное значение (для MANUAL).
-  string custom_value = 3;
-}
-
-// MergeBranchesResponse
-message MergeBranchesResponse {
-  // Успешно ли слияние.
+message MergeBranchResponse {
   bool success = 1;
-  
-  // Обновлённая целевая ветка.
-  Branch target_branch = 2;
-  
-  // ID созданного снапшота (если create_snapshot=true).
-  string snapshot_id = 3;
-  
-  // Неразрешённые конфликты (если есть).
-  repeated MergeConflict unresolved_conflicts = 4;
+  int32 changes_merged = 2;
+  repeated string conflicts = 3;
 }
 
-// GetMergePreviewRequest — предпросмотр слияния.
-message GetMergePreviewRequest {
+message GetDiffRequest {
   string source_branch_id = 1;
   string target_branch_id = 2;
 }
 
-// GetMergePreviewResponse
-message GetMergePreviewResponse {
-  // Результат сравнения.
-  BranchComparison comparison = 1;
-  
-  // Возможно ли автоматическое слияние.
-  bool can_auto_merge = 2;
-  
-  // Предупреждения.
-  repeated string warnings = 3;
+message GetDiffResponse {
+  BranchDiff diff = 1;
 }
 
-// CreateSnapshotRequest — создать снапшот.
 message CreateSnapshotRequest {
   string branch_id = 1;
   string name = 2;
-  string description = 3;
 }
 
-// CreateSnapshotResponse
 message CreateSnapshotResponse {
-  Snapshot snapshot = 1;
+  bool success = 1;
+  Snapshot snapshot = 2;
 }
 
-// GetSnapshotRequest
-message GetSnapshotRequest {
-  string snapshot_id = 1;
-}
-
-// GetSnapshotResponse
-message GetSnapshotResponse {
-  Snapshot snapshot = 1;
-}
-
-// RestoreSnapshotRequest — восстановить состояние из снапшота.
 message RestoreSnapshotRequest {
   string snapshot_id = 1;
-  
-  // Создать новую ветку с состоянием снапшота.
-  bool create_new_branch = 2;
-  
-  // Имя новой ветки (если create_new_branch=true).
-  string new_branch_name = 3;
 }
 
-// RestoreSnapshotResponse
 message RestoreSnapshotResponse {
-  // Если create_new_branch=true — новая ветка.
-  Branch branch = 1;
-  
-  // Успешно ли восстановление.
-  bool success = 2;
+  bool success = 1;
 }
-
-// ListSnapshotsRequest — список снапшотов ветки.
-message ListSnapshotsRequest {
-  string branch_id = 1;
-  common.v1.PaginationRequest pagination = 2;
-}
-
-// ListSnapshotsResponse
-message ListSnapshotsResponse {
-  repeated Snapshot snapshots = 1;
-  common.v1.PaginationResponse pagination = 2;
-}
-

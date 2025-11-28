@@ -218,4 +218,3 @@ type FileMetadata struct {
 	LastModified time.Time
 	ETag         string
 }
-

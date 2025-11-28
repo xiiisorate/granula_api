@@ -435,5 +435,3 @@ func convertElementTypeFromPB(t pb.ElementType) entity.ElementType {
 		return entity.ElementTypeFurniture
 	}
 }
-
-
