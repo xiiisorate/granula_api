@@ -263,7 +263,7 @@ services:
       DB_HOST: postgres-auth
       DB_PORT: 5432
       DB_USER: granula
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-granula_secret}
+      DB_PASSWORD: granula_secret
       DB_NAME: auth_db
       DB_SSLMODE: disable
       REDIS_URL: redis://redis:6379
