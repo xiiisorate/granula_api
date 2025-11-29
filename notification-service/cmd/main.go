@@ -1,14 +1,21 @@
+// =============================================================================
 // Package main is the entry point for Notification Service.
+// =============================================================================
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/xiiisorate/granula_api/notification-service/internal/config"
 	"github.com/xiiisorate/granula_api/notification-service/internal/repository"
 	"github.com/xiiisorate/granula_api/notification-service/internal/server"
 	"github.com/xiiisorate/granula_api/notification-service/internal/service"
+	notifpb "github.com/xiiisorate/granula_api/shared/gen/notification/v1"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 
 	"google.golang.org/grpc"
@@ -30,7 +37,10 @@ func main() {
 	})
 	logger.SetGlobal(log)
 
-	log.Info("Starting Notification Service")
+	log.Info("Starting Notification Service",
+		logger.String("env", cfg.AppEnv),
+		logger.String("version", "1.0.0"),
+	)
 
 	// Connect to database
 	dsn := fmt.Sprintf(
@@ -43,10 +53,17 @@ func main() {
 		log.Fatal("Failed to connect to database", logger.Err(err))
 	}
 
+	log.Info("Connected to database",
+		logger.String("host", cfg.DB.Host),
+		logger.String("database", cfg.DB.Name),
+	)
+
 	// Run migrations
 	if err := repository.Migrate(db); err != nil {
 		log.Fatal("Failed to run migrations", logger.Err(err))
 	}
+
+	log.Info("Database migrations completed")
 
 	// Initialize repositories
 	notifRepo := repository.NewNotificationRepository(db)
@@ -55,12 +72,19 @@ func main() {
 	notifService := service.NewNotificationService(notifRepo)
 
 	// Create gRPC server
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(loggingInterceptor(log)),
+	)
+
+	// Register notification service
 	notifServer := server.NewNotificationServer(notifService)
-	server.RegisterNotificationServiceServer(grpcServer, notifServer)
+	notifpb.RegisterNotificationServiceServer(grpcServer, notifServer)
 
 	// Enable reflection for debugging
-	reflection.Register(grpcServer)
+	if cfg.AppEnv != "production" {
+		reflection.Register(grpcServer)
+		log.Info("gRPC reflection enabled (development mode)")
+	}
 
 	// Start server
 	address := fmt.Sprintf("%s:%d", cfg.GRPC.Host, cfg.GRPC.Port)
@@ -69,10 +93,46 @@ func main() {
 		log.Fatal("Failed to listen", logger.Err(err))
 	}
 
-	log.Info("Notification Service listening", logger.String("address", address))
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	if err := grpcServer.Serve(listener); err != nil {
-		log.Fatal("Failed to serve", logger.Err(err))
-	}
+	go func() {
+		log.Info("Notification Service listening", logger.String("address", address))
+		if err := grpcServer.Serve(listener); err != nil {
+			log.Fatal("Failed to serve", logger.Err(err))
+		}
+	}()
+
+	<-quit
+	log.Info("Shutting down Notification Service...")
+
+	grpcServer.GracefulStop()
+
+	log.Info("Notification Service stopped")
 }
 
+// loggingInterceptor returns a gRPC interceptor that logs all requests.
+func loggingInterceptor(log *logger.Logger) grpc.UnaryServerInterceptor {
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (interface{}, error) {
+		log.Debug("gRPC request",
+			logger.String("method", info.FullMethod),
+		)
+
+		resp, err := handler(ctx, req)
+
+		if err != nil {
+			log.Error("gRPC error",
+				logger.String("method", info.FullMethod),
+				logger.Err(err),
+			)
+		}
+
+		return resp, err
+	}
+}

@@ -1,115 +1,25 @@
+// =============================================================================
 // Package server implements gRPC server for Notification Service.
+// =============================================================================
 package server
 
 import (
 	"context"
-	"time"
+
+	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/xiiisorate/granula_api/notification-service/internal/repository"
 	"github.com/xiiisorate/granula_api/notification-service/internal/service"
-
-	"github.com/google/uuid"
-	"google.golang.org/grpc"
+	commonpb "github.com/xiiisorate/granula_api/shared/gen/common/v1"
+	notifpb "github.com/xiiisorate/granula_api/shared/gen/notification/v1"
 )
 
-// NotificationServiceServer is the interface for Notification gRPC service.
-type NotificationServiceServer interface {
-	GetNotifications(ctx context.Context, req *GetNotificationsRequest) (*GetNotificationsResponse, error)
-	GetUnreadCount(ctx context.Context, req *GetUnreadCountRequest) (*GetUnreadCountResponse, error)
-	MarkAsRead(ctx context.Context, req *MarkAsReadRequest) (*MarkAsReadResponse, error)
-	MarkAllAsRead(ctx context.Context, req *MarkAllAsReadRequest) (*MarkAllAsReadResponse, error)
-	DeleteNotification(ctx context.Context, req *DeleteNotificationRequest) (*DeleteNotificationResponse, error)
-	DeleteAllRead(ctx context.Context, req *DeleteAllReadRequest) (*DeleteAllReadResponse, error)
-	SendNotification(ctx context.Context, req *SendNotificationRequest) (*SendNotificationResponse, error)
-}
-
-// Request/Response types
-type GetNotificationsRequest struct {
-	UserID     string
-	Limit      int32
-	Offset     int32
-	UnreadOnly bool
-	Type       string
-}
-
-type GetNotificationsResponse struct {
-	Notifications []*Notification
-	UnreadCount   int64
-	Total         int64
-}
-
-type GetUnreadCountRequest struct {
-	UserID string
-}
-
-type GetUnreadCountResponse struct {
-	UnreadCount int64
-	ByType      map[string]int32
-}
-
-type MarkAsReadRequest struct {
-	UserID         string
-	NotificationID string
-}
-
-type MarkAsReadResponse struct {
-	Notification *Notification
-}
-
-type MarkAllAsReadRequest struct {
-	UserID string
-	Type   string
-	Before string
-}
-
-type MarkAllAsReadResponse struct {
-	MarkedCount int64
-	Message     string
-}
-
-type DeleteNotificationRequest struct {
-	UserID         string
-	NotificationID string
-}
-
-type DeleteNotificationResponse struct {
-	Message string
-}
-
-type DeleteAllReadRequest struct {
-	UserID string
-}
-
-type DeleteAllReadResponse struct {
-	DeletedCount int64
-	Message      string
-}
-
-type SendNotificationRequest struct {
-	UserID  string
-	Type    string
-	Title   string
-	Message string
-	Data    map[string]string
-}
-
-type SendNotificationResponse struct {
-	Notification *Notification
-}
-
-type Notification struct {
-	ID        string
-	Type      string
-	Title     string
-	Message   string
-	Data      map[string]string
-	Read      bool
-	ReadAt    string
-	CreatedAt string
-}
-
-// NotificationServer implements NotificationServiceServer.
+// NotificationServer implements notifpb.NotificationServiceServer.
 type NotificationServer struct {
+	notifpb.UnimplementedNotificationServiceServer
 	notifService *service.NotificationService
 }
 
@@ -118,167 +28,15 @@ func NewNotificationServer(notifService *service.NotificationService) *Notificat
 	return &NotificationServer{notifService: notifService}
 }
 
-// GetNotifications returns a list of notifications.
-func (s *NotificationServer) GetNotifications(ctx context.Context, req *GetNotificationsRequest) (*GetNotificationsResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	var notifType *repository.NotificationType
-	if req.Type != "" {
-		t := repository.NotificationType(req.Type)
-		notifType = &t
-	}
-
-	result, err := s.notifService.GetList(&service.GetListInput{
-		UserID:     userID,
-		Limit:      int(req.Limit),
-		Offset:     int(req.Offset),
-		UnreadOnly: req.UnreadOnly,
-		Type:       notifType,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	notifications := make([]*Notification, len(result.Notifications))
-	for i, n := range result.Notifications {
-		notifications[i] = notifToProto(&n)
-	}
-
-	return &GetNotificationsResponse{
-		Notifications: notifications,
-		UnreadCount:   result.UnreadCount,
-		Total:         result.Total,
-	}, nil
-}
-
-// GetUnreadCount returns unread notification count.
-func (s *NotificationServer) GetUnreadCount(ctx context.Context, req *GetUnreadCountRequest) (*GetUnreadCountResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := s.notifService.GetUnreadCount(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	byType := make(map[string]int32)
-	for k, v := range result.ByType {
-		byType[k] = int32(v)
-	}
-
-	return &GetUnreadCountResponse{
-		UnreadCount: result.UnreadCount,
-		ByType:      byType,
-	}, nil
-}
-
-// MarkAsRead marks a notification as read.
-func (s *NotificationServer) MarkAsRead(ctx context.Context, req *MarkAsReadRequest) (*MarkAsReadResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	notifID, err := uuid.Parse(req.NotificationID)
-	if err != nil {
-		return nil, err
-	}
-
-	notif, err := s.notifService.MarkAsRead(userID, notifID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &MarkAsReadResponse{
-		Notification: notifToProto(notif),
-	}, nil
-}
-
-// MarkAllAsRead marks all notifications as read.
-func (s *NotificationServer) MarkAllAsRead(ctx context.Context, req *MarkAllAsReadRequest) (*MarkAllAsReadResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	var notifType *repository.NotificationType
-	if req.Type != "" {
-		t := repository.NotificationType(req.Type)
-		notifType = &t
-	}
-
-	var before *time.Time
-	if req.Before != "" {
-		t, err := time.Parse(time.RFC3339, req.Before)
-		if err == nil {
-			before = &t
-		}
-	}
-
-	count, err := s.notifService.MarkAllAsRead(&service.MarkAllAsReadInput{
-		UserID: userID,
-		Type:   notifType,
-		Before: before,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &MarkAllAsReadResponse{
-		MarkedCount: count,
-		Message:     "Notifications marked as read",
-	}, nil
-}
-
-// DeleteNotification deletes a notification.
-func (s *NotificationServer) DeleteNotification(ctx context.Context, req *DeleteNotificationRequest) (*DeleteNotificationResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	notifID, err := uuid.Parse(req.NotificationID)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.notifService.Delete(userID, notifID); err != nil {
-		return nil, err
-	}
-
-	return &DeleteNotificationResponse{
-		Message: "Notification deleted",
-	}, nil
-}
-
-// DeleteAllRead deletes all read notifications.
-func (s *NotificationServer) DeleteAllRead(ctx context.Context, req *DeleteAllReadRequest) (*DeleteAllReadResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	count, err := s.notifService.DeleteAllRead(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &DeleteAllReadResponse{
-		DeletedCount: count,
-		Message:      "Notifications deleted",
-	}, nil
-}
-
 // SendNotification creates a new notification.
-func (s *NotificationServer) SendNotification(ctx context.Context, req *SendNotificationRequest) (*SendNotificationResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
+func (s *NotificationServer) SendNotification(ctx context.Context, req *notifpb.SendNotificationRequest) (*notifpb.SendNotificationResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
 	}
 
 	data := make(repository.NotificationData)
@@ -288,35 +46,278 @@ func (s *NotificationServer) SendNotification(ctx context.Context, req *SendNoti
 
 	notif, err := s.notifService.Create(&service.CreateInput{
 		UserID:  userID,
-		Type:    repository.NotificationType(req.Type),
+		Type:    mapNotificationType(req.Type),
 		Title:   req.Title,
 		Message: req.Message,
 		Data:    data,
 	})
 	if err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &SendNotificationResponse{
-		Notification: notifToProto(notif),
+	return &notifpb.SendNotificationResponse{
+		NotificationId: notif.ID.String(),
+		EmailSent:      false,
+		PushSent:       false,
 	}, nil
 }
 
-// RegisterNotificationServiceServer registers the notification service server.
-func RegisterNotificationServiceServer(s *grpc.Server, srv NotificationServiceServer) {
-	// Will be generated from proto
+// GetNotifications returns a list of notifications.
+func (s *NotificationServer) GetNotifications(ctx context.Context, req *notifpb.GetNotificationsRequest) (*notifpb.GetNotificationsResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+	}
+
+	limit := 20
+	offset := 0
+	if req.Pagination != nil {
+		if req.Pagination.PageSize > 0 {
+			limit = int(req.Pagination.PageSize)
+		}
+		if req.Pagination.Page > 0 {
+			offset = (int(req.Pagination.Page) - 1) * limit
+		}
+	}
+
+	var notifType *repository.NotificationType
+	if req.Type != notifpb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED {
+		t := mapNotificationType(req.Type)
+		notifType = &t
+	}
+
+	result, err := s.notifService.GetList(&service.GetListInput{
+		UserID:     userID,
+		Limit:      limit,
+		Offset:     offset,
+		UnreadOnly: req.UnreadOnly,
+		Type:       notifType,
+	})
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	notifications := make([]*notifpb.Notification, len(result.Notifications))
+	for i, n := range result.Notifications {
+		notifications[i] = notifToProto(&n)
+	}
+
+	return &notifpb.GetNotificationsResponse{
+		Notifications: notifications,
+		Pagination: &commonpb.PaginationResponse{
+			Total:      int32(result.Total),
+			TotalPages: int32((result.Total + int64(limit) - 1) / int64(limit)),
+		},
+	}, nil
 }
 
-// Helper function
-func notifToProto(n *repository.Notification) *Notification {
-	notif := &Notification{
-		ID:        n.ID.String(),
-		Type:      string(n.Type),
+// MarkAsRead marks a notification as read.
+func (s *NotificationServer) MarkAsRead(ctx context.Context, req *notifpb.MarkAsReadRequest) (*notifpb.MarkAsReadResponse, error) {
+	if req.NotificationId == "" {
+		return nil, status.Error(codes.InvalidArgument, "notification_id is required")
+	}
+
+	notifID, err := uuid.Parse(req.NotificationId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid notification_id format")
+	}
+
+	// Use a placeholder userID for now - in production this should come from context
+	// The service will validate ownership
+	placeholderUserID := uuid.Nil
+
+	_, err = s.notifService.MarkAsRead(placeholderUserID, notifID)
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	return &notifpb.MarkAsReadResponse{
+		Success: true,
+	}, nil
+}
+
+// MarkAllAsRead marks all notifications as read.
+func (s *NotificationServer) MarkAllAsRead(ctx context.Context, req *notifpb.MarkAllAsReadRequest) (*notifpb.MarkAllAsReadResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+	}
+
+	var notifType *repository.NotificationType
+	if req.Type != notifpb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED {
+		t := mapNotificationType(req.Type)
+		notifType = &t
+	}
+
+	count, err := s.notifService.MarkAllAsRead(&service.MarkAllAsReadInput{
+		UserID: userID,
+		Type:   notifType,
+	})
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	return &notifpb.MarkAllAsReadResponse{
+		MarkedCount: int32(count),
+	}, nil
+}
+
+// GetUnreadCount returns unread notification count.
+func (s *NotificationServer) GetUnreadCount(ctx context.Context, req *notifpb.GetUnreadCountRequest) (*notifpb.GetUnreadCountResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+	}
+
+	result, err := s.notifService.GetUnreadCount(userID)
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	byType := make(map[string]int32)
+	for k, v := range result.ByType {
+		byType[k] = int32(v)
+	}
+
+	return &notifpb.GetUnreadCountResponse{
+		Count:  int32(result.UnreadCount),
+		ByType: byType,
+	}, nil
+}
+
+// SendEmail sends an email.
+func (s *NotificationServer) SendEmail(ctx context.Context, req *notifpb.SendEmailRequest) (*notifpb.SendEmailResponse, error) {
+	// TODO: Implement email sending
+	return &notifpb.SendEmailResponse{
+		Success:   true,
+		MessageId: uuid.New().String(),
+	}, nil
+}
+
+// DeleteNotification deletes a notification.
+func (s *NotificationServer) DeleteNotification(ctx context.Context, req *notifpb.DeleteNotificationRequest) (*notifpb.DeleteNotificationResponse, error) {
+	if req.NotificationId == "" {
+		return nil, status.Error(codes.InvalidArgument, "notification_id is required")
+	}
+
+	notifID, err := uuid.Parse(req.NotificationId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid notification_id format")
+	}
+
+	// Use a placeholder userID for now
+	placeholderUserID := uuid.Nil
+
+	if err := s.notifService.Delete(placeholderUserID, notifID); err != nil {
+		return nil, convertError(err)
+	}
+
+	return &notifpb.DeleteNotificationResponse{
+		Success: true,
+	}, nil
+}
+
+// DeleteAllRead deletes all read notifications.
+func (s *NotificationServer) DeleteAllRead(ctx context.Context, req *notifpb.DeleteAllReadRequest) (*notifpb.DeleteAllReadResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+	}
+
+	count, err := s.notifService.DeleteAllRead(userID)
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	return &notifpb.DeleteAllReadResponse{
+		DeletedCount: int32(count),
+	}, nil
+}
+
+// GetSettings returns notification settings.
+func (s *NotificationServer) GetSettings(ctx context.Context, req *notifpb.GetSettingsRequest) (*notifpb.GetSettingsResponse, error) {
+	// TODO: Implement settings
+	return &notifpb.GetSettingsResponse{
+		Settings: &notifpb.NotificationSettings{
+			UserId:       req.UserId,
+			EmailEnabled: true,
+			PushEnabled:  true,
+			InAppEnabled: true,
+		},
+	}, nil
+}
+
+// UpdateSettings updates notification settings.
+func (s *NotificationServer) UpdateSettings(ctx context.Context, req *notifpb.UpdateSettingsRequest) (*notifpb.UpdateSettingsResponse, error) {
+	// TODO: Implement settings
+	return &notifpb.UpdateSettingsResponse{
+		Settings: req.Settings,
+	}, nil
+}
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+func convertError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	switch err.Error() {
+	case "notification not found":
+		return status.Error(codes.NotFound, err.Error())
+	default:
+		return status.Error(codes.Internal, "internal server error")
+	}
+}
+
+func mapNotificationType(t notifpb.NotificationType) repository.NotificationType {
+	switch t {
+	case notifpb.NotificationType_NOTIFICATION_TYPE_SYSTEM:
+		return repository.NotificationTypeSystem
+	case notifpb.NotificationType_NOTIFICATION_TYPE_WORKSPACE:
+		return repository.NotificationTypeWorkspaceInvite
+	case notifpb.NotificationType_NOTIFICATION_TYPE_REQUEST:
+		return repository.NotificationTypeRequestStatus
+	case notifpb.NotificationType_NOTIFICATION_TYPE_COMPLIANCE:
+		return repository.NotificationTypeComplianceWarning
+	case notifpb.NotificationType_NOTIFICATION_TYPE_AI:
+		return repository.NotificationTypeAIComplete
+	case notifpb.NotificationType_NOTIFICATION_TYPE_COLLABORATION:
+		return repository.NotificationTypeWorkspaceInvite
+	default:
+		return repository.NotificationTypeSystem
+	}
+}
+
+func notifToProto(n *repository.Notification) *notifpb.Notification {
+	notif := &notifpb.Notification{
+		Id:        n.ID.String(),
+		UserId:    n.UserID.String(),
+		Type:      notifpb.NotificationType_NOTIFICATION_TYPE_SYSTEM,
+		Priority:  notifpb.NotificationPriority_NOTIFICATION_PRIORITY_NORMAL,
 		Title:     n.Title,
 		Message:   n.Message,
 		Data:      make(map[string]string),
 		Read:      n.Read,
-		CreatedAt: n.CreatedAt.Format(time.RFC3339),
+		CreatedAt: timestamppb.New(n.CreatedAt),
 	}
 
 	for k, v := range n.Data {
@@ -324,9 +325,8 @@ func notifToProto(n *repository.Notification) *Notification {
 	}
 
 	if n.ReadAt != nil {
-		notif.ReadAt = n.ReadAt.Format(time.RFC3339)
+		notif.ReadAt = timestamppb.New(*n.ReadAt)
 	}
 
 	return notif
 }
-

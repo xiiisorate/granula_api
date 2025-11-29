@@ -1,91 +1,23 @@
+// =============================================================================
 // Package server implements gRPC server for User Service.
+// =============================================================================
 package server
 
 import (
 	"context"
 
+	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/xiiisorate/granula_api/user-service/internal/repository"
 	"github.com/xiiisorate/granula_api/user-service/internal/service"
-
-	"github.com/google/uuid"
-	"google.golang.org/grpc"
+	userpb "github.com/xiiisorate/granula_api/shared/gen/user/v1"
 )
 
-// UserServiceServer is the interface for User gRPC service.
-type UserServiceServer interface {
-	GetProfile(ctx context.Context, req *GetProfileRequest) (*GetProfileResponse, error)
-	UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*UpdateProfileResponse, error)
-	ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error)
-	DeleteAccount(ctx context.Context, req *DeleteAccountRequest) (*DeleteAccountResponse, error)
-}
-
-// Request/Response types
-type GetProfileRequest struct {
-	UserID string
-}
-
-type GetProfileResponse struct {
-	Profile *UserProfile
-}
-
-type UpdateProfileRequest struct {
-	UserID   string
-	Name     *string
-	Settings *UserSettings
-}
-
-type UpdateProfileResponse struct {
-	Profile *UserProfile
-}
-
-type ChangePasswordRequest struct {
-	UserID          string
-	CurrentPassword string
-	NewPassword     string
-	PasswordHash    string
-}
-
-type ChangePasswordResponse struct {
-	Message string
-}
-
-type DeleteAccountRequest struct {
-	UserID   string
-	Password string
-	Reason   string
-}
-
-type DeleteAccountResponse struct {
-	Message string
-}
-
-type UserProfile struct {
-	ID            string
-	Email         string
-	Name          string
-	AvatarURL     string
-	Role          string
-	EmailVerified bool
-	Settings      *UserSettings
-	CreatedAt     string
-	UpdatedAt     string
-}
-
-type UserSettings struct {
-	Language      string
-	Theme         string
-	Units         string
-	Notifications *NotificationSettings
-}
-
-type NotificationSettings struct {
-	Email     bool
-	Push      bool
-	Marketing bool
-}
-
-// UserServer implements UserServiceServer.
+// UserServer implements userpb.UserServiceServer.
 type UserServer struct {
+	userpb.UnimplementedUserServiceServer
 	userService *service.UserService
 }
 
@@ -95,132 +27,145 @@ func NewUserServer(userService *service.UserService) *UserServer {
 }
 
 // GetProfile returns a user profile.
-func (s *UserServer) GetProfile(ctx context.Context, req *GetProfileRequest) (*GetProfileResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
+func (s *UserServer) GetProfile(ctx context.Context, req *userpb.GetProfileRequest) (*userpb.GetProfileResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
 	}
 
 	profile, err := s.userService.GetProfile(userID)
 	if err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &GetProfileResponse{
-		Profile: profileToProto(profile),
+	return &userpb.GetProfileResponse{
+		User: profileToProto(profile),
 	}, nil
 }
 
 // UpdateProfile updates a user profile.
-func (s *UserServer) UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*UpdateProfileResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
+func (s *UserServer) UpdateProfile(ctx context.Context, req *userpb.UpdateProfileRequest) (*userpb.UpdateProfileResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
 	}
 
-	input := &service.UpdateProfileInput{
-		Name: req.Name,
+	input := &service.UpdateProfileInput{}
+	if req.Name != "" {
+		input.Name = &req.Name
 	}
-
-	if req.Settings != nil {
-		input.Settings = &repository.UserSettings{
-			Language: req.Settings.Language,
-			Theme:    req.Settings.Theme,
-			Units:    req.Settings.Units,
-		}
-		if req.Settings.Notifications != nil {
-			input.Settings.Notifications = &repository.NotificationSettings{
-				Email:     req.Settings.Notifications.Email,
-				Push:      req.Settings.Notifications.Push,
-				Marketing: req.Settings.Notifications.Marketing,
-			}
-		}
-	}
+	// Note: AvatarURL update is handled separately via UploadAvatar
 
 	profile, err := s.userService.UpdateProfile(userID, input)
 	if err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &UpdateProfileResponse{
-		Profile: profileToProto(profile),
+	return &userpb.UpdateProfileResponse{
+		User: profileToProto(profile),
 	}, nil
 }
 
-// ChangePassword validates password change.
-func (s *UserServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
+// UploadAvatar uploads a user avatar.
+func (s *UserServer) UploadAvatar(ctx context.Context, req *userpb.UploadAvatarRequest) (*userpb.UploadAvatarResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	// TODO: Implement avatar upload to storage
+	return &userpb.UploadAvatarResponse{
+		AvatarUrl: "https://storage.granula.ru/avatars/default.png",
+	}, nil
+}
+
+// ChangePassword changes user password.
+func (s *UserServer) ChangePassword(ctx context.Context, req *userpb.ChangePasswordRequest) (*userpb.ChangePasswordResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
 	}
 
 	err = s.userService.ChangePassword(&service.ChangePasswordInput{
 		UserID:          userID,
 		CurrentPassword: req.CurrentPassword,
 		NewPassword:     req.NewPassword,
-		PasswordHash:    req.PasswordHash,
 	})
 	if err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &ChangePasswordResponse{
-		Message: "Password changed successfully",
+	return &userpb.ChangePasswordResponse{
+		Success: true,
 	}, nil
 }
 
-// DeleteAccount deletes a user account.
-func (s *UserServer) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) (*DeleteAccountResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
+// DeleteUser deletes a user account.
+func (s *UserServer) DeleteUser(ctx context.Context, req *userpb.DeleteUserRequest) (*userpb.DeleteUserResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
 	}
 
 	if err := s.userService.DeleteAccount(userID); err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &DeleteAccountResponse{
-		Message: "Account deleted successfully",
+	return &userpb.DeleteUserResponse{
+		Success: true,
 	}, nil
 }
 
-// RegisterUserServiceServer registers the user service server.
-func RegisterUserServiceServer(s *grpc.Server, srv UserServiceServer) {
-	// Will be generated from proto
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+func convertError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	switch err.Error() {
+	case "user not found":
+		return status.Error(codes.NotFound, err.Error())
+	case "invalid password":
+		return status.Error(codes.Unauthenticated, "current password is incorrect")
+	case "new password must be different":
+		return status.Error(codes.InvalidArgument, err.Error())
+	default:
+		return status.Error(codes.Internal, "internal server error")
+	}
 }
 
-// Helper function
-func profileToProto(p *repository.UserProfile) *UserProfile {
-	profile := &UserProfile{
-		ID:            p.ID.String(),
+func profileToProto(p *repository.UserProfile) *userpb.User {
+	user := &userpb.User{
+		Id:            p.ID.String(),
 		Email:         p.Email,
 		Name:          p.Name,
 		Role:          p.Role,
 		EmailVerified: p.EmailVerified,
-		CreatedAt:     p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:     p.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		CreatedAt:     p.CreatedAt.Unix(),
+		UpdatedAt:     p.UpdatedAt.Unix(),
 	}
 
 	if p.AvatarURL != nil {
-		profile.AvatarURL = *p.AvatarURL
+		user.AvatarUrl = *p.AvatarURL
 	}
 
-	if p.Settings != nil {
-		profile.Settings = &UserSettings{
-			Language: p.Settings.Language,
-			Theme:    p.Settings.Theme,
-			Units:    p.Settings.Units,
-		}
-		if p.Settings.Notifications != nil {
-			profile.Settings.Notifications = &NotificationSettings{
-				Email:     p.Settings.Notifications.Email,
-				Push:      p.Settings.Notifications.Push,
-				Marketing: p.Settings.Notifications.Marketing,
-			}
-		}
-	}
-
-	return profile
+	return user
 }
-

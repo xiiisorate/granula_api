@@ -61,6 +61,7 @@ func (s *JWTService) GenerateAccessToken(user *repository.User) (string, time.Ti
 }
 
 // GenerateRefreshToken generates a refresh token.
+// Each refresh token has a unique ID (JTI) to prevent duplicate key issues.
 func (s *JWTService) GenerateRefreshToken(user *repository.User) (string, time.Time, error) {
 	expiresAt := time.Now().Add(s.refreshExpire)
 
@@ -69,6 +70,7 @@ func (s *JWTService) GenerateRefreshToken(user *repository.User) (string, time.T
 		Email:  user.Email,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.New().String(), // Unique JWT ID to ensure uniqueness
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
