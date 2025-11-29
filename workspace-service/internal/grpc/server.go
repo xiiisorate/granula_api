@@ -81,11 +81,18 @@ func NewWorkspaceServer(svc *service.WorkspaceService, log *logger.Logger) *Work
 func (s *WorkspaceServer) CreateWorkspace(ctx context.Context, req *workspacev1.CreateWorkspaceRequest) (*workspacev1.CreateWorkspaceResponse, error) {
 	s.log.Info("CreateWorkspace called",
 		logger.String("name", req.Name),
+		logger.String("owner_id", req.OwnerId),
 	)
 
-	// Get owner ID from context (would be set by auth middleware in production)
-	// For now, we'll generate one as placeholder
-	ownerID := uuid.New()
+	// Parse owner ID from request (passed from API Gateway auth context)
+	if req.OwnerId == "" {
+		return nil, status.Error(codes.InvalidArgument, "owner_id is required")
+	}
+
+	ownerID, err := uuid.Parse(req.OwnerId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid owner_id format")
+	}
 
 	// Call service
 	ws, err := s.service.CreateWorkspace(ctx, ownerID, req.Name, req.Description)
