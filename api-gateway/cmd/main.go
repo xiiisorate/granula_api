@@ -105,11 +105,15 @@ func main() {
 		Format:     "${time} | ${status} | ${latency} | ${method} ${path}\n",
 		TimeFormat: "2006-01-02 15:04:05",
 	}))
+	// CORS configuration
+	// Note: AllowCredentials cannot be true when AllowOrigins is "*"
+	// For development, we allow all origins without credentials
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID",
-		AllowCredentials: cfg.CORSAllowCredentials,
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID,X-Requested-With",
+		ExposeHeaders:    "Content-Length,Content-Type,X-Request-ID",
+		AllowCredentials: false, // Must be false when AllowOrigins is "*"
 	}))
 
 	// ==========================================================================

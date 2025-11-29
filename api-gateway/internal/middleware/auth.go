@@ -7,15 +7,12 @@ import (
 	"time"
 
 	"github.com/xiiisorate/granula_api/api-gateway/internal/config"
+	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
-
-// Ensure imports are used
-var _ = errors.New
-var _ = time.Now
 
 // Claims represents JWT token claims.
 type Claims struct {
@@ -45,11 +42,19 @@ func Auth(cfg *config.Config) fiber.Handler {
 		// Validate token
 		claims, err := validateToken(tokenString, cfg.JWTSecret)
 		if err != nil {
+			// Log detailed error for debugging
+			logger.Global().Error("JWT validation failed",
+				logger.Err(err),
+				logger.String("path", c.Path()),
+				logger.String("method", c.Method()),
+			)
 			return fiber.NewError(fiber.StatusUnauthorized, "invalid token")
 		}
 
 		// Set user info in context
-		c.Locals("userID", claims.UserID)
+		// Using string keys that match what handlers expect
+		c.Locals("userID", claims.UserID)           // uuid.UUID for backward compatibility
+		c.Locals("user_id", claims.UserID.String()) // string for new handlers
 		c.Locals("email", claims.Email)
 		c.Locals("role", claims.Role)
 
@@ -59,24 +64,42 @@ func Auth(cfg *config.Config) fiber.Handler {
 
 // validateToken validates a JWT token.
 func validateToken(tokenString, secret string) (*Claims, error) {
+	log := logger.Global()
+
+	// Check if secret is configured
+	if len(secret) == 0 {
+		log.Error("JWT secret is empty!")
+		return nil, errors.New("jwt secret not configured")
+	}
+
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			log.Error("Invalid JWT signing method")
 			return nil, errors.New("invalid signing method")
 		}
 		return []byte(secret), nil
 	})
 
 	if err != nil {
+		// Log specific JWT error for debugging
+		log.Debug("JWT parse error", logger.Err(err))
 		return nil, err
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+		log.Debug("Token claims invalid",
+			logger.Bool("claims_ok", ok),
+			logger.Bool("token_valid", token.Valid),
+		)
+		return nil, errors.New("invalid token claims")
 	}
 
-	// Check expiration
+	// Check expiration (jwt library already checks this, but we log it)
 	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+		log.Debug("Token expired",
+			logger.String("expires_at", claims.ExpiresAt.Time.String()),
+		)
 		return nil, errors.New("token expired")
 	}
 
