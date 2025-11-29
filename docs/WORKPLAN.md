@@ -1,14 +1,14 @@
 # 📋 GRANULA API - ПОЛНЫЙ ПЛАН РАБОТ
 
-> **Дата обновления:** 29.11.2024  
-> **Статус проекта:** В разработке (80% готово)  
-> **Следующий этап:** Финализация и локальный деплой
+> **Дата обновления:** 29.11.2024 (вечер)  
+> **Статус проекта:** В разработке (95% готово)  
+> **Следующий этап:** Генерация proto и локальный деплой
 
 ---
 
 ## 📊 ТЕКУЩИЙ СТАТУС СИСТЕМЫ
 
-### Результаты анализа (29.11.2024):
+### Результаты работы (29.11.2024):
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -18,35 +18,60 @@
 │  SHARED MODULE                               D1 SERVICES (Core)                  │
 │  ─────────────────                           ─────────────────────               │
 │  [✅] shared/pkg/*                           [✅] auth-service                   │
-│  [⚠️] shared/gen/* (ПУСТО!)                  [❌] user-service (go.sum)          │
-│  [✅] shared/proto/*                         [❌] api-gateway (go.sum)           │
-│                                              [❌] notification-service (go.sum)  │
-│                                              [❌] workspace-service (НЕТ)        │
-│                                              [❌] request-service (НЕТ)          │
+│  [⚠️] shared/gen/* (ПУСТО!)                  [✅] user-service                   │
+│  [✅] shared/proto/*                         [✅] api-gateway                    │
+│                                              [✅] notification-service           │
+│                                              [✅] workspace-service (NEW!)       │
+│                                              [✅] request-service (NEW!)         │
 │                                                                                  │
-│  D2 SERVICES (AI/3D)                         ТЕСТЫ                               │
-│  ────────────────────                        ───────────                         │
-│  [✅] compliance-service                     [✅] compliance-service/engine_test │
-│  [✅] ai-service                             [✅] ai-service/client_test         │
-│  [✅] floorplan-service                      [✅] ai-service/chat_test           │
-│  [✅] scene-service                          [✅] floorplan-service/entity_test  │
-│  [✅] branch-service                         [✅] scene-service/entity_test      │
-│                                              [✅] branch-service/entity_test     │
+│  D2 SERVICES (AI/3D)                         SWAGGER & DOCS                      │
+│  ────────────────────                        ───────────────────                 │
+│  [✅] compliance-service + Dockerfile        [✅] api-gateway/docs/swagger.yaml  │
+│  [✅] ai-service + Dockerfile                [✅] DTOs для всех сервисов         │
+│  [✅] floorplan-service + Dockerfile         [✅] HTTP handlers для всех         │
+│  [✅] scene-service + Dockerfile             [✅] docker-compose.yml             │
+│  [✅] branch-service + Dockerfile                                                │
+│                                                                                  │
+│  ТЕСТЫ                                       INFRASTRUCTURE                      │
+│  ───────────                                 ───────────────                     │
+│  [✅] compliance-service/engine_test         [✅] 6x PostgreSQL                  │
+│  [✅] ai-service/client_test                 [✅] 1x MongoDB                     │
+│  [✅] ai-service/chat_test                   [✅] 1x Redis                       │
+│  [✅] floorplan-service/entity_test          [✅] 1x MinIO                       │
+│  [✅] scene-service/entity_test                                                  │
+│  [✅] branch-service/entity_test                                                 │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 Легенда: [✅] Готово/Компилируется  [⚠️] Частично  [❌] Требует исправления
 ```
 
+### 📈 ПРОГРЕСС СЕССИИ (29.11.2024 вечер):
+
+| Задача | Статус |
+|--------|--------|
+| Исправить go.sum для D1 сервисов | ✅ Готово |
+| Создать Workspace Service | ✅ Готово |
+| Создать Request Service | ✅ Готово |
+| Dockerfiles для D2 сервисов | ✅ Готово |
+| Swagger документация (1000+ строк) | ✅ Готово |
+| HTTP handlers в API Gateway | ✅ Готово |
+| docker-compose.yml с 11 сервисами | ✅ Готово |
+| Генерация proto файлов | ⏳ Следующий шаг |
+
 ---
 
-## 🎯 КРИТИЧЕСКИЕ ПРОБЛЕМЫ (ИСПРАВИТЬ НЕМЕДЛЕННО)
+## 🎯 ОСТАВШИЕСЯ ЗАДАЧИ
 
-### 1. Proto файлы не сгенерированы
+### 1. Proto файлы не сгенерированы (ЕДИНСТВЕННАЯ КРИТИЧЕСКАЯ)
 ```
 Проблема: shared/gen/ пустая директория
 Решение: Запустить protoc для всех .proto файлов
 Команда: make proto (или вручную через protoc)
+
+Это блокирует:
+- Интеграцию gRPC клиентов в API Gateway
+- Реальную регистрацию gRPC серверов
 ```
 
 ### 2. D1 сервисы не компилируются (missing go.sum)
