@@ -29,6 +29,8 @@ import (
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -91,6 +93,12 @@ func main() {
 	// Register auth service
 	authServer := grpcserver.NewAuthServer(authService)
 	authpb.RegisterAuthServiceServer(grpcServer, authServer)
+
+	// Register gRPC health check
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("auth-service", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// Enable reflection for debugging (development only)
 	if cfg.AppEnv != "production" {
