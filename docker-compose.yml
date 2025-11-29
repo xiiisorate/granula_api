@@ -204,8 +204,8 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Console
+      - "9010:9000"   # S3 API (host 9010 -> container 9000)
+      - "9011:9001"   # Console (host 9011 -> container 9001)
     networks:
       - granula-network
     healthcheck:
