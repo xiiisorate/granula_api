@@ -1,317 +1,462 @@
-# 📋 Полный план работ — Granula API
+# 📋 GRANULA API - ПОЛНЫЙ ПЛАН РАБОТ
 
-> **Дата:** После синхронизации всех веток  
-> **Статус:** Все ветки D1 и D2 смержены в `dev/shared`
+> **Дата обновления:** 29.11.2024  
+> **Статус проекта:** В разработке (80% готово)  
+> **Следующий этап:** Финализация и локальный деплой
 
 ---
 
-## 📊 АКТУАЛЬНЫЙ СТАТУС (после синхронизации)
+## 📊 ТЕКУЩИЙ СТАТУС СИСТЕМЫ
+
+### Результаты анализа (29.11.2024):
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         ТЕКУЩЕЕ СОСТОЯНИЕ ПРОЕКТА                          │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│  DEVELOPER 1 (Core)                    DEVELOPER 2 (AI/3D)                 │
-│  ─────────────────                     ────────────────────                │
-│                                                                            │
-│  [✅] Auth Service (14 файлов)         [✅] Compliance Svc (9 файлов)       │
-│  [✅] User Service (6 файлов)          [✅] AI Service (14 файлов)          │
-│  [✅] API Gateway (7 файлов)           [✅] Floor Plan Svc (8 файлов)       │
-│  [✅] Notification Svc (6 файлов)      [✅] Scene Service (9 файлов)        │
-│  [❌] Workspace Service                [✅] Branch Service (7 файлов)       │
-│  [❌] Request Service                                                       │
-│                                                                            │
-│  Proto файлы:                          Proto файлы:                        │
-│  [✅] auth.proto                       [✅] ai.proto                        │
-│  [✅] user.proto                       [✅] compliance.proto                │
-│  [✅] notification.proto               [✅] floorplan.proto                 │
-│  [✅] workspace.proto                  [✅] scene.proto                     │
-│  [✅] request.proto                    [✅] branch.proto                    │
-│                                        [✅] common.proto                   │
-│                                                                            │
-│  Тесты: 0                              Тесты: 6 файлов ✅                   │
-│                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            СТАТУС КОМПИЛЯЦИИ                                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  SHARED MODULE                               D1 SERVICES (Core)                  │
+│  ─────────────────                           ─────────────────────               │
+│  [✅] shared/pkg/*                           [✅] auth-service                   │
+│  [⚠️] shared/gen/* (ПУСТО!)                  [❌] user-service (go.sum)          │
+│  [✅] shared/proto/*                         [❌] api-gateway (go.sum)           │
+│                                              [❌] notification-service (go.sum)  │
+│                                              [❌] workspace-service (НЕТ)        │
+│                                              [❌] request-service (НЕТ)          │
+│                                                                                  │
+│  D2 SERVICES (AI/3D)                         ТЕСТЫ                               │
+│  ────────────────────                        ───────────                         │
+│  [✅] compliance-service                     [✅] compliance-service/engine_test │
+│  [✅] ai-service                             [✅] ai-service/client_test         │
+│  [✅] floorplan-service                      [✅] ai-service/chat_test           │
+│  [✅] scene-service                          [✅] floorplan-service/entity_test  │
+│  [✅] branch-service                         [✅] scene-service/entity_test      │
+│                                              [✅] branch-service/entity_test     │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
----
-
-## 🔴 DEVELOPER 1 — Оставшиеся задачи
-
-### 1. Workspace Service (СОЗДАТЬ С НУЛЯ) — ~3ч
-
-Proto файл уже готов: `shared/proto/workspace/v1/workspace.proto` ✅
-
-| # | Задача | Файл | Время |
-|---|--------|------|-------|
-| 1.1 | ✅ Proto файл | `shared/proto/workspace/v1/workspace.proto` | готово |
-| 1.2 | Создать go.mod | `workspace-service/go.mod` | 5м |
-| 1.3 | Сгенерировать Go код | `make proto-workspace` | 5м |
-| 1.4 | Config | `internal/config/config.go` | 15м |
-| 1.5 | Entity: Workspace, Member | `internal/domain/entity/workspace.go` | 25м |
-| 1.6 | Repository | `internal/repository/postgres/workspace.go` | 35м |
-| 1.7 | Service | `internal/service/workspace_service.go` | 45м |
-| 1.8 | gRPC Server | `internal/grpc/server.go` | 35м |
-| 1.9 | Main | `cmd/server/main.go` | 15м |
-| 1.10 | Миграции | `migrations/000001_*.sql` | 15м |
-| 1.11 | Dockerfile | `Dockerfile` | 10м |
-| 1.12 | Тесты | `internal/service/workspace_test.go` | 25м |
-
-### 2. Request Service (СОЗДАТЬ С НУЛЯ) — ~3ч
-
-Proto файл уже готов: `shared/proto/request/v1/request.proto` ✅
-
-| # | Задача | Файл | Время |
-|---|--------|------|-------|
-| 2.1 | ✅ Proto файл | `shared/proto/request/v1/request.proto` | готово |
-| 2.2 | Создать go.mod | `request-service/go.mod` | 5м |
-| 2.3 | Сгенерировать Go код | `make proto-request` | 5м |
-| 2.4 | Config | `internal/config/config.go` | 15м |
-| 2.5 | Entity: Request, StatusHistory | `internal/domain/entity/request.go` | 25м |
-| 2.6 | Repository | `internal/repository/postgres/request.go` | 35м |
-| 2.7 | Service | `internal/service/request_service.go` | 45м |
-| 2.8 | gRPC Server | `internal/grpc/server.go` | 35м |
-| 2.9 | Main | `cmd/server/main.go` | 15м |
-| 2.10 | Миграции | `migrations/000001_*.sql` | 15м |
-| 2.11 | Dockerfile | `Dockerfile` | 10м |
-| 2.12 | Тесты | `internal/service/request_test.go` | 25м |
-
-### 3. Исправления и тесты для готовых сервисов — ~2ч
-
-| # | Задача | Сервис | Время |
-|---|--------|--------|-------|
-| 3.1 | Исправить импорт (auth.go:9 ошибка) | auth-service | 10м |
-| 3.2 | Сгенерировать Go код из proto | auth-service | 10м |
-| 3.3 | Сгенерировать Go код из proto | user-service | 10м |
-| 3.4 | Сгенерировать Go код из proto | notification-service | 10м |
-| 3.5 | Unit тесты AuthService | auth-service | 30м |
-| 3.6 | Unit тесты UserService | user-service | 25м |
-| 3.7 | Unit тесты NotificationService | notification-service | 25м |
-
----
-
-## 🟢 DEVELOPER 2 — Оставшиеся задачи
-
-### 4. Dockerfiles и сборка — ~30м
-
-| # | Задача | Сервис | Время |
-|---|--------|--------|-------|
-| 4.1 | Создать Dockerfile | compliance-service | 5м |
-| 4.2 | Создать Dockerfile | ai-service | 5м |
-| 4.3 | Создать Dockerfile | floorplan-service | 5м |
-| 4.4 | Создать Dockerfile | scene-service | 5м |
-| 4.5 | Создать Dockerfile | branch-service | 5м |
-| 4.6 | Проверить `go build ./...` для всех | все D2 | 10м |
-
-### 5. API Gateway — gRPC клиенты D2 сервисов — ~1.5ч
-
-| # | Задача | Файл | Время |
-|---|--------|------|-------|
-| 5.1 | gRPC клиент FloorPlan | `api-gateway/internal/grpc/floorplan.go` | 15м |
-| 5.2 | gRPC клиент Scene | `api-gateway/internal/grpc/scene.go` | 15м |
-| 5.3 | gRPC клиент Branch | `api-gateway/internal/grpc/branch.go` | 15м |
-| 5.4 | gRPC клиент AI | `api-gateway/internal/grpc/ai.go` | 15м |
-| 5.5 | gRPC клиент Compliance | `api-gateway/internal/grpc/compliance.go` | 15м |
-| 5.6 | Регистрация клиентов в main | `api-gateway/cmd/main.go` | 15м |
-
-### 6. API Gateway — HTTP Handlers D2 — ~2ч
-
-| # | Задача | Файл | Время |
-|---|--------|------|-------|
-| 6.1 | Handlers FloorPlan | `api-gateway/internal/handlers/floorplan.go` | 20м |
-| 6.2 | Handlers Scene | `api-gateway/internal/handlers/scene.go` | 20м |
-| 6.3 | Handlers Branch | `api-gateway/internal/handlers/branch.go` | 20м |
-| 6.4 | Handlers AI/Chat | `api-gateway/internal/handlers/ai.go` | 25м |
-| 6.5 | Handlers Compliance | `api-gateway/internal/handlers/compliance.go` | 20м |
-| 6.6 | Регистрация routes | `api-gateway/cmd/main.go` | 15м |
-
----
-
-## 🔵 СОВМЕСТНЫЕ ЗАДАЧИ — Интеграция
-
-### 7. Docker Compose финализация — ~1ч
-
-| # | Задача | Ответственный | Время |
-|---|--------|---------------|-------|
-| 7.1 | Добавить все сервисы в docker-compose | D1 | 20м |
-| 7.2 | Настроить depends_on и healthcheck | D1 | 20м |
-| 7.3 | Протестировать запуск всего | D1 + D2 | 20м |
-
-### 8. E2E тестирование — ~2ч
-
-| # | Сценарий | Ответственный | Время |
-|---|----------|---------------|-------|
-| 8.1 | Регистрация → Логин → Профиль | D1 | 20м |
-| 8.2 | Создание workspace → Добавление участников | D1 | 20м |
-| 8.3 | Загрузка планировки → AI распознавание | D2 | 25м |
-| 8.4 | Создание сцены → Редактирование → Compliance | D2 | 25м |
-| 8.5 | AI генерация вариантов → Ветки | D2 | 25м |
-| 8.6 | Создание заявки → Уведомления | D1 | 20м |
-
----
-
-## ⏰ ОПТИМАЛЬНЫЙ TIMELINE (8-10 часов)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ПАРАЛЛЕЛЬНАЯ РАБОТА                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ЧАС 0-1                                                                    │
-│  ────────                                                                   │
-│  [D1] Исправить импорты, сгенерировать proto код                           │
-│  [D2] Создать Dockerfiles для D2 сервисов, проверить сборку                │
-│                                                                             │
-│  ЧАС 1-4                                                                    │
-│  ────────                                                                   │
-│  [D1] Workspace Service (entity → repo → service → grpc → main)            │
-│  [D2] API Gateway: gRPC клиенты + handlers для D2 сервисов                 │
-│                                                                             │
-│  ЧАС 4-7                                                                    │
-│  ────────                                                                   │
-│  [D1] Request Service (entity → repo → service → grpc → main)              │
-│  [D2] Интеграционные тесты AI↔FloorPlan↔Scene↔Branch                       │
-│                                                                             │
-│  ЧАС 7-8                                                                    │
-│  ────────                                                                   │
-│  [D1] Тесты для auth/user/notification                                     │
-│  [D2] Тесты handlers в API Gateway                                         │
-│                                                                             │
-│  ЧАС 8-9                                                                    │
-│  ────────                                                                   │
-│  [D1+D2] Docker Compose финализация, запуск всех сервисов                  │
-│                                                                             │
-│  ЧАС 9-10                                                                   │
-│  ────────                                                                   │
-│  [D1+D2] E2E тестирование, bugfixes                                        │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+Легенда: [✅] Готово/Компилируется  [⚠️] Частично  [❌] Требует исправления
 ```
 
 ---
 
-## 📁 Файлы для создания Developer 1
+## 🎯 КРИТИЧЕСКИЕ ПРОБЛЕМЫ (ИСПРАВИТЬ НЕМЕДЛЕННО)
 
-### workspace-service/
+### 1. Proto файлы не сгенерированы
+```
+Проблема: shared/gen/ пустая директория
+Решение: Запустить protoc для всех .proto файлов
+Команда: make proto (или вручную через protoc)
+```
+
+### 2. D1 сервисы не компилируются (missing go.sum)
+```
+Проблема: user-service, api-gateway, notification-service отсутствуют go.sum
+Решение: go mod tidy в каждом сервисе
+```
+
+### 3. Отсутствующие сервисы
+```
+Проблема: workspace-service и request-service не существуют
+Решение: Создать с нуля по шаблону других сервисов
+```
+
+---
+
+## 📝 ДЕТАЛЬНЫЙ ПЛАН РАБОТ
+
+### ЭТАП 1: Исправление критических проблем (2-3 часа)
+
+#### 1.1 Генерация Proto файлов
+```powershell
+# Windows
+cd R:\granula\api
+mkdir -p shared/gen
+
+# Генерация для каждого proto файла
+$protos = @(
+    "common/v1/common.proto",
+    "auth/v1/auth.proto",
+    "user/v1/user.proto",
+    "workspace/v1/workspace.proto",
+    "floor_plan/v1/floor_plan.proto",
+    "scene/v1/scene.proto",
+    "branch/v1/branch.proto",
+    "ai/v1/ai.proto",
+    "compliance/v1/compliance.proto",
+    "request/v1/request.proto",
+    "notification/v1/notification.proto"
+)
+
+foreach ($p in $protos) {
+    protoc --go_out=shared/gen --go_opt=paths=source_relative `
+           --go-grpc_out=shared/gen --go-grpc_opt=paths=source_relative `
+           -I shared/proto shared/proto/$p
+}
+```
+
+#### 1.2 Исправление go.sum для D1 сервисов
+```powershell
+# Для каждого D1 сервиса
+cd user-service && go mod tidy && cd ..
+cd api-gateway && go mod tidy && cd ..
+cd notification-service && go mod tidy && cd ..
+```
+
+#### 1.3 Исправление импортов в auth-service
+```
+Файл: auth-service/internal/service/auth.go
+Проблема: Неправильные импорты (github.com/xiiisorate/github.com/xiiisorate/...)
+Исправить на: github.com/xiiisorate/granula_api/shared/pkg/errors
+```
+
+---
+
+### ЭТАП 2: Создание недостающих сервисов (4-5 часов)
+
+#### 2.1 Workspace Service
 ```
 workspace-service/
-├── go.mod                           ← создать
-├── Dockerfile                       ← создать
-├── cmd/server/main.go              ← создать
+├── cmd/server/main.go
+├── go.mod
+├── Dockerfile
 ├── internal/
-│   ├── config/config.go            ← создать
-│   ├── domain/entity/workspace.go  ← создать
-│   ├── repository/postgres/workspace.go ← создать
-│   ├── service/
-│   │   ├── workspace_service.go    ← создать
-│   │   └── workspace_test.go       ← создать
-│   └── grpc/server.go              ← создать
+│   ├── config/config.go
+│   ├── domain/entity/workspace.go
+│   ├── repository/postgres/workspace_repository.go
+│   ├── service/workspace_service.go
+│   └── grpc/server.go
 └── migrations/
-    ├── 000001_create_workspaces.up.sql   ← создать
-    └── 000001_create_workspaces.down.sql ← создать
+    ├── 000001_create_workspaces.up.sql
+    └── 000001_create_workspaces.down.sql
 ```
 
-### request-service/
+**Методы WorkspaceService:**
+- CreateWorkspace(ctx, userID, name, description) → Workspace
+- GetWorkspace(ctx, id) → Workspace
+- ListWorkspaces(ctx, userID, pagination) → []Workspace
+- UpdateWorkspace(ctx, id, name, description) → Workspace
+- DeleteWorkspace(ctx, id) → error
+- AddMember(ctx, workspaceID, userID, role) → Member
+- RemoveMember(ctx, workspaceID, userID) → error
+- UpdateMemberRole(ctx, workspaceID, userID, role) → Member
+- ListMembers(ctx, workspaceID) → []Member
+
+#### 2.2 Request Service
 ```
 request-service/
-├── go.mod                          ← создать
-├── Dockerfile                      ← создать
-├── cmd/server/main.go             ← создать
+├── cmd/server/main.go
+├── go.mod
+├── Dockerfile
 ├── internal/
-│   ├── config/config.go           ← создать
-│   ├── domain/entity/request.go   ← создать
-│   ├── repository/postgres/request.go ← создать
-│   ├── service/
-│   │   ├── request_service.go     ← создать
-│   │   └── request_test.go        ← создать
-│   └── grpc/server.go             ← создать
+│   ├── config/config.go
+│   ├── domain/entity/request.go
+│   ├── repository/postgres/request_repository.go
+│   ├── service/request_service.go
+│   └── grpc/server.go
 └── migrations/
-    ├── 000001_create_requests.up.sql   ← создать
-    └── 000001_create_requests.down.sql ← создать
+    ├── 000001_create_requests.up.sql
+    └── 000001_create_requests.down.sql
 ```
+
+**Методы RequestService:**
+- CreateRequest(ctx, workspaceID, title, description, category) → Request
+- GetRequest(ctx, id) → Request
+- ListRequests(ctx, workspaceID, status, pagination) → []Request
+- UpdateRequest(ctx, id, title, description) → Request
+- CancelRequest(ctx, id) → error
+- AssignExpert(ctx, requestID, expertID) → Request
+- UpdateStatus(ctx, requestID, status, comment) → Request
 
 ---
 
-## 📁 Файлы для создания Developer 2
+### ЭТАП 3: Dockerfiles для D2 сервисов (1-2 часа)
 
-### Dockerfiles
-```
-compliance-service/Dockerfile    ← создать
-ai-service/Dockerfile            ← создать
-floorplan-service/Dockerfile     ← создать
-scene-service/Dockerfile         ← создать
-branch-service/Dockerfile        ← создать
+#### Шаблон Dockerfile для D2 сервисов:
+```dockerfile
+# =============================================================================
+# Build stage
+# =============================================================================
+FROM golang:1.22-alpine AS builder
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /app
+
+# Copy shared module
+COPY shared/ ./shared/
+
+# Copy service
+COPY ${SERVICE_NAME}/ ./${SERVICE_NAME}/
+
+WORKDIR /app/${SERVICE_NAME}
+
+RUN go mod download
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o /app/service ./cmd/server
+
+# =============================================================================
+# Production stage
+# =============================================================================
+FROM alpine:3.19
+
+RUN apk --no-cache add ca-certificates tzdata && \
+    addgroup -g 1000 granula && \
+    adduser -u 1000 -G granula -s /bin/sh -D granula
+
+WORKDIR /app
+COPY --from=builder /app/service .
+COPY --from=builder /app/${SERVICE_NAME}/migrations ./migrations 2>/dev/null || true
+
+RUN chown -R granula:granula /app
+USER granula
+
+EXPOSE 50054
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/health || exit 1
+
+ENTRYPOINT ["./service"]
 ```
 
-### API Gateway расширения
-```
-api-gateway/internal/grpc/
-├── floorplan.go    ← создать
-├── scene.go        ← создать
-├── branch.go       ← создать
-├── ai.go           ← создать
-└── compliance.go   ← создать
+**Создать для:**
+- [ ] compliance-service/Dockerfile (порт 50058)
+- [ ] ai-service/Dockerfile (порт 50057)
+- [ ] floorplan-service/Dockerfile (порт 50054)
+- [ ] scene-service/Dockerfile (порт 50055)
+- [ ] branch-service/Dockerfile (порт 50056)
 
+---
+
+### ЭТАП 4: API Gateway интеграция (3-4 часа)
+
+#### 4.1 Добавить gRPC клиенты
+```go
+// api-gateway/internal/grpc/clients.go
+package grpc
+
+type Clients struct {
+    Auth         authv1.AuthServiceClient
+    User         userv1.UserServiceClient
+    Workspace    workspacev1.WorkspaceServiceClient
+    FloorPlan    floorplanv1.FloorPlanServiceClient
+    Scene        scenev1.SceneServiceClient
+    Branch       branchv1.BranchServiceClient
+    AI           aiv1.AIServiceClient
+    Compliance   compliancev1.ComplianceServiceClient
+    Request      requestv1.RequestServiceClient
+    Notification notificationv1.NotificationServiceClient
+}
+```
+
+#### 4.2 Реализовать HTTP handlers
+```
 api-gateway/internal/handlers/
-├── floorplan.go    ← создать
-├── scene.go        ← создать
-├── branch.go       ← создать
-├── ai.go           ← создать
-└── compliance.go   ← создать
+├── auth.go          ← Существует (TODO: gRPC integration)
+├── user.go          ← Существует (TODO: gRPC integration)
+├── notification.go  ← Существует (TODO: gRPC integration)
+├── workspace.go     ← СОЗДАТЬ
+├── floorplan.go     ← СОЗДАТЬ
+├── scene.go         ← СОЗДАТЬ
+├── branch.go        ← СОЗДАТЬ
+├── ai.go            ← СОЗДАТЬ (включая streaming)
+├── compliance.go    ← СОЗДАТЬ
+└── request.go       ← СОЗДАТЬ
+```
+
+#### 4.3 Настроить роутинг
+```go
+// Routes
+api := app.Group("/api/v1")
+
+// Auth (public)
+api.Post("/auth/register", handlers.Register)
+api.Post("/auth/login", handlers.Login)
+api.Post("/auth/refresh", handlers.RefreshToken)
+api.Post("/auth/logout", handlers.Logout)
+
+// Protected routes
+protected := api.Use(middleware.Auth(cfg))
+
+// Users
+protected.Get("/users/me", handlers.GetProfile)
+protected.Put("/users/me", handlers.UpdateProfile)
+protected.Post("/users/me/avatar", handlers.UploadAvatar)
+
+// Workspaces
+protected.Post("/workspaces", handlers.CreateWorkspace)
+protected.Get("/workspaces", handlers.ListWorkspaces)
+protected.Get("/workspaces/:id", handlers.GetWorkspace)
+protected.Put("/workspaces/:id", handlers.UpdateWorkspace)
+protected.Delete("/workspaces/:id", handlers.DeleteWorkspace)
+
+// Floor Plans
+protected.Post("/workspaces/:id/floor-plans", handlers.UploadFloorPlan)
+protected.Get("/workspaces/:id/floor-plans", handlers.ListFloorPlans)
+protected.Get("/floor-plans/:id", handlers.GetFloorPlan)
+protected.Delete("/floor-plans/:id", handlers.DeleteFloorPlan)
+protected.Post("/floor-plans/:id/process", handlers.ProcessFloorPlan)
+
+// Scenes
+protected.Get("/workspaces/:id/scenes", handlers.ListScenes)
+protected.Post("/scenes", handlers.CreateScene)
+protected.Get("/scenes/:id", handlers.GetScene)
+protected.Put("/scenes/:id", handlers.UpdateScene)
+protected.Delete("/scenes/:id", handlers.DeleteScene)
+
+// Elements
+protected.Get("/scenes/:id/elements", handlers.ListElements)
+protected.Post("/scenes/:id/elements", handlers.CreateElement)
+protected.Put("/elements/:id", handlers.UpdateElement)
+protected.Delete("/elements/:id", handlers.DeleteElement)
+
+// Branches
+protected.Get("/scenes/:id/branches", handlers.ListBranches)
+protected.Post("/branches", handlers.CreateBranch)
+protected.Get("/branches/:id", handlers.GetBranch)
+protected.Post("/branches/:id/merge", handlers.MergeBranch)
+
+// AI
+protected.Post("/ai/chat", handlers.SendChatMessage)
+protected.Get("/ai/chat/:scene_id/history", handlers.GetChatHistory)
+protected.Post("/ai/recognize", handlers.RecognizeFloorPlan)
+protected.Post("/ai/generate-variants", handlers.GenerateVariants)
+
+// Compliance
+protected.Post("/compliance/check", handlers.CheckCompliance)
+protected.Get("/compliance/rules", handlers.GetRules)
+
+// Requests
+protected.Post("/requests", handlers.CreateRequest)
+protected.Get("/requests", handlers.ListRequests)
+protected.Get("/requests/:id", handlers.GetRequest)
+protected.Put("/requests/:id/status", handlers.UpdateRequestStatus)
+
+// Notifications
+protected.Get("/notifications", handlers.GetNotifications)
+protected.Post("/notifications/:id/read", handlers.MarkAsRead)
+protected.Get("/notifications/unread-count", handlers.GetUnreadCount)
 ```
 
 ---
 
-## ✅ Критерии готовности
+### ЭТАП 5: Тестирование (2-3 часа)
 
-### Каждый сервис готов если:
-- [x] Proto файл существует
-- [ ] go.mod существует
-- [ ] Код компилируется (`go build ./...`)
-- [ ] Dockerfile существует
-- [ ] Миграции БД готовы
-- [ ] gRPC сервер запускается
-- [ ] Минимум 1 тест проходит
+#### 5.1 Unit тесты для D1 сервисов
+```
+auth-service/internal/service/auth_test.go
+user-service/internal/service/user_test.go
+notification-service/internal/service/notification_test.go
+workspace-service/internal/service/workspace_test.go
+request-service/internal/service/request_test.go
+```
 
-### Проект готов к демо если:
-- [ ] Все 11 сервисов запускаются
-- [ ] docker-compose up работает
-- [ ] API Gateway роутит все endpoints
-- [ ] E2E тесты проходят
-
----
-
-## 🔧 Команды для начала работы
-
-### Developer 1
+#### 5.2 Запуск всех тестов
 ```powershell
-cd R:\granula\api
-git checkout dev/shared
-git pull origin dev/shared
-git checkout -b dev/d1-workspace-request
+# Запуск тестов по всем сервисам
+go test ./... -v -cover
 
-# Начать с Workspace Service...
-```
-
-### Developer 2
-```powershell
-cd R:\granula\api
-git checkout dev/shared
-git pull origin dev/shared
-git checkout -b dev/d2-gateway-handlers
-
-# Начать с Dockerfiles...
+# С coverage report
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out -o coverage.html
 ```
 
 ---
 
-## 📊 Итоговая оценка времени
+### ЭТАП 6: Локальный деплой (1-2 часа)
 
-| Разработчик | Задачи | Время |
-|-------------|--------|-------|
-| **D1** | Workspace + Request + тесты | ~8ч |
-| **D2** | Dockerfiles + Gateway handlers | ~4ч |
-| **Совместно** | Docker Compose + E2E | ~2ч |
-| **Итого** | | **~10ч параллельной работы** |
+#### 6.1 Запуск инфраструктуры
+```powershell
+# Запуск только БД и кэша
+docker-compose up -d postgres mongodb redis minio
 
+# Проверка
+docker-compose ps
+```
+
+#### 6.2 Запуск миграций
+```powershell
+# Auth DB
+migrate -path auth-service/migrations -database "postgres://granula:granula_secret@localhost:5432/auth_db?sslmode=disable" up
+
+# Users DB
+migrate -path user-service/migrations -database "postgres://granula:granula_secret@localhost:5432/users_db?sslmode=disable" up
+
+# И так далее для всех сервисов...
+```
+
+#### 6.3 Запуск всех сервисов
+```powershell
+# Сборка и запуск
+docker-compose up -d --build
+
+# Проверка логов
+docker-compose logs -f api-gateway
+
+# Проверка здоровья
+curl http://localhost:8080/health
+```
+
+---
+
+## 📋 ЧЕКЛИСТ ЗАВЕРШЕНИЯ
+
+### Критический путь (обязательно):
+- [ ] Proto генерация работает
+- [ ] Все сервисы компилируются
+- [ ] Docker Compose запускается
+- [ ] API Gateway роутит запросы
+- [ ] Регистрация/логин работает
+- [ ] CRUD воркспейсов работает
+
+### Полный функционал:
+- [ ] Загрузка и распознавание планировок
+- [ ] Редактирование сцены (элементы)
+- [ ] Ветвление и слияние
+- [ ] AI чат работает
+- [ ] Compliance проверка работает
+- [ ] Заявки на экспертов работают
+- [ ] Уведомления доставляются
+
+### Качество кода:
+- [ ] Unit тесты для всех сервисов (>70% coverage)
+- [ ] Все файлы с комментариями и docstrings
+- [ ] Линтер проходит без ошибок
+- [ ] Логирование настроено
+- [ ] Error handling везде
+
+---
+
+## 🔧 ПОЛЕЗНЫЕ КОМАНДЫ
+
+```powershell
+# Сборка всех сервисов
+make build
+
+# Запуск тестов
+make test
+
+# Линтинг
+make lint
+
+# Docker Compose
+make docker-up
+make docker-down
+make docker-logs
+
+# Миграции
+make migrate-all-up
+
+# Proto генерация
+make proto
+```
+
+---
+
+## 📞 КОНТАКТЫ И РЕСУРСЫ
+
+- **Репозиторий:** https://github.com/xiiisorate/granula_api
+- **Ветка разработки:** dev/shared
+- **Документация:** ./docs/
+- **Proto файлы:** ./shared/proto/
