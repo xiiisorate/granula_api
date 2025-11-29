@@ -60,7 +60,7 @@ jobs:
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cat > /opt/granula/api/.env << EOF
           APP_ENV=production
           LOG_LEVEL=info
-          HTTP_PORT=3000
+          HTTP_PORT=3001
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           JWT_ACCESS_EXPIRE=15m
           JWT_REFRESH_EXPIRE=168h
@@ -80,4 +80,4 @@ jobs:
 
       - name: Deploy services
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cd /opt/granula/api && docker compose down --remove-orphans 2>/dev/null; docker compose build --parallel && docker compose --env-file .env up -d && sleep 60 && docker compose ps && curl -sf http://localhost:3000/health && echo "Healthy!" || echo "Starting..."'
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cd /opt/granula/api && docker compose down --remove-orphans 2>/dev/null; docker compose build --parallel && docker compose --env-file .env up -d && sleep 60 && docker compose ps && curl -sf http://localhost:3001/ && echo "Healthy!" || echo "Starting..."'
