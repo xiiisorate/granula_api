@@ -81,6 +81,12 @@ func main() {
 	sceneHandler := handlers.NewSceneHandler(grpcClients.SceneConn)
 	aiHandler := handlers.NewAIHandler(grpcClients.AIConn)
 
+	// New handlers for FloorPlan, Branch, Compliance, Request
+	floorPlanHandler := handlers.NewFloorPlanHandler(grpcClients.FloorPlanConn)
+	branchHandler := handlers.NewBranchHandler(grpcClients.BranchConn)
+	complianceHandler := handlers.NewComplianceHandler(grpcClients.ComplianceConn)
+	requestHandler := handlers.NewRequestHandler(grpcClients.RequestConn)
+
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler:          middleware.ErrorHandler,
@@ -239,55 +245,66 @@ func main() {
 	}
 
 	// --------------------------------------------------------------------------
-	// Placeholder routes for services not yet fully integrated
+	// FloorPlan routes (protected)
 	// --------------------------------------------------------------------------
-	// FloorPlan routes
 	floorplans := api.Group("/floor-plans")
 	floorplans.Use(middleware.Auth(cfg))
 	{
-		floorplans.Get("/", placeholderHandler("list floor plans"))
-		floorplans.Post("/", createPlaceholderHandler("upload floor plan"))
-		floorplans.Get("/:id", placeholderHandler("get floor plan"))
-		floorplans.Patch("/:id", placeholderHandler("update floor plan"))
-		floorplans.Delete("/:id", placeholderHandler("delete floor plan"))
-		floorplans.Post("/:id/reprocess", placeholderHandler("reprocess floor plan"))
-		floorplans.Post("/:id/create-scene", createPlaceholderHandler("create scene from floor plan"))
+		floorplans.Get("/", floorPlanHandler.List)
+		floorplans.Post("/", floorPlanHandler.Upload)
+		floorplans.Get("/:id", floorPlanHandler.Get)
+		floorplans.Patch("/:id", floorPlanHandler.Update)
+		floorplans.Delete("/:id", floorPlanHandler.Delete)
+		floorplans.Post("/:id/recognize", floorPlanHandler.StartRecognition)
+		floorplans.Get("/:id/recognition-status", floorPlanHandler.GetRecognitionStatus)
+		floorplans.Get("/:id/download-url", floorPlanHandler.GetDownloadURL)
 	}
 
-	// Branch routes
+	// --------------------------------------------------------------------------
+	// Branch routes (protected)
+	// --------------------------------------------------------------------------
 	branches := api.Group("/scenes/:scene_id/branches")
 	branches.Use(middleware.Auth(cfg))
 	{
-		branches.Get("/", placeholderHandler("list branches"))
-		branches.Post("/", createPlaceholderHandler("create branch"))
-		branches.Get("/:id", placeholderHandler("get branch"))
-		branches.Patch("/:id", placeholderHandler("update branch"))
-		branches.Delete("/:id", placeholderHandler("delete branch"))
-		branches.Post("/:id/activate", placeholderHandler("activate branch"))
-		branches.Post("/:id/duplicate", createPlaceholderHandler("duplicate branch"))
-		branches.Get("/:id/compare/:target_id", placeholderHandler("compare branches"))
-		branches.Post("/:id/merge", placeholderHandler("merge branch"))
+		branches.Get("/", branchHandler.List)
+		branches.Post("/", branchHandler.Create)
+		branches.Get("/:id", branchHandler.Get)
+		branches.Patch("/:id", branchHandler.Update)
+		branches.Delete("/:id", branchHandler.Delete)
+		branches.Post("/:id/activate", branchHandler.Activate)
+		branches.Post("/:id/duplicate", branchHandler.Duplicate)
+		branches.Get("/:id/compare/:target_id", branchHandler.Compare)
+		branches.Post("/:id/merge", branchHandler.Merge)
 	}
 
-	// Compliance routes
+	// --------------------------------------------------------------------------
+	// Compliance routes (protected)
+	// --------------------------------------------------------------------------
 	compliance := api.Group("/compliance")
 	compliance.Use(middleware.Auth(cfg))
 	{
-		compliance.Post("/check", placeholderHandler("check compliance"))
-		compliance.Post("/check-operation", placeholderHandler("check operation compliance"))
-		compliance.Get("/rules", placeholderHandler("list compliance rules"))
-		compliance.Get("/rules/:id", placeholderHandler("get compliance rule"))
+		compliance.Post("/check", complianceHandler.Check)
+		compliance.Post("/check-operation", complianceHandler.CheckOperation)
+		compliance.Get("/rules", complianceHandler.GetRules)
+		compliance.Get("/rules/:id", complianceHandler.GetRule)
+		compliance.Post("/report", complianceHandler.GenerateReport)
 	}
 
-	// Request routes (expert requests)
+	// --------------------------------------------------------------------------
+	// Request routes (expert requests, protected)
+	// --------------------------------------------------------------------------
 	requests := api.Group("/requests")
 	requests.Use(middleware.Auth(cfg))
 	{
-		requests.Get("/", placeholderHandler("list requests"))
-		requests.Post("/", createPlaceholderHandler("create request"))
-		requests.Get("/:id", placeholderHandler("get request"))
-		requests.Patch("/:id", placeholderHandler("update request"))
-		requests.Delete("/:id", placeholderHandler("cancel request"))
+		requests.Get("/", requestHandler.List)
+		requests.Post("/", requestHandler.Create)
+		requests.Get("/:id", requestHandler.Get)
+		requests.Patch("/:id", requestHandler.Update)
+		requests.Delete("/:id", requestHandler.Delete)
+		requests.Post("/:id/cancel", requestHandler.Cancel)
+		requests.Post("/:id/submit", requestHandler.Submit)
+		requests.Post("/:id/documents", requestHandler.AddDocument)
+		requests.Get("/:id/documents", requestHandler.GetDocuments)
 	}
 
 	// ==========================================================================
@@ -318,26 +335,4 @@ func main() {
 	}
 
 	log.Info("API Gateway stopped")
-}
-
-// placeholderHandler creates a placeholder handler for routes not yet implemented.
-func placeholderHandler(action string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message":    "Endpoint pending implementation",
-			"action":     action,
-			"request_id": c.GetRespHeader("X-Request-ID"),
-		})
-	}
-}
-
-// createPlaceholderHandler creates a placeholder handler that returns 201 for create operations.
-func createPlaceholderHandler(action string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-			"message":    "Endpoint pending implementation",
-			"action":     action,
-			"request_id": c.GetRespHeader("X-Request-ID"),
-		})
-	}
 }
