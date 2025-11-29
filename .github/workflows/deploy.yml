@@ -93,9 +93,22 @@ jobs:
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
             cd /opt/granula/api
+            
+            # Stop all containers
             docker compose down --remove-orphans 2>/dev/null || true
-            docker compose build --no-cache --parallel
+            
+            # Remove old images to force complete rebuild
+            docker rmi $(docker images -q "api-*" 2>/dev/null) 2>/dev/null || true
+            
+            # Clear Docker build cache
+            docker builder prune -f 2>/dev/null || true
+            
+            # Build fresh images
+            docker compose build --no-cache --pull
+            
+            # Start services
             docker compose --env-file .env up -d
+            
             sleep 60
             docker compose ps
             curl -sf http://localhost:3001/ && echo "API Gateway is up!" || echo "Starting..."
