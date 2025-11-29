@@ -326,8 +326,18 @@ func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 func handleGRPCError(err error) error {
 	st, ok := status.FromError(err)
 	if !ok {
+		// Log the raw error for debugging
+		logger.Global().Error("gRPC error (non-status)",
+			logger.Err(err),
+		)
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
+
+	// Log gRPC error details for debugging
+	logger.Global().Error("gRPC error",
+		logger.String("code", st.Code().String()),
+		logger.String("message", st.Message()),
+	)
 
 	switch st.Code() {
 	case codes.InvalidArgument:
