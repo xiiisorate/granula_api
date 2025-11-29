@@ -93,7 +93,7 @@ message LogoutResponse {
 
 // LogoutAllRequest - запрос выхода из всех устройств
 message LogoutAllRequest {
-  // Пусто, user_id берется из токена
+  string user_id = 1;
 }
 
 // LogoutAllResponse - ответ выхода из всех устройств

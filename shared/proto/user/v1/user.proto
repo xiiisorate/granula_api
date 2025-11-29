@@ -17,6 +17,9 @@ service UserService {
   // Загрузить аватар
   rpc UploadAvatar(UploadAvatarRequest) returns (UploadAvatarResponse);
   
+  // Изменить пароль
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  
   // Удалить пользователя
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 }
@@ -53,6 +56,18 @@ message UploadAvatarRequest {
 // UploadAvatarResponse - ответ загрузки аватара
 message UploadAvatarResponse {
   string avatar_url = 1;
+}
+
+// ChangePasswordRequest - запрос изменения пароля
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+// ChangePasswordResponse - ответ изменения пароля
+message ChangePasswordResponse {
+  bool success = 1;
 }
 
 // DeleteUserRequest - запрос удаления пользователя

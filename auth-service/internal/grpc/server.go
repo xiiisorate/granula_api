@@ -1,117 +1,26 @@
+// =============================================================================
 // Package server implements gRPC server for Auth Service.
+// =============================================================================
+// This package provides the gRPC interface for authentication operations
+// including user registration, login, token management, and logout.
+// =============================================================================
 package server
 
 import (
 	"context"
 
+	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/xiiisorate/granula_api/auth-service/internal/repository"
 	"github.com/xiiisorate/granula_api/auth-service/internal/service"
-	"github.com/xiiisorate/granula_api/shared/pkg/errors"
-
-	"github.com/google/uuid"
-	"google.golang.org/grpc"
+	authpb "github.com/xiiisorate/granula_api/shared/gen/auth/v1"
 )
 
-// AuthServiceServer is the interface for Auth gRPC service.
-type AuthServiceServer interface {
-	Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error)
-	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
-	ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error)
-	RefreshToken(ctx context.Context, req *RefreshTokenRequest) (*RefreshTokenResponse, error)
-	Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error)
-	LogoutAll(ctx context.Context, req *LogoutAllRequest) (*LogoutAllResponse, error)
-}
-
-// Request/Response types (matching proto)
-type RegisterRequest struct {
-	Email    string
-	Password string
-	Name     string
-}
-
-type RegisterResponse struct {
-	User   *User
-	Tokens *Tokens
-}
-
-type LoginRequest struct {
-	Email    string
-	Password string
-	DeviceID string
-}
-
-type LoginResponse struct {
-	User   *User
-	Tokens *Tokens
-}
-
-type ValidateTokenRequest struct {
-	AccessToken string
-}
-
-type ValidateTokenResponse struct {
-	Valid  bool
-	UserID string
-	Email  string
-	Role   string
-}
-
-type RefreshTokenRequest struct {
-	RefreshToken string
-}
-
-type RefreshTokenResponse struct {
-	Tokens *Tokens
-}
-
-type LogoutRequest struct {
-	RefreshToken string
-}
-
-type LogoutResponse struct {
-	Message string
-}
-
-type LogoutAllRequest struct{}
-
-type LogoutAllResponse struct {
-	RevokedCount int64
-	Message      string
-}
-
-type User struct {
-	ID            string
-	Email         string
-	Name          string
-	Role          string
-	EmailVerified bool
-	AvatarURL     string
-	Settings      *UserSettings
-	CreatedAt     string
-	UpdatedAt     string
-}
-
-type UserSettings struct {
-	Language      string
-	Theme         string
-	Units         string
-	Notifications *NotificationSettings
-}
-
-type NotificationSettings struct {
-	Email     bool
-	Push      bool
-	Marketing bool
-}
-
-type Tokens struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresAt    string
-}
-
-// AuthServer implements AuthServiceServer.
+// AuthServer implements authpb.AuthServiceServer.
 type AuthServer struct {
+	authpb.UnimplementedAuthServiceServer
 	authService *service.AuthService
 }
 
@@ -121,117 +30,160 @@ func NewAuthServer(authService *service.AuthService) *AuthServer {
 }
 
 // Register handles user registration.
-func (s *AuthServer) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
+func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) (*authpb.RegisterResponse, error) {
+	// Validate input
+	if req.Email == "" || req.Password == "" || req.Name == "" {
+		return nil, status.Error(codes.InvalidArgument, "email, password and name are required")
+	}
+
 	result, err := s.authService.Register(&service.RegisterInput{
 		Email:    req.Email,
 		Password: req.Password,
 		Name:     req.Name,
 	})
 	if err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &RegisterResponse{
-		User:   userToProto(result.User),
-		Tokens: tokensToProto(result),
+	return &authpb.RegisterResponse{
+		UserId:       result.User.ID.String(),
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    int64(result.ExpiresAt.Sub(result.User.CreatedAt).Seconds()),
 	}, nil
 }
 
-// Login handles user login.
-func (s *AuthServer) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
+// Login handles user authentication.
+func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.LoginResponse, error) {
+	// Validate input
+	if req.Email == "" || req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "email and password are required")
+	}
+
 	result, err := s.authService.Login(&service.LoginInput{
 		Email:    req.Email,
 		Password: req.Password,
-		DeviceID: req.DeviceID,
+		DeviceID: req.DeviceId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &LoginResponse{
-		User:   userToProto(result.User),
-		Tokens: tokensToProto(result),
+	return &authpb.LoginResponse{
+		UserId:       result.User.ID.String(),
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    int64(result.ExpiresAt.Sub(result.User.CreatedAt).Seconds()),
 	}, nil
 }
 
 // ValidateToken validates an access token.
-func (s *AuthServer) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error) {
-	claims, err := s.authService.ValidateToken(req.AccessToken)
-	if err != nil {
-		return &ValidateTokenResponse{Valid: false}, nil
+func (s *AuthServer) ValidateToken(ctx context.Context, req *authpb.ValidateTokenRequest) (*authpb.ValidateTokenResponse, error) {
+	if req.Token == "" {
+		return nil, status.Error(codes.InvalidArgument, "token is required")
 	}
 
-	return &ValidateTokenResponse{
+	claims, err := s.authService.ValidateToken(req.Token)
+	if err != nil {
+		return &authpb.ValidateTokenResponse{Valid: false}, nil
+	}
+
+	return &authpb.ValidateTokenResponse{
 		Valid:  true,
-		UserID: claims.UserID.String(),
-		Email:  claims.Email,
-		Role:   claims.Role,
+		UserId: claims.UserID.String(),
+		Roles:  []string{claims.Role},
 	}, nil
 }
 
 // RefreshToken refreshes an access token.
-func (s *AuthServer) RefreshToken(ctx context.Context, req *RefreshTokenRequest) (*RefreshTokenResponse, error) {
-	result, err := s.authService.RefreshToken(req.RefreshToken)
-	if err != nil {
-		return nil, err
+func (s *AuthServer) RefreshToken(ctx context.Context, req *authpb.RefreshTokenRequest) (*authpb.RefreshTokenResponse, error) {
+	if req.RefreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh_token is required")
 	}
 
-	return &RefreshTokenResponse{
-		Tokens: tokensToProto(result),
+	result, err := s.authService.RefreshToken(req.RefreshToken)
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	return &authpb.RefreshTokenResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    900, // 15 minutes
 	}, nil
 }
 
 // Logout revokes a refresh token.
-func (s *AuthServer) Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error) {
-	if err := s.authService.Logout(req.RefreshToken); err != nil {
-		return nil, err
+func (s *AuthServer) Logout(ctx context.Context, req *authpb.LogoutRequest) (*authpb.LogoutResponse, error) {
+	if req.RefreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh_token is required")
 	}
 
-	return &LogoutResponse{Message: "Successfully logged out"}, nil
+	if err := s.authService.Logout(req.RefreshToken); err != nil {
+		return nil, convertError(err)
+	}
+
+	return &authpb.LogoutResponse{Success: true}, nil
 }
 
 // LogoutAll revokes all refresh tokens for a user.
-func (s *AuthServer) LogoutAll(ctx context.Context, req *LogoutAllRequest) (*LogoutAllResponse, error) {
-	// Get user ID from context (set by auth middleware in gateway)
-	userID, ok := ctx.Value("user_id").(uuid.UUID)
-	if !ok {
-		return nil, errors.ErrUnauthenticated
+func (s *AuthServer) LogoutAll(ctx context.Context, req *authpb.LogoutAllRequest) (*authpb.LogoutAllResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
 	}
 
 	count, err := s.authService.LogoutAll(userID)
 	if err != nil {
-		return nil, err
+		return nil, convertError(err)
 	}
 
-	return &LogoutAllResponse{
-		RevokedCount: count,
-		Message:      "Logged out from all devices",
+	return &authpb.LogoutAllResponse{
+		Success:         true,
+		SessionsRevoked: int32(count),
 	}, nil
 }
 
-// RegisterAuthServiceServer registers the auth service server (stub for now).
-func RegisterAuthServiceServer(s *grpc.Server, srv AuthServiceServer) {
-	// Will be generated from proto
-}
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
-// Helper functions
-func userToProto(user *repository.User) *User {
-	return &User{
-		ID:            user.ID.String(),
-		Email:         user.Email,
-		Name:          user.Name,
-		Role:          user.Role,
-		EmailVerified: user.EmailVerified,
-		CreatedAt:     user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:     user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+// convertError converts domain errors to gRPC status errors.
+func convertError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Check for common errors
+	switch err.Error() {
+	case "user not found":
+		return status.Error(codes.NotFound, err.Error())
+	case "email already exists", "provided email already exists":
+		return status.Error(codes.AlreadyExists, "email already registered")
+	case "invalid password":
+		return status.Error(codes.Unauthenticated, "invalid credentials")
+	case "invalid or expired token":
+		return status.Error(codes.Unauthenticated, err.Error())
+	case "password is too weak (min 8 characters)":
+		return status.Error(codes.InvalidArgument, err.Error())
+	default:
+		return status.Error(codes.Internal, "internal server error")
 	}
 }
 
-func tokensToProto(result *service.AuthResult) *Tokens {
-	return &Tokens{
-		AccessToken:  result.AccessToken,
-		RefreshToken: result.RefreshToken,
-		ExpiresAt:    result.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
+// userToProto converts repository.User to protobuf User (helper for future use).
+func userToProto(user *repository.User) map[string]interface{} {
+	return map[string]interface{}{
+		"id":             user.ID.String(),
+		"email":          user.Email,
+		"name":           user.Name,
+		"role":           user.Role,
+		"email_verified": user.EmailVerified,
+		"created_at":     user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"updated_at":     user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
-

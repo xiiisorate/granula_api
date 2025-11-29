@@ -42,6 +42,9 @@ service NotificationService {
   // Удалить уведомление
   rpc DeleteNotification(DeleteNotificationRequest) returns (DeleteNotificationResponse);
   
+  // Удалить все прочитанные
+  rpc DeleteAllRead(DeleteAllReadRequest) returns (DeleteAllReadResponse);
+  
   // Получить настройки уведомлений
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
   
@@ -313,6 +316,18 @@ message DeleteNotificationRequest {
 message DeleteNotificationResponse {
   // Успешно ли
   bool success = 1;
+}
+
+// DeleteAllReadRequest - запрос удаления всех прочитанных
+message DeleteAllReadRequest {
+  // ID пользователя
+  string user_id = 1;
+}
+
+// DeleteAllReadResponse - ответ удаления всех прочитанных
+message DeleteAllReadResponse {
+  // Количество удалённых
+  int32 deleted_count = 1;
 }
 
 // =============================================================================
