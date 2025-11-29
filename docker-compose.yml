@@ -258,16 +258,16 @@ services:
       dockerfile: auth-service/Dockerfile
     container_name: granula-auth-service
     environment:
-      APP_ENV: development
+      APP_ENV: ${APP_ENV:-development}
       GRPC_PORT: 50051
       DB_HOST: postgres-auth
       DB_PORT: 5432
       DB_USER: granula
-      DB_PASSWORD: granula_secret
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-granula_secret}
       DB_NAME: auth_db
       DB_SSLMODE: disable
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: dev-secret-change-in-production
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
     networks:
       - granula-network
     depends_on:

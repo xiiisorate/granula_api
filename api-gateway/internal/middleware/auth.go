@@ -3,6 +3,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -72,32 +73,49 @@ func validateToken(tokenString, secret string) (*Claims, error) {
 		return nil, errors.New("jwt secret not configured")
 	}
 
+	// Log secret length for debugging (never log the actual secret!)
+	log.Info("JWT validation attempt",
+		logger.Int("secret_length", len(secret)),
+		logger.Int("token_length", len(tokenString)),
+	)
+
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			log.Error("Invalid JWT signing method")
+			log.Error("Invalid JWT signing method",
+				logger.String("method", token.Method.Alg()),
+			)
 			return nil, errors.New("invalid signing method")
 		}
 		return []byte(secret), nil
 	})
 
 	if err != nil {
-		// Log specific JWT error for debugging
-		log.Debug("JWT parse error", logger.Err(err))
+		// Log specific JWT error - use Error level to ensure visibility in production
+		log.Error("JWT parse error",
+			logger.Err(err),
+			logger.String("error_type", fmt.Sprintf("%T", err)),
+		)
 		return nil, err
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
-		log.Debug("Token claims invalid",
+		log.Error("Token claims invalid",
 			logger.Bool("claims_ok", ok),
 			logger.Bool("token_valid", token.Valid),
 		)
 		return nil, errors.New("invalid token claims")
 	}
 
+	// Log successful parsing
+	log.Info("JWT parsed successfully",
+		logger.String("user_id", claims.UserID.String()),
+		logger.String("email", claims.Email),
+	)
+
 	// Check expiration (jwt library already checks this, but we log it)
 	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
-		log.Debug("Token expired",
+		log.Error("Token expired",
 			logger.String("expires_at", claims.ExpiresAt.Time.String()),
 		)
 		return nil, errors.New("token expired")
@@ -105,4 +123,3 @@ func validateToken(tokenString, secret string) (*Claims, error) {
 
 	return claims, nil
 }
-
