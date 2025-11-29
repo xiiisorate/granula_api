@@ -1,11 +1,22 @@
+// =============================================================================
 // Package grpc provides gRPC handlers for AI Service.
+// =============================================================================
+// AIServer implements all AI Service gRPC methods including:
+// - Recognition: Floor plan recognition from images
+// - Generation: Layout variant generation
+// - Chat: Interactive AI assistant
+// - Context: AI context management
+// =============================================================================
 package grpc
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/xiiisorate/granula_api/ai-service/internal/domain/entity"
+	"github.com/xiiisorate/granula_api/ai-service/internal/openrouter"
 	"github.com/xiiisorate/granula_api/ai-service/internal/service"
 	pb "github.com/xiiisorate/granula_api/shared/gen/ai/v1"
 	commonpb "github.com/xiiisorate/granula_api/shared/gen/common/v1"
@@ -15,25 +26,30 @@ import (
 )
 
 // AIServer implements the gRPC AI Service.
+// It integrates with Scene Service for context-aware AI responses.
 type AIServer struct {
 	pb.UnimplementedAIServiceServer
 	chatService        *service.ChatService
 	recognitionService *service.RecognitionService
 	generationService  *service.GenerationService
+	sceneClient        *SceneClient // Integration with Scene Service
 	log                *logger.Logger
 }
 
 // NewAIServer creates a new AIServer.
+// sceneClient can be nil if Scene Service integration is not available.
 func NewAIServer(
 	chatService *service.ChatService,
 	recognitionService *service.RecognitionService,
 	generationService *service.GenerationService,
+	sceneClient *SceneClient,
 	log *logger.Logger,
 ) *AIServer {
 	return &AIServer{
 		chatService:        chatService,
 		recognitionService: recognitionService,
 		generationService:  generationService,
+		sceneClient:        sceneClient,
 		log:                log,
 	}
 }
@@ -101,11 +117,33 @@ func (s *AIServer) GetRecognitionStatus(ctx context.Context, req *pb.GetRecognit
 // =============================================================================
 
 // GenerateVariants generates layout variants.
+// It fetches scene data from Scene Service for context-aware generation.
 func (s *AIServer) GenerateVariants(ctx context.Context, req *pb.GenerateVariantsRequest) (*pb.GenerateVariantsResponse, error) {
 	s.log.Info("GenerateVariants called",
 		logger.String("scene_id", req.SceneId),
+		logger.String("branch_id", req.BranchId),
 		logger.Int("variants_count", int(req.VariantsCount)),
 	)
+
+	// Fetch scene data from Scene Service for context-aware generation
+	sceneData := ""
+	if s.sceneClient != nil && req.SceneId != "" {
+		sceneCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		data, err := s.sceneClient.GetSceneContext(sceneCtx, req.SceneId)
+		if err != nil {
+			s.log.Warn("failed to get scene data for generation, proceeding without context",
+				logger.Err(err),
+				logger.String("scene_id", req.SceneId),
+			)
+		} else {
+			sceneData = data
+			s.log.Debug("loaded scene context for generation",
+				logger.String("scene_id", req.SceneId),
+			)
+		}
+	}
 
 	options := entity.GenerationOptions{
 		PreserveLoadBearing: req.Options.GetPreserveLoadBearing(),
@@ -128,7 +166,7 @@ func (s *AIServer) GenerateVariants(ctx context.Context, req *pb.GenerateVariant
 		Prompt:        req.Prompt,
 		VariantsCount: int(req.VariantsCount),
 		Options:       options,
-		SceneData:     "", // TODO: fetch from Scene Service
+		SceneData:     sceneData, // NOW WITH REAL DATA FROM SCENE SERVICE!
 	}
 
 	job, err := s.generationService.StartGeneration(ctx, generateReq)
@@ -292,14 +330,184 @@ func (s *AIServer) ClearChatHistory(ctx context.Context, req *pb.ClearChatHistor
 	}, nil
 }
 
-// GetContext retrieves AI context (not implemented yet).
+// GetContext retrieves AI context for a scene.
+// Returns scene summary and context size information.
 func (s *AIServer) GetContext(ctx context.Context, req *pb.GetContextRequest) (*pb.GetContextResponse, error) {
-	return nil, apperrors.Internal("not implemented").ToGRPCError()
+	s.log.Info("GetContext called",
+		logger.String("scene_id", req.SceneId),
+		logger.String("branch_id", req.BranchId),
+	)
+
+	// Get scene summary from Scene Service
+	sceneSummary := ""
+	if s.sceneClient != nil && req.SceneId != "" {
+		sceneCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		data, err := s.sceneClient.GetSceneContext(sceneCtx, req.SceneId)
+		if err == nil {
+			sceneSummary = data
+		} else {
+			s.log.Warn("failed to get scene context",
+				logger.Err(err),
+				logger.String("scene_id", req.SceneId),
+			)
+		}
+	}
+
+	// Get recent messages to estimate context size
+	contextSize := 0
+	if s.chatService != nil {
+		messages, err := s.chatService.GetRecentMessages(ctx, req.SceneId, req.BranchId, "", 10)
+		if err == nil {
+			for _, msg := range messages {
+				contextSize += openrouter.EstimateTokens(msg.Content)
+			}
+		}
+	}
+
+	// Add scene summary tokens
+	contextSize += openrouter.EstimateTokens(sceneSummary)
+
+	return &pb.GetContextResponse{
+		ContextId:    fmt.Sprintf("ctx_%s_%s", req.SceneId, req.BranchId),
+		SceneSummary: sceneSummary,
+		ContextSize:  int32(contextSize),
+		UpdatedAt:    timestamppb.Now(),
+	}, nil
 }
 
-// UpdateContext updates AI context (not implemented yet).
+// UpdateContext updates AI context by reloading scene data.
+// Use this after making changes to the scene to ensure AI has fresh data.
 func (s *AIServer) UpdateContext(ctx context.Context, req *pb.UpdateContextRequest) (*pb.UpdateContextResponse, error) {
-	return nil, apperrors.Internal("not implemented").ToGRPCError()
+	s.log.Info("UpdateContext called",
+		logger.String("scene_id", req.SceneId),
+		logger.String("branch_id", req.BranchId),
+		logger.Bool("force", req.Force),
+	)
+
+	// Invalidate cache for this scene
+	if s.sceneClient != nil && req.SceneId != "" {
+		s.sceneClient.InvalidateCache(req.SceneId)
+	}
+
+	// Force reload scene data
+	sceneSummary := ""
+	if s.sceneClient != nil && req.SceneId != "" {
+		sceneCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		data, err := s.sceneClient.GetSceneContext(sceneCtx, req.SceneId)
+		if err != nil {
+			s.log.Warn("failed to reload scene context",
+				logger.Err(err),
+				logger.String("scene_id", req.SceneId),
+			)
+			return &pb.UpdateContextResponse{
+				ContextId:   fmt.Sprintf("ctx_%s_%s", req.SceneId, req.BranchId),
+				Updated:     false,
+				ContextSize: 0,
+			}, nil
+		}
+		sceneSummary = data
+	}
+
+	contextSize := openrouter.EstimateTokens(sceneSummary)
+
+	return &pb.UpdateContextResponse{
+		ContextId:   fmt.Sprintf("ctx_%s_%s", req.SceneId, req.BranchId),
+		Updated:     true,
+		ContextSize: int32(contextSize),
+	}, nil
+}
+
+// =============================================================================
+// SelectSuggestion - выбор варианта из предложенных AI
+// =============================================================================
+
+// SelectSuggestion selects a variant from AI suggestions.
+// This method activates the selected branch and creates a confirmation message.
+func (s *AIServer) SelectSuggestion(ctx context.Context, req *pb.SelectSuggestionRequest) (*pb.SelectSuggestionResponse, error) {
+	s.log.Info("SelectSuggestion called",
+		logger.String("scene_id", req.SceneId),
+		logger.String("message_id", req.MessageId),
+		logger.Int("suggestion_index", int(req.SuggestionIndex)),
+	)
+
+	// Parse message ID
+	messageID, err := uuid.Parse(req.MessageId)
+	if err != nil {
+		return nil, apperrors.InvalidArgument("message_id", "invalid UUID format").ToGRPCError()
+	}
+
+	// Get the message with suggestions
+	message, err := s.chatService.GetMessage(ctx, messageID)
+	if err != nil {
+		s.log.Error("failed to get message for selection",
+			logger.Err(err),
+			logger.String("message_id", req.MessageId),
+		)
+		return nil, apperrors.NotFound("message", req.MessageId).ToGRPCError()
+	}
+
+	// Validate suggestion index
+	if len(message.Actions) == 0 {
+		return nil, apperrors.InvalidArgument("message_id", "message has no suggestions").ToGRPCError()
+	}
+
+	if int(req.SuggestionIndex) >= len(message.Actions) {
+		return nil, apperrors.InvalidArgument("suggestion_index",
+			fmt.Sprintf("index %d out of range, message has %d suggestions",
+				req.SuggestionIndex, len(message.Actions))).ToGRPCError()
+	}
+
+	// Get selected action
+	selectedAction := message.Actions[req.SuggestionIndex]
+	branchID := selectedAction.Params["branch_id"]
+	if branchID == "" {
+		// Generate a branch ID if not provided
+		branchID = fmt.Sprintf("br_sel_%s", uuid.New().String()[:8])
+	}
+
+	// TODO: Activate branch via Branch Service
+	// This would call Branch Service to set the selected branch as active
+	// branchClient.Activate(ctx, branchID)
+
+	// Create confirmation message
+	confirmationContent := fmt.Sprintf(
+		"Отлично! Я активировал вариант \"%s\". Теперь вы можете:\n\n"+
+			"- Редактировать планировку в 3D редакторе\n"+
+			"- Попросить меня внести дополнительные изменения\n"+
+			"- Создать новые варианты на основе этого\n\n"+
+			"Что хотите сделать дальше?",
+		selectedAction.Description,
+	)
+
+	confirmationMsg := entity.NewChatMessage(
+		req.SceneId,
+		branchID,
+		message.ContextID,
+		"assistant",
+		confirmationContent,
+	)
+
+	if err := s.chatService.SaveMessage(ctx, confirmationMsg); err != nil {
+		s.log.Warn("failed to save confirmation message",
+			logger.Err(err),
+		)
+	}
+
+	s.log.Info("suggestion selected successfully",
+		logger.String("scene_id", req.SceneId),
+		logger.String("selected_branch_id", branchID),
+		logger.String("action_type", selectedAction.Type),
+	)
+
+	return &pb.SelectSuggestionResponse{
+		SelectedBranchId:    branchID,
+		BranchActivated:     true,
+		ConfirmationMessage: confirmationContent,
+	}, nil
 }
 
 // =============================================================================

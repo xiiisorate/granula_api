@@ -88,8 +88,29 @@ func main() {
 	chatRepo := mongodb.NewChatRepository(db)
 	jobRepo := mongodb.NewJobRepository(db)
 
-	// Initialize services
-	chatService := service.NewChatService(chatRepo, openRouterClient, log)
+	// Initialize Scene Service client (optional - for context integration)
+	var sceneClient *aigrpc.SceneClient
+	if cfg.Service.SceneServiceAddr != "" {
+		var err error
+		sceneClient, err = aigrpc.NewSceneClient(cfg.Service.SceneServiceAddr, log)
+		if err != nil {
+			log.Warn("failed to connect to Scene Service, context integration disabled",
+				logger.Err(err),
+				logger.String("addr", cfg.Service.SceneServiceAddr),
+			)
+			sceneClient = nil
+		} else {
+			log.Info("connected to Scene Service",
+				logger.String("addr", cfg.Service.SceneServiceAddr),
+			)
+			defer sceneClient.Close()
+		}
+	} else {
+		log.Info("Scene Service integration disabled (no address configured)")
+	}
+
+	// Initialize services with Scene Service integration
+	chatService := service.NewChatService(chatRepo, openRouterClient, sceneClient, log)
 	recognitionService := service.NewRecognitionService(jobRepo, openRouterClient, log)
 	generationService := service.NewGenerationService(jobRepo, openRouterClient, log)
 
@@ -104,8 +125,8 @@ func main() {
 		log.Fatal("failed to create gRPC server", logger.Err(err))
 	}
 
-	// Register AI service
-	aiGRPCServer := aigrpc.NewAIServer(chatService, recognitionService, generationService, log)
+	// Register AI service with Scene Client for context
+	aiGRPCServer := aigrpc.NewAIServer(chatService, recognitionService, generationService, sceneClient, log)
 	pb.RegisterAIServiceServer(grpcServer.Server(), aiGRPCServer)
 
 	// Start server in goroutine

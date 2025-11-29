@@ -2920,6 +2920,134 @@ func (x *UpdateContextResponse) GetContextSize() int32 {
 	return 0
 }
 
+// SelectSuggestionRequest — запрос на выбор варианта.
+type SelectSuggestionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID сцены.
+	SceneId string `protobuf:"bytes,1,opt,name=scene_id,json=sceneId,proto3" json:"scene_id,omitempty"`
+	// ID сообщения с вариантами.
+	MessageId string `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	// Индекс выбранного варианта (0-based).
+	SuggestionIndex int32 `protobuf:"varint,3,opt,name=suggestion_index,json=suggestionIndex,proto3" json:"suggestion_index,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SelectSuggestionRequest) Reset() {
+	*x = SelectSuggestionRequest{}
+	mi := &file_ai_v1_ai_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SelectSuggestionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SelectSuggestionRequest) ProtoMessage() {}
+
+func (x *SelectSuggestionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_v1_ai_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SelectSuggestionRequest.ProtoReflect.Descriptor instead.
+func (*SelectSuggestionRequest) Descriptor() ([]byte, []int) {
+	return file_ai_v1_ai_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *SelectSuggestionRequest) GetSceneId() string {
+	if x != nil {
+		return x.SceneId
+	}
+	return ""
+}
+
+func (x *SelectSuggestionRequest) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *SelectSuggestionRequest) GetSuggestionIndex() int32 {
+	if x != nil {
+		return x.SuggestionIndex
+	}
+	return 0
+}
+
+// SelectSuggestionResponse — результат выбора варианта.
+type SelectSuggestionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID активированной ветки.
+	SelectedBranchId string `protobuf:"bytes,1,opt,name=selected_branch_id,json=selectedBranchId,proto3" json:"selected_branch_id,omitempty"`
+	// Была ли ветка активирована.
+	BranchActivated bool `protobuf:"varint,2,opt,name=branch_activated,json=branchActivated,proto3" json:"branch_activated,omitempty"`
+	// Подтверждающее сообщение от AI.
+	ConfirmationMessage string `protobuf:"bytes,3,opt,name=confirmation_message,json=confirmationMessage,proto3" json:"confirmation_message,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SelectSuggestionResponse) Reset() {
+	*x = SelectSuggestionResponse{}
+	mi := &file_ai_v1_ai_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SelectSuggestionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SelectSuggestionResponse) ProtoMessage() {}
+
+func (x *SelectSuggestionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_v1_ai_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SelectSuggestionResponse.ProtoReflect.Descriptor instead.
+func (*SelectSuggestionResponse) Descriptor() ([]byte, []int) {
+	return file_ai_v1_ai_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *SelectSuggestionResponse) GetSelectedBranchId() string {
+	if x != nil {
+		return x.SelectedBranchId
+	}
+	return ""
+}
+
+func (x *SelectSuggestionResponse) GetBranchActivated() bool {
+	if x != nil {
+		return x.BranchActivated
+	}
+	return false
+}
+
+func (x *SelectSuggestionResponse) GetConfirmationMessage() string {
+	if x != nil {
+		return x.ConfirmationMessage
+	}
+	return ""
+}
+
 var File_ai_v1_ai_proto protoreflect.FileDescriptor
 
 const file_ai_v1_ai_proto_rawDesc = "" +
@@ -3157,7 +3285,16 @@ const file_ai_v1_ai_proto_rawDesc = "" +
 	"\n" +
 	"context_id\x18\x01 \x01(\tR\tcontextId\x12\x18\n" +
 	"\aupdated\x18\x02 \x01(\bR\aupdated\x12!\n" +
-	"\fcontext_size\x18\x03 \x01(\x05R\vcontextSize*\x8c\x03\n" +
+	"\fcontext_size\x18\x03 \x01(\x05R\vcontextSize\"~\n" +
+	"\x17SelectSuggestionRequest\x12\x19\n" +
+	"\bscene_id\x18\x01 \x01(\tR\asceneId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12)\n" +
+	"\x10suggestion_index\x18\x03 \x01(\x05R\x0fsuggestionIndex\"\xa6\x01\n" +
+	"\x18SelectSuggestionResponse\x12,\n" +
+	"\x12selected_branch_id\x18\x01 \x01(\tR\x10selectedBranchId\x12)\n" +
+	"\x10branch_activated\x18\x02 \x01(\bR\x0fbranchActivated\x121\n" +
+	"\x14confirmation_message\x18\x03 \x01(\tR\x13confirmationMessage*\x8c\x03\n" +
 	"\bRoomType\x12\x19\n" +
 	"\x15ROOM_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10ROOM_TYPE_LIVING\x10\x01\x12\x15\n" +
@@ -3193,7 +3330,7 @@ const file_ai_v1_ai_proto_rawDesc = "" +
 	"\x1cGENERATION_STYLE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18GENERATION_STYLE_MINIMAL\x10\x01\x12\x1d\n" +
 	"\x19GENERATION_STYLE_MODERATE\x10\x02\x12\x1d\n" +
-	"\x19GENERATION_STYLE_CREATIVE\x10\x032\xbc\x06\n" +
+	"\x19GENERATION_STYLE_CREATIVE\x10\x032\x91\a\n" +
 	"\tAIService\x12Y\n" +
 	"\x12RecognizeFloorPlan\x12 .ai.v1.RecognizeFloorPlanRequest\x1a!.ai.v1.RecognizeFloorPlanResponse\x12_\n" +
 	"\x14GetRecognitionStatus\x12\".ai.v1.GetRecognitionStatusRequest\x1a#.ai.v1.GetRecognitionStatusResponse\x12S\n" +
@@ -3205,7 +3342,8 @@ const file_ai_v1_ai_proto_rawDesc = "" +
 	"\x10ClearChatHistory\x12\x1e.ai.v1.ClearChatHistoryRequest\x1a\x1f.ai.v1.ClearChatHistoryResponse\x12A\n" +
 	"\n" +
 	"GetContext\x12\x18.ai.v1.GetContextRequest\x1a\x19.ai.v1.GetContextResponse\x12J\n" +
-	"\rUpdateContext\x12\x1b.ai.v1.UpdateContextRequest\x1a\x1c.ai.v1.UpdateContextResponseB9Z7github.com/xiiisorate/granula_api/shared/gen/ai/v1;aiv1b\x06proto3"
+	"\rUpdateContext\x12\x1b.ai.v1.UpdateContextRequest\x1a\x1c.ai.v1.UpdateContextResponse\x12S\n" +
+	"\x10SelectSuggestion\x12\x1e.ai.v1.SelectSuggestionRequest\x1a\x1f.ai.v1.SelectSuggestionResponseB9Z7github.com/xiiisorate/granula_api/shared/gen/ai/v1;aiv1b\x06proto3"
 
 var (
 	file_ai_v1_ai_proto_rawDescOnce sync.Once
@@ -3220,7 +3358,7 @@ func file_ai_v1_ai_proto_rawDescGZIP() []byte {
 }
 
 var file_ai_v1_ai_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_ai_v1_ai_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_ai_v1_ai_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_ai_v1_ai_proto_goTypes = []any{
 	(RoomType)(0),                        // 0: ai.v1.RoomType
 	(OpeningType)(0),                     // 1: ai.v1.OpeningType
@@ -3259,37 +3397,39 @@ var file_ai_v1_ai_proto_goTypes = []any{
 	(*GetContextResponse)(nil),           // 34: ai.v1.GetContextResponse
 	(*UpdateContextRequest)(nil),         // 35: ai.v1.UpdateContextRequest
 	(*UpdateContextResponse)(nil),        // 36: ai.v1.UpdateContextResponse
-	nil,                                  // 37: ai.v1.GenerationOptions.MinRoomAreasEntry
-	nil,                                  // 38: ai.v1.SuggestedAction.ParamsEntry
-	(*v1.Dimensions2D)(nil),              // 39: common.v1.Dimensions2D
-	(*v1.Point2D)(nil),                   // 40: common.v1.Point2D
-	(*v1.Polygon2D)(nil),                 // 41: common.v1.Polygon2D
-	(*timestamppb.Timestamp)(nil),        // 42: google.protobuf.Timestamp
+	(*SelectSuggestionRequest)(nil),      // 37: ai.v1.SelectSuggestionRequest
+	(*SelectSuggestionResponse)(nil),     // 38: ai.v1.SelectSuggestionResponse
+	nil,                                  // 39: ai.v1.GenerationOptions.MinRoomAreasEntry
+	nil,                                  // 40: ai.v1.SuggestedAction.ParamsEntry
+	(*v1.Dimensions2D)(nil),              // 41: common.v1.Dimensions2D
+	(*v1.Point2D)(nil),                   // 42: common.v1.Point2D
+	(*v1.Polygon2D)(nil),                 // 43: common.v1.Polygon2D
+	(*timestamppb.Timestamp)(nil),        // 44: google.protobuf.Timestamp
 }
 var file_ai_v1_ai_proto_depIdxs = []int32{
 	5,  // 0: ai.v1.RecognizeFloorPlanRequest.options:type_name -> ai.v1.RecognitionOptions
 	2,  // 1: ai.v1.RecognizeFloorPlanResponse.status:type_name -> ai.v1.JobStatus
 	7,  // 2: ai.v1.RecognizeFloorPlanResponse.scene:type_name -> ai.v1.RecognizedScene
-	39, // 3: ai.v1.RecognizedScene.dimensions:type_name -> common.v1.Dimensions2D
+	41, // 3: ai.v1.RecognizedScene.dimensions:type_name -> common.v1.Dimensions2D
 	8,  // 4: ai.v1.RecognizedScene.walls:type_name -> ai.v1.RecognizedWall
 	9,  // 5: ai.v1.RecognizedScene.rooms:type_name -> ai.v1.RecognizedRoom
 	10, // 6: ai.v1.RecognizedScene.openings:type_name -> ai.v1.RecognizedOpening
 	11, // 7: ai.v1.RecognizedScene.elements:type_name -> ai.v1.RecognizedElement
 	12, // 8: ai.v1.RecognizedScene.metadata:type_name -> ai.v1.RecognitionMetadata
-	40, // 9: ai.v1.RecognizedWall.start:type_name -> common.v1.Point2D
-	40, // 10: ai.v1.RecognizedWall.end:type_name -> common.v1.Point2D
+	42, // 9: ai.v1.RecognizedWall.start:type_name -> common.v1.Point2D
+	42, // 10: ai.v1.RecognizedWall.end:type_name -> common.v1.Point2D
 	0,  // 11: ai.v1.RecognizedRoom.type:type_name -> ai.v1.RoomType
-	41, // 12: ai.v1.RecognizedRoom.boundary:type_name -> common.v1.Polygon2D
+	43, // 12: ai.v1.RecognizedRoom.boundary:type_name -> common.v1.Polygon2D
 	1,  // 13: ai.v1.RecognizedOpening.type:type_name -> ai.v1.OpeningType
-	40, // 14: ai.v1.RecognizedOpening.position:type_name -> common.v1.Point2D
-	40, // 15: ai.v1.RecognizedElement.position:type_name -> common.v1.Point2D
-	39, // 16: ai.v1.RecognizedElement.dimensions:type_name -> common.v1.Dimensions2D
-	39, // 17: ai.v1.RecognitionMetadata.source_resolution:type_name -> common.v1.Dimensions2D
+	42, // 14: ai.v1.RecognizedOpening.position:type_name -> common.v1.Point2D
+	42, // 15: ai.v1.RecognizedElement.position:type_name -> common.v1.Point2D
+	41, // 16: ai.v1.RecognizedElement.dimensions:type_name -> common.v1.Dimensions2D
+	41, // 17: ai.v1.RecognitionMetadata.source_resolution:type_name -> common.v1.Dimensions2D
 	2,  // 18: ai.v1.GetRecognitionStatusResponse.status:type_name -> ai.v1.JobStatus
 	7,  // 19: ai.v1.GetRecognitionStatusResponse.scene:type_name -> ai.v1.RecognizedScene
 	16, // 20: ai.v1.GenerateVariantsRequest.options:type_name -> ai.v1.GenerationOptions
 	0,  // 21: ai.v1.GenerationOptions.required_rooms:type_name -> ai.v1.RoomType
-	37, // 22: ai.v1.GenerationOptions.min_room_areas:type_name -> ai.v1.GenerationOptions.MinRoomAreasEntry
+	39, // 22: ai.v1.GenerationOptions.min_room_areas:type_name -> ai.v1.GenerationOptions.MinRoomAreasEntry
 	3,  // 23: ai.v1.GenerationOptions.style:type_name -> ai.v1.GenerationStyle
 	2,  // 24: ai.v1.GenerateVariantsResponse.status:type_name -> ai.v1.JobStatus
 	18, // 25: ai.v1.GenerateVariantsResponse.variants:type_name -> ai.v1.GeneratedVariant
@@ -3301,12 +3441,12 @@ var file_ai_v1_ai_proto_depIdxs = []int32{
 	27, // 31: ai.v1.ChatMessageResponse.token_usage:type_name -> ai.v1.TokenUsage
 	26, // 32: ai.v1.ChatChunk.actions:type_name -> ai.v1.SuggestedAction
 	27, // 33: ai.v1.ChatChunk.token_usage:type_name -> ai.v1.TokenUsage
-	38, // 34: ai.v1.SuggestedAction.params:type_name -> ai.v1.SuggestedAction.ParamsEntry
+	40, // 34: ai.v1.SuggestedAction.params:type_name -> ai.v1.SuggestedAction.ParamsEntry
 	30, // 35: ai.v1.GetChatHistoryResponse.messages:type_name -> ai.v1.ChatHistoryMessage
-	42, // 36: ai.v1.ChatHistoryMessage.created_at:type_name -> google.protobuf.Timestamp
+	44, // 36: ai.v1.ChatHistoryMessage.created_at:type_name -> google.protobuf.Timestamp
 	26, // 37: ai.v1.ChatHistoryMessage.actions:type_name -> ai.v1.SuggestedAction
 	27, // 38: ai.v1.ChatHistoryMessage.token_usage:type_name -> ai.v1.TokenUsage
-	42, // 39: ai.v1.GetContextResponse.updated_at:type_name -> google.protobuf.Timestamp
+	44, // 39: ai.v1.GetContextResponse.updated_at:type_name -> google.protobuf.Timestamp
 	4,  // 40: ai.v1.AIService.RecognizeFloorPlan:input_type -> ai.v1.RecognizeFloorPlanRequest
 	13, // 41: ai.v1.AIService.GetRecognitionStatus:input_type -> ai.v1.GetRecognitionStatusRequest
 	15, // 42: ai.v1.AIService.GenerateVariants:input_type -> ai.v1.GenerateVariantsRequest
@@ -3317,18 +3457,20 @@ var file_ai_v1_ai_proto_depIdxs = []int32{
 	31, // 47: ai.v1.AIService.ClearChatHistory:input_type -> ai.v1.ClearChatHistoryRequest
 	33, // 48: ai.v1.AIService.GetContext:input_type -> ai.v1.GetContextRequest
 	35, // 49: ai.v1.AIService.UpdateContext:input_type -> ai.v1.UpdateContextRequest
-	6,  // 50: ai.v1.AIService.RecognizeFloorPlan:output_type -> ai.v1.RecognizeFloorPlanResponse
-	14, // 51: ai.v1.AIService.GetRecognitionStatus:output_type -> ai.v1.GetRecognitionStatusResponse
-	17, // 52: ai.v1.AIService.GenerateVariants:output_type -> ai.v1.GenerateVariantsResponse
-	21, // 53: ai.v1.AIService.GetGenerationStatus:output_type -> ai.v1.GetGenerationStatusResponse
-	24, // 54: ai.v1.AIService.SendChatMessage:output_type -> ai.v1.ChatMessageResponse
-	25, // 55: ai.v1.AIService.StreamChatResponse:output_type -> ai.v1.ChatChunk
-	29, // 56: ai.v1.AIService.GetChatHistory:output_type -> ai.v1.GetChatHistoryResponse
-	32, // 57: ai.v1.AIService.ClearChatHistory:output_type -> ai.v1.ClearChatHistoryResponse
-	34, // 58: ai.v1.AIService.GetContext:output_type -> ai.v1.GetContextResponse
-	36, // 59: ai.v1.AIService.UpdateContext:output_type -> ai.v1.UpdateContextResponse
-	50, // [50:60] is the sub-list for method output_type
-	40, // [40:50] is the sub-list for method input_type
+	37, // 50: ai.v1.AIService.SelectSuggestion:input_type -> ai.v1.SelectSuggestionRequest
+	6,  // 51: ai.v1.AIService.RecognizeFloorPlan:output_type -> ai.v1.RecognizeFloorPlanResponse
+	14, // 52: ai.v1.AIService.GetRecognitionStatus:output_type -> ai.v1.GetRecognitionStatusResponse
+	17, // 53: ai.v1.AIService.GenerateVariants:output_type -> ai.v1.GenerateVariantsResponse
+	21, // 54: ai.v1.AIService.GetGenerationStatus:output_type -> ai.v1.GetGenerationStatusResponse
+	24, // 55: ai.v1.AIService.SendChatMessage:output_type -> ai.v1.ChatMessageResponse
+	25, // 56: ai.v1.AIService.StreamChatResponse:output_type -> ai.v1.ChatChunk
+	29, // 57: ai.v1.AIService.GetChatHistory:output_type -> ai.v1.GetChatHistoryResponse
+	32, // 58: ai.v1.AIService.ClearChatHistory:output_type -> ai.v1.ClearChatHistoryResponse
+	34, // 59: ai.v1.AIService.GetContext:output_type -> ai.v1.GetContextResponse
+	36, // 60: ai.v1.AIService.UpdateContext:output_type -> ai.v1.UpdateContextResponse
+	38, // 61: ai.v1.AIService.SelectSuggestion:output_type -> ai.v1.SelectSuggestionResponse
+	51, // [51:62] is the sub-list for method output_type
+	40, // [40:51] is the sub-list for method input_type
 	40, // [40:40] is the sub-list for extension type_name
 	40, // [40:40] is the sub-list for extension extendee
 	0,  // [0:40] is the sub-list for field type_name
@@ -3345,7 +3487,7 @@ func file_ai_v1_ai_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ai_v1_ai_proto_rawDesc), len(file_ai_v1_ai_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   35,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

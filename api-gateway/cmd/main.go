@@ -226,6 +226,9 @@ func main() {
 		scenes.Patch("/:id", sceneHandler.UpdateScene)
 		scenes.Delete("/:id", sceneHandler.DeleteScene)
 		scenes.Get("/:id/compliance", sceneHandler.CheckCompliance)
+
+		// AI Chat with scene context - SelectSuggestion
+		scenes.Post("/:scene_id/chat/messages/:message_id/select", aiHandler.SelectSuggestion)
 	}
 
 	// --------------------------------------------------------------------------
@@ -246,6 +249,10 @@ func main() {
 		ai.Post("/chat", aiHandler.SendChatMessage)
 		ai.Get("/chat/history", aiHandler.GetChatHistory)
 		ai.Delete("/chat/history", aiHandler.ClearChatHistory)
+
+		// Context management
+		ai.Get("/context", aiHandler.GetContext)
+		ai.Post("/context", aiHandler.UpdateContext)
 	}
 
 	// --------------------------------------------------------------------------

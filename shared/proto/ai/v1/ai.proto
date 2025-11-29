@@ -73,6 +73,14 @@ service AIService {
   
   // UpdateContext — обновить контекст (например, после изменений сцены).
   rpc UpdateContext(UpdateContextRequest) returns (UpdateContextResponse);
+  
+  // ---------------------------------------------------------------------------
+  // Suggestion Selection — выбор вариантов
+  // ---------------------------------------------------------------------------
+  
+  // SelectSuggestion — выбрать вариант из предложенных AI.
+  // Активирует выбранную ветку и создаёт подтверждающее сообщение.
+  rpc SelectSuggestion(SelectSuggestionRequest) returns (SelectSuggestionResponse);
 }
 
 // =============================================================================
@@ -695,5 +703,33 @@ message UpdateContextResponse {
   
   // Новый размер контекста.
   int32 context_size = 3;
+}
+
+// =============================================================================
+// Suggestion Selection — выбор вариантов
+// =============================================================================
+
+// SelectSuggestionRequest — запрос на выбор варианта.
+message SelectSuggestionRequest {
+  // ID сцены.
+  string scene_id = 1;
+  
+  // ID сообщения с вариантами.
+  string message_id = 2;
+  
+  // Индекс выбранного варианта (0-based).
+  int32 suggestion_index = 3;
+}
+
+// SelectSuggestionResponse — результат выбора варианта.
+message SelectSuggestionResponse {
+  // ID активированной ветки.
+  string selected_branch_id = 1;
+  
+  // Была ли ветка активирована.
+  bool branch_activated = 2;
+  
+  // Подтверждающее сообщение от AI.
+  string confirmation_message = 3;
 }
 

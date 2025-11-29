@@ -42,6 +42,7 @@ const (
 	AIService_ClearChatHistory_FullMethodName     = "/ai.v1.AIService/ClearChatHistory"
 	AIService_GetContext_FullMethodName           = "/ai.v1.AIService/GetContext"
 	AIService_UpdateContext_FullMethodName        = "/ai.v1.AIService/UpdateContext"
+	AIService_SelectSuggestion_FullMethodName     = "/ai.v1.AIService/SelectSuggestion"
 )
 
 // AIServiceClient is the client API for AIService service.
@@ -71,6 +72,9 @@ type AIServiceClient interface {
 	GetContext(ctx context.Context, in *GetContextRequest, opts ...grpc.CallOption) (*GetContextResponse, error)
 	// UpdateContext — обновить контекст (например, после изменений сцены).
 	UpdateContext(ctx context.Context, in *UpdateContextRequest, opts ...grpc.CallOption) (*UpdateContextResponse, error)
+	// SelectSuggestion — выбрать вариант из предложенных AI.
+	// Активирует выбранную ветку и создаёт подтверждающее сообщение.
+	SelectSuggestion(ctx context.Context, in *SelectSuggestionRequest, opts ...grpc.CallOption) (*SelectSuggestionResponse, error)
 }
 
 type aIServiceClient struct {
@@ -190,6 +194,16 @@ func (c *aIServiceClient) UpdateContext(ctx context.Context, in *UpdateContextRe
 	return out, nil
 }
 
+func (c *aIServiceClient) SelectSuggestion(ctx context.Context, in *SelectSuggestionRequest, opts ...grpc.CallOption) (*SelectSuggestionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SelectSuggestionResponse)
+	err := c.cc.Invoke(ctx, AIService_SelectSuggestion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AIServiceServer is the server API for AIService service.
 // All implementations must embed UnimplementedAIServiceServer
 // for forward compatibility.
@@ -217,6 +231,9 @@ type AIServiceServer interface {
 	GetContext(context.Context, *GetContextRequest) (*GetContextResponse, error)
 	// UpdateContext — обновить контекст (например, после изменений сцены).
 	UpdateContext(context.Context, *UpdateContextRequest) (*UpdateContextResponse, error)
+	// SelectSuggestion — выбрать вариант из предложенных AI.
+	// Активирует выбранную ветку и создаёт подтверждающее сообщение.
+	SelectSuggestion(context.Context, *SelectSuggestionRequest) (*SelectSuggestionResponse, error)
 	mustEmbedUnimplementedAIServiceServer()
 }
 
@@ -256,6 +273,9 @@ func (UnimplementedAIServiceServer) GetContext(context.Context, *GetContextReque
 }
 func (UnimplementedAIServiceServer) UpdateContext(context.Context, *UpdateContextRequest) (*UpdateContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateContext not implemented")
+}
+func (UnimplementedAIServiceServer) SelectSuggestion(context.Context, *SelectSuggestionRequest) (*SelectSuggestionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SelectSuggestion not implemented")
 }
 func (UnimplementedAIServiceServer) mustEmbedUnimplementedAIServiceServer() {}
 func (UnimplementedAIServiceServer) testEmbeddedByValue()                   {}
@@ -451,6 +471,24 @@ func _AIService_UpdateContext_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AIService_SelectSuggestion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SelectSuggestionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AIServiceServer).SelectSuggestion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AIService_SelectSuggestion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AIServiceServer).SelectSuggestion(ctx, req.(*SelectSuggestionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AIService_ServiceDesc is the grpc.ServiceDesc for AIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -493,6 +531,10 @@ var AIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateContext",
 			Handler:    _AIService_UpdateContext_Handler,
+		},
+		{
+			MethodName: "SelectSuggestion",
+			Handler:    _AIService_SelectSuggestion_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
