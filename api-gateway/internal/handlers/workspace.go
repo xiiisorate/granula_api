@@ -627,4 +627,3 @@ type SuccessResponse struct {
 	Message   string `json:"message"`
 	RequestID string `json:"request_id,omitempty"`
 }
-

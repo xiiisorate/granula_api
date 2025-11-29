@@ -42,7 +42,10 @@ IMAGES_DIR = Path(__file__).parent.parent / "Квартиры"
 LOG_FILE = Path(__file__).parent / f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
 # Test user credentials (will be created if not exists)
-TEST_USER_EMAIL = "test_api@granula.ru"
+# Using timestamp to ensure unique email for each test run
+import time as _time
+_timestamp = int(_time.time())
+TEST_USER_EMAIL = f"test_api_{_timestamp}@granula.ru"
 TEST_USER_PASSWORD = "TestPassword123!"
 TEST_USER_NAME = "API Test User"
 
