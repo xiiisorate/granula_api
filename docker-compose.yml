@@ -228,9 +228,9 @@ services:
       dockerfile: api-gateway/Dockerfile
     container_name: granula-api-gateway
     environment:
-      APP_ENV: development
-      LOG_LEVEL: debug
-      HTTP_PORT: 8080
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      HTTP_PORT: ${HTTP_PORT:-3000}
       REDIS_URL: redis://redis:6379
       AUTH_SERVICE_ADDR: auth-service:50051
       USER_SERVICE_ADDR: user-service:50052
@@ -242,10 +242,10 @@ services:
       COMPLIANCE_SERVICE_ADDR: compliance-service:50058
       REQUEST_SERVICE_ADDR: request-service:50059
       NOTIFICATION_SERVICE_ADDR: notification-service:50060
-      JWT_SECRET: dev-secret-change-in-production
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
       SWAGGER_ENABLED: "true"
     ports:
-      - "8080:8080"
+      - "3000:3000"
     networks:
       - granula-network
     depends_on:

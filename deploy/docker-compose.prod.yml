@@ -18,11 +18,11 @@ services:
     container_name: granula-api-gateway
     restart: always
     ports:
-      - "8080:8080"
+      - "3000:3000"
     environment:
       APP_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      HTTP_PORT: 8080
+      HTTP_PORT: 3000
       JWT_SECRET: ${JWT_SECRET}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://granula.ru}
       AUTH_SERVICE_ADDR: auth-service:50051
@@ -42,7 +42,7 @@ services:
       - user-service
       - notification-service
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

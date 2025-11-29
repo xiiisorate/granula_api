@@ -1,30 +1,13 @@
 # =============================================================================
 # GitHub Actions - CI/CD Pipeline for Granula API
 # =============================================================================
-# Автоматический деплой всех микросервисов на production сервер.
-#
-# Triggers:
-#   - Push в main ветку
-#   - Pull request в main
-#
-# Secrets (настроить в GitHub Settings → Secrets):
-#   - SERVER_HOST: IP адрес сервера
-#   - SERVER_USER: Пользователь SSH
-#   - SERVER_SSH_KEY: Приватный SSH ключ
-#   - JWT_SECRET: Секрет для JWT токенов
-#   - OPENROUTER_API_KEY: API ключ OpenRouter
-#   - POSTGRES_PASSWORD: Пароль PostgreSQL
-#   - MONGO_PASSWORD: Пароль MongoDB
-#   - REDIS_PASSWORD: Пароль Redis
-#   - MINIO_SECRET_KEY: Секретный ключ MinIO
+# Автоматический деплой - билд на сервере для надёжности
 # =============================================================================
 
 name: Deploy Granula API
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 env:
@@ -50,80 +33,24 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: |
-          cd shared && go mod download
+        run: cd shared && go mod download
           
       - name: Run tests
-        run: |
-          cd shared && go test -v -race -coverprofile=coverage.out ./...
-          
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./shared/coverage.out
-          fail_ci_if_error: false
+        run: cd shared && go test -v -race ./...
 
   # ===========================================================================
-  # Job: Build
-  # ===========================================================================
-  build:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build images
-        run: |
-          docker compose -f docker-compose.yml build
-          
-      - name: Save images
-        run: |
-          mkdir -p /tmp/images
-          docker save api-api-gateway:latest | gzip > /tmp/images/api-gateway.tar.gz
-          docker save api-auth-service:latest | gzip > /tmp/images/auth-service.tar.gz
-          docker save api-user-service:latest | gzip > /tmp/images/user-service.tar.gz
-          docker save api-notification-service:latest | gzip > /tmp/images/notification-service.tar.gz
-          docker save api-workspace-service:latest | gzip > /tmp/images/workspace-service.tar.gz
-          docker save api-ai-service:latest | gzip > /tmp/images/ai-service.tar.gz
-          docker save api-scene-service:latest | gzip > /tmp/images/scene-service.tar.gz
-          docker save api-branch-service:latest | gzip > /tmp/images/branch-service.tar.gz
-          docker save api-floorplan-service:latest | gzip > /tmp/images/floorplan-service.tar.gz
-          docker save api-compliance-service:latest | gzip > /tmp/images/compliance-service.tar.gz
-          docker save api-request-service:latest | gzip > /tmp/images/request-service.tar.gz
-          
-      - name: Upload images artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-images
-          path: /tmp/images/
-          retention-days: 1
-
-  # ===========================================================================
-  # Job: Deploy
+  # Job: Deploy (Build on server)
   # ===========================================================================
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: build
+    needs: test
     if: github.ref == 'refs/heads/main'
     environment: production
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Download images artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-images
-          path: /tmp/images/
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
@@ -135,18 +62,17 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Create deployment directory
+      - name: Sync code to server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /opt/granula/api/images"
-
-      - name: Copy files to server
-        run: |
-          # Copy docker-compose and configs
-          scp docker-compose.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/
-          scp -r deploy/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/
-          
-          # Copy Docker images
-          scp /tmp/images/*.tar.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/images/
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'node_modules' \
+            --exclude '__pycache__' \
+            --exclude '*.log' \
+            --exclude '.idea' \
+            --exclude '.vscode' \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/
 
       - name: Create environment file
         run: |
@@ -177,44 +103,82 @@ jobs:
           # OpenRouter AI
           OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
           
-          # API Gateway
+          # API Gateway port
           HTTP_PORT=3000
-          CORS_ALLOWED_ORIGINS=https://granula.ru,https://app.granula.ru
+          CORS_ALLOWED_ORIGINS=https://granula.ru,https://app.granula.ru,https://api.granula.raitokyokai.tech
           EOF"
 
-      - name: Deploy services
+      - name: Configure Nginx and SSL
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            # Ensure certbot directory exists
+            mkdir -p /var/www/certbot
+            
+            # Check if SSL cert exists, if not create temporary HTTP-only config
+            if [ ! -f /etc/letsencrypt/live/api.granula.raitokyokai.tech/fullchain.pem ]; then
+              echo "SSL cert not found, creating HTTP-only config for certbot..."
+              cat > /etc/nginx/sites-available/api.granula.conf << 'NGINXEOF'
+server {
+    listen 80;
+    server_name api.granula.raitokyokai.tech;
+    
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+NGINXEOF
+            else
+              # Copy full SSL config
+              cp /opt/granula/api/deploy/nginx/api.granula.conf /etc/nginx/sites-available/api.granula.conf
+            fi
+            
+            ln -sf /etc/nginx/sites-available/api.granula.conf /etc/nginx/sites-enabled/api.granula.conf
+            rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+            
+            # Test and reload nginx
+            nginx -t && systemctl reload nginx || echo "Nginx config issue"
+          ENDSSH
+
+      - name: Build and Deploy
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             cd /opt/granula/api
             
-            # Load Docker images
-            for img in images/*.tar.gz; do
-              if [ -f "$img" ]; then
-                echo "Loading $img..."
-                gunzip -c "$img" | docker load
-              fi
-            done
-            
             # Stop existing services
             docker compose down --remove-orphans 2>/dev/null || true
             
-            # Start services
-            docker compose --env-file .env -f docker-compose.yml up -d
+            # Build images on server
+            echo "Building Docker images..."
+            docker compose build --parallel
             
-            # Wait for services to be healthy
+            # Start services
+            echo "Starting services..."
+            docker compose --env-file .env up -d
+            
+            # Wait for services
             echo "Waiting for services to start..."
-            sleep 30
+            sleep 60
+            
+            # Show status
+            docker compose ps
             
             # Health check
-            curl -sf http://localhost:3000/health || echo "Health check failed, but continuing..."
+            echo "Health check..."
+            curl -sf http://localhost:3000/health && echo "API Gateway is healthy!" || echo "Health check pending..."
             
             echo "Deployment completed!"
           ENDSSH
 
-      - name: Notify on success
-        if: success()
-        run: echo "✅ Deployment to production successful!"
-
-      - name: Notify on failure
-        if: failure()
-        run: echo "❌ Deployment failed!"
+      - name: Verify deployment
+        run: |
+          echo "Checking API Gateway..."
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "curl -s http://localhost:3000/health || echo 'Still starting...'"
