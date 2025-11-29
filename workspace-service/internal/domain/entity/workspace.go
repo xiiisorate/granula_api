@@ -125,8 +125,9 @@ func (r MemberRole) CanDeleteWorkspace() bool {
 //
 // Business Rules:
 //   - Every workspace has exactly one owner
-//   - Name must be 2-100 characters
-//   - Description is optional, max 1000 characters
+//   - Name must be 2-100 characters (1-255 per API docs)
+//   - Description is optional, max 2000 characters
+//   - Address is optional, max 500 characters
 //   - Workspace can have unlimited members
 type Workspace struct {
 	// ID is the unique identifier for the workspace (UUID v4).
@@ -138,16 +139,38 @@ type Workspace struct {
 	OwnerID uuid.UUID `json:"owner_id" db:"owner_id"`
 
 	// Name is the display name of the workspace.
-	// Required, 2-100 characters, trimmed of whitespace.
+	// Required, 1-255 characters, trimmed of whitespace.
 	Name string `json:"name" db:"name"`
 
 	// Description provides additional context about the workspace.
-	// Optional, max 1000 characters.
+	// Optional, max 2000 characters.
 	Description string `json:"description" db:"description"`
+
+	// Address is the physical address of the apartment/property.
+	// Optional, max 500 characters.
+	Address string `json:"address,omitempty" db:"address"`
+
+	// TotalArea is the total area in square meters.
+	// Optional, must be > 0 and <= 10000.
+	TotalArea *float64 `json:"total_area,omitempty" db:"total_area"`
+
+	// RoomsCount is the number of rooms in the apartment.
+	// Optional, must be >= 1 and <= 100.
+	RoomsCount *int `json:"rooms_count,omitempty" db:"rooms_count"`
+
+	// Status indicates the current state of the workspace.
+	// Default: "draft". Values: draft, active, completed, archived.
+	Status WorkspaceStatus `json:"status" db:"status"`
+
+	// Settings contains workspace-specific configuration.
+	Settings *WorkspaceSettings `json:"settings" db:"settings"`
+
+	// PreviewURL is the URL to a preview image of the workspace.
+	PreviewURL *string `json:"preview_url,omitempty" db:"preview_url"`
 
 	// Members contains all users with access to this workspace.
 	// Includes the owner as a member with RoleOwner.
-	Members []Member `json:"members" db:"-"`
+	Members []Member `json:"members,omitempty" db:"-"`
 
 	// MemberCount is the total number of members (including owner).
 	// Used for display without loading all members.
@@ -164,6 +187,78 @@ type Workspace struct {
 	// UpdatedAt is the timestamp of the last modification.
 	// Updated automatically on any change.
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// =============================================================================
+// Workspace Status Constants
+// =============================================================================
+
+// WorkspaceStatus represents the current state of a workspace.
+type WorkspaceStatus string
+
+const (
+	// StatusDraft - workspace is being set up, not yet active.
+	StatusDraft WorkspaceStatus = "draft"
+
+	// StatusActive - workspace is actively being worked on.
+	StatusActive WorkspaceStatus = "active"
+
+	// StatusCompleted - project is completed.
+	StatusCompleted WorkspaceStatus = "completed"
+
+	// StatusArchived - workspace is archived (read-only).
+	StatusArchived WorkspaceStatus = "archived"
+)
+
+// ValidWorkspaceStatuses contains all valid workspace statuses.
+var ValidWorkspaceStatuses = []WorkspaceStatus{StatusDraft, StatusActive, StatusCompleted, StatusArchived}
+
+// IsValid checks if the status is valid.
+func (s WorkspaceStatus) IsValid() bool {
+	for _, valid := range ValidWorkspaceStatuses {
+		if s == valid {
+			return true
+		}
+	}
+	return false
+}
+
+// String returns string representation.
+func (s WorkspaceStatus) String() string {
+	return string(s)
+}
+
+// =============================================================================
+// Workspace Settings
+// =============================================================================
+
+// WorkspaceSettings contains workspace-specific configuration.
+type WorkspaceSettings struct {
+	// Units is the measurement system: "metric" or "imperial".
+	Units string `json:"units" db:"units"`
+
+	// GridSize is the grid size in meters for snapping.
+	GridSize float64 `json:"grid_size" db:"grid_size"`
+
+	// WallHeight is the default wall height in meters.
+	WallHeight float64 `json:"wall_height" db:"wall_height"`
+
+	// SnapToGrid enables automatic snapping to grid.
+	SnapToGrid bool `json:"snap_to_grid" db:"snap_to_grid"`
+
+	// ShowDimensions enables dimension display in the editor.
+	ShowDimensions bool `json:"show_dimensions" db:"show_dimensions"`
+}
+
+// DefaultWorkspaceSettings returns sensible default settings.
+func DefaultWorkspaceSettings() *WorkspaceSettings {
+	return &WorkspaceSettings{
+		Units:          "metric",
+		GridSize:       0.1,
+		WallHeight:     2.7,
+		SnapToGrid:     true,
+		ShowDimensions: true,
+	}
 }
 
 // NewWorkspace creates a new workspace with the given owner and name.
@@ -186,7 +281,7 @@ type Workspace struct {
 func NewWorkspace(ownerID uuid.UUID, name string) (*Workspace, error) {
 	// Trim and validate name
 	name = strings.TrimSpace(name)
-	if len(name) < 2 || len(name) > 100 {
+	if len(name) < 1 || len(name) > 255 {
 		return nil, ErrInvalidWorkspaceName
 	}
 
@@ -196,6 +291,12 @@ func NewWorkspace(ownerID uuid.UUID, name string) (*Workspace, error) {
 		OwnerID:     ownerID,
 		Name:        name,
 		Description: "",
+		Address:     "",
+		TotalArea:   nil,
+		RoomsCount:  nil,
+		Status:      StatusDraft,
+		Settings:    DefaultWorkspaceSettings(),
+		PreviewURL:  nil,
 		Members:     make([]Member, 0, 1),
 		MemberCount: 1,
 		CreatedAt:   now,

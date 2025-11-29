@@ -167,6 +167,26 @@ func (c RequestCategory) Price() int {
 	return 0
 }
 
+// ValidCategories contains all valid request categories.
+var ValidCategories = []RequestCategory{
+	CategoryConsultation, CategoryDocumentation, CategoryExpertVisit, CategoryFullPackage,
+}
+
+// IsValid checks if the category is valid.
+func (c RequestCategory) IsValid() bool {
+	for _, valid := range ValidCategories {
+		if c == valid {
+			return true
+		}
+	}
+	return false
+}
+
+// String returns string representation.
+func (c RequestCategory) String() string {
+	return string(c)
+}
+
 // =============================================================================
 // Request Priority Constants
 // =============================================================================
@@ -187,6 +207,24 @@ const (
 	// PriorityUrgent - Same-day or next-day processing.
 	PriorityUrgent RequestPriority = "urgent"
 )
+
+// ValidPriorities contains all valid priority levels.
+var ValidPriorities = []RequestPriority{PriorityLow, PriorityNormal, PriorityHigh, PriorityUrgent}
+
+// IsValid checks if the priority is valid.
+func (p RequestPriority) IsValid() bool {
+	for _, valid := range ValidPriorities {
+		if p == valid {
+			return true
+		}
+	}
+	return false
+}
+
+// String returns string representation.
+func (p RequestPriority) String() string {
+	return string(p)
+}
 
 // =============================================================================
 // Request Entity
@@ -242,6 +280,18 @@ type Request struct {
 
 	// ContactEmail is the user's contact email.
 	ContactEmail string `json:"contact_email,omitempty" db:"contact_email"`
+
+	// ContactName is the contact person's name.
+	ContactName string `json:"contact_name,omitempty" db:"contact_name"`
+
+	// PreferredTime is the preferred contact time window.
+	PreferredTime string `json:"preferred_time,omitempty" db:"preferred_time"`
+
+	// SceneID links to the related scene (if any).
+	SceneID string `json:"scene_id,omitempty" db:"scene_id"`
+
+	// BranchID links to the related branch variant (if any).
+	BranchID string `json:"branch_id,omitempty" db:"branch_id"`
 
 	// StatusHistory tracks all status changes.
 	StatusHistory []StatusChange `json:"status_history,omitempty" db:"-"`

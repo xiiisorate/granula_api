@@ -1,6 +1,6 @@
 # План разработки Granula API
 
-## 📊 ТЕКУЩИЙ СТАТУС (обновлено)
+## 📊 ТЕКУЩИЙ СТАТУС (обновлено 29.11.2024)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
@@ -14,18 +14,25 @@
 │  [✅] User Service                     [✅] AI Service                     │
 │  [✅] API Gateway                      [✅] Floor Plan Service             │
 │  [✅] Notification Service             [✅] Scene Service                  │
-│  [⏳] Workspace Service                [✅] Branch Service                 │
-│  [⏳] Request Service                  [✅] Tests (all services)           │
+│  [✅] Workspace Service ← NEW!         [✅] Branch Service                 │
+│  [✅] Request Service ← NEW!           [✅] Tests (all services)           │
 │                                                                            │
-│  Ветки:                                Ветки:                              │
-│  • dev/d1-auth                         • dev/d2-service                    │
-│  • dev/d1-user                                                             │
-│  • dev/d1-gateway                                                          │
-│  • dev/d1-notification                                                     │
+│  Все ветки смержены в dev/shared       Все ветки смержены в dev/shared    │
+│                                                                            │
+│  ИНФРАСТРУКТУРА                        ДОКУМЕНТАЦИЯ                        │
+│  ──────────────                        ────────────                        │
+│  [✅] Docker Compose                   [✅] Swagger (1000+ строк)          │
+│  [✅] Dockerfiles (все 11 сервисов)    [✅] API docs                       │
+│  [✅] PostgreSQL (6 баз)               [✅] Entity docs                    │
+│  [✅] MongoDB                          [✅] Architecture docs              │
+│  [✅] Redis                                                                │
+│  [✅] MinIO                                                                │
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
 
 Легенда: [✅] Готово  [⏳] В процессе  [❌] Не начато
+
+СТАТУС: 100% сервисов реализовано! Осталось: генерация proto файлов
 ```
 
 ---

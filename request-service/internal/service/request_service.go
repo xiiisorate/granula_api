@@ -10,6 +10,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,6 +18,18 @@ import (
 	"github.com/xiiisorate/granula_api/request-service/internal/domain/entity"
 	"github.com/xiiisorate/granula_api/request-service/internal/repository/postgres"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
+)
+
+// =============================================================================
+// Service Errors
+// =============================================================================
+
+var (
+	// ErrForbidden is returned when user lacks permission for the operation.
+	ErrForbidden = errors.New("forbidden: insufficient permissions")
+
+	// ErrUnauthorized is returned when user is not authenticated.
+	ErrUnauthorized = errors.New("unauthorized: authentication required")
 )
 
 // =============================================================================
@@ -473,4 +486,3 @@ func (s *RequestService) GetDocuments(ctx context.Context, requestID uuid.UUID) 
 func (s *RequestService) GetStatusHistory(ctx context.Context, requestID uuid.UUID) ([]entity.StatusChange, error) {
 	return s.repo.GetStatusHistory(ctx, requestID)
 }
-
