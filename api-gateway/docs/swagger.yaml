@@ -69,10 +69,6 @@ info:
     | RATE_LIMITED | Превышен лимит запросов |
     | INTERNAL_ERROR | Внутренняя ошибка сервера |
 
-    ## Версионирование
-
-    Все endpoints имеют префикс `/api/v1/`. При выпуске новых версий старые версии поддерживаются минимум 6 месяцев.
-
   termsOfService: https://granula.ru/terms
   contact:
     name: Granula API Support
@@ -90,55 +86,25 @@ servers:
 
 tags:
   - name: auth
-    description: |
-      ## Аутентификация и управление сессиями
-
-      Endpoints для регистрации, входа, выхода и управления токенами.
+    description: Аутентификация и управление сессиями
   - name: users
-    description: |
-      ## Профили пользователей
-
-      Управление профилем, настройками и аватаром пользователя.
+    description: Профили пользователей
   - name: workspaces
-    description: |
-      ## Рабочие пространства
-
-      Создание и управление воркспейсами для совместной работы над проектами.
+    description: Рабочие пространства для проектов
   - name: floor-plans
-    description: |
-      ## Планировки
-
-      Загрузка, обработка и управление планировками квартир.
+    description: Загрузка и обработка планировок
   - name: scenes
-    description: |
-      ## 3D сцены
-
-      Управление 3D сценами и элементами (стены, комнаты, мебель).
+    description: 3D сцены и элементы
   - name: branches
-    description: |
-      ## Ветки дизайна
-
-      Версионирование и сравнение вариантов планировки.
+    description: Ветки дизайна (версионирование)
   - name: ai
-    description: |
-      ## AI сервисы
-
-      Распознавание планировок, генерация вариантов и AI-ассистент.
+    description: AI сервисы (распознавание, генерация, чат)
   - name: compliance
-    description: |
-      ## Проверка соответствия
-
-      Проверка на соответствие СНиП и ЖК РФ.
+    description: Проверка соответствия СНиП и ЖК РФ
   - name: requests
-    description: |
-      ## Заявки экспертам
-
-      Подача и управление заявками на услуги специалистов БТИ.
+    description: Заявки на услуги экспертов БТИ
   - name: notifications
-    description: |
-      ## Уведомления
-
-      Уведомления пользователей о событиях в системе.
+    description: Уведомления пользователей
 
 # =============================================================================
 # Security Schemes
@@ -149,10 +115,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: |
-        JWT токен аутентификации. Получите через `/auth/login` или `/auth/register`.
-
-        Формат: `Bearer <token>`
+      description: JWT токен. Получите через `/auth/login` или `/auth/register`. Формат - `Bearer <token>`
 
   # ===========================================================================
   # Schemas
@@ -163,38 +126,48 @@ components:
     # -------------------------------------------------------------------------
     Error:
       type: object
-      required:
-        - code
-        - message
       properties:
-        code:
+        error:
           type: string
-          description: Машиночитаемый код ошибки
-          example: VALIDATION_ERROR
+          description: Описание ошибки
+          example: unauthorized
         message:
           type: string
-          description: Человекочитаемое описание ошибки
-          example: Неверный формат email
+          description: Детальное сообщение
+          example: Invalid token
+        request_id:
+          type: string
+          description: ID запроса для отладки
+          example: req-abc123
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: validation_error
         details:
           type: object
           additionalProperties:
             type: string
-          description: Детали ошибок валидации по полям
           example:
-            email: "Неверный формат email"
-            password: "Минимум 8 символов"
+            email: "invalid email format"
+            password: "minimum 8 characters"
+
+    # -------------------------------------------------------------------------
+    # Success Response
+    # -------------------------------------------------------------------------
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
         request_id:
           type: string
-          description: ID запроса для отладки
-          example: req-abc123def456
-
-    ValidationError:
-      allOf:
-        - $ref: "#/components/schemas/Error"
-        - type: object
-          properties:
-            code:
-              example: VALIDATION_ERROR
 
     # -------------------------------------------------------------------------
     # Pagination
@@ -204,116 +177,85 @@ components:
       properties:
         total:
           type: integer
-          description: Общее количество элементов
           example: 150
         page:
           type: integer
-          description: Текущая страница
           example: 1
         page_size:
           type: integer
-          description: Элементов на странице
           example: 20
         total_pages:
           type: integer
-          description: Всего страниц
           example: 8
-        has_next:
-          type: boolean
-          description: Есть следующая страница
-          example: true
-        has_prev:
-          type: boolean
-          description: Есть предыдущая страница
-          example: false
 
     # -------------------------------------------------------------------------
     # Auth Schemas
     # -------------------------------------------------------------------------
     RegisterRequest:
       type: object
-      required:
-        - email
-        - password
-        - name
+      required: [email, password, name]
       properties:
         email:
           type: string
           format: email
-          maxLength: 255
-          description: Email пользователя (уникальный)
           example: user@example.com
         password:
           type: string
           format: password
           minLength: 8
-          maxLength: 72
-          description: Пароль (минимум 8 символов, рекомендуется использовать буквы, цифры и спецсимволы)
           example: SecurePass123!
         name:
           type: string
           minLength: 2
-          maxLength: 255
-          description: Имя пользователя
           example: Иван Петров
 
     LoginRequest:
       type: object
-      required:
-        - email
-        - password
+      required: [email, password]
       properties:
         email:
           type: string
           format: email
-          description: Email пользователя
           example: user@example.com
         password:
           type: string
           format: password
-          description: Пароль
           example: SecurePass123!
-        device_id:
-          type: string
-          description: Идентификатор устройства для управления сессиями
-          example: device-123-abc
 
-    AuthTokens:
+    AuthResponse:
       type: object
       properties:
-        user_id:
+        data:
+          type: object
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            expires_in:
+              type: integer
+              description: Секунды до истечения access_token
+        message:
           type: string
-          format: uuid
-          description: UUID пользователя
-          example: 550e8400-e29b-41d4-a716-446655440000
-        access_token:
+        request_id:
           type: string
-          description: JWT Access Token (время жизни 15 минут)
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        refresh_token:
-          type: string
-          description: Refresh Token для обновления Access Token
-          example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
-        expires_at:
-          type: integer
-          format: int64
-          description: Unix timestamp истечения Access Token
-          example: 1701234567
-        token_type:
-          type: string
-          description: Тип токена
-          example: Bearer
-          enum: [Bearer]
 
     RefreshRequest:
       type: object
-      required:
-        - refresh_token
+      required: [refresh_token]
       properties:
         refresh_token:
           type: string
-          description: Refresh Token
-          example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
+
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
 
     # -------------------------------------------------------------------------
     # User Schemas
@@ -324,36 +266,22 @@ components:
         id:
           type: string
           format: uuid
-          description: UUID пользователя
-          example: 550e8400-e29b-41d4-a716-446655440000
         email:
           type: string
           format: email
-          description: Email
-          example: user@example.com
         name:
           type: string
-          description: Имя
-          example: Иван Петров
         avatar_url:
           type: string
           format: uri
-          description: URL аватара
-          example: https://storage.granula.ru/avatars/user-123.jpg
         phone:
           type: string
-          description: Телефон
-          example: "+7 (999) 123-45-67"
         created_at:
           type: string
           format: date-time
-          description: Дата регистрации
-          example: "2024-01-15T10:30:00Z"
         updated_at:
           type: string
           format: date-time
-          description: Дата обновления
-          example: "2024-11-29T14:20:00Z"
 
     UpdateUserRequest:
       type: object
@@ -362,12 +290,67 @@ components:
           type: string
           minLength: 2
           maxLength: 255
-          description: Новое имя
-          example: Иван Сидоров
         phone:
           type: string
-          description: Новый телефон
-          example: "+79991234567"
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+          minLength: 8
+
+    # -------------------------------------------------------------------------
+    # Notification Schemas
+    # -------------------------------------------------------------------------
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [info, warning, error, success, system]
+        title:
+          type: string
+        message:
+          type: string
+        is_read:
+          type: boolean
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationList:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            notifications:
+              type: array
+              items:
+                $ref: "#/components/schemas/Notification"
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+
+    UnreadCount:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            count:
+              type: integer
 
     # -------------------------------------------------------------------------
     # Workspace Schemas
@@ -378,58 +361,41 @@ components:
         id:
           type: string
           format: uuid
-          description: UUID воркспейса
-          example: 550e8400-e29b-41d4-a716-446655440000
         owner_id:
           type: string
           format: uuid
-          description: UUID владельца
-          example: 660e8400-e29b-41d4-a716-446655440001
         name:
           type: string
-          description: Название
-          example: Перепланировка квартиры на Тверской
         description:
           type: string
-          description: Описание
-          example: Проект перепланировки 3-комнатной квартиры
         member_count:
           type: integer
-          description: Количество участников
-          example: 3
-        project_count:
-          type: integer
-          description: Количество проектов
-          example: 2
         created_at:
           type: string
           format: date-time
-          example: "2024-01-15T10:30:00Z"
         updated_at:
           type: string
           format: date-time
-          example: "2024-11-29T14:20:00Z"
-        members:
-          type: array
-          items:
-            $ref: "#/components/schemas/Member"
 
     CreateWorkspaceRequest:
       type: object
-      required:
-        - name
+      required: [name]
       properties:
         name:
           type: string
           minLength: 2
           maxLength: 100
-          description: Название воркспейса
-          example: Перепланировка квартиры
         description:
           type: string
           maxLength: 1000
-          description: Описание
-          example: Проект перепланировки 3-комнатной квартиры
+
+    UpdateWorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
 
     Member:
       type: object
@@ -437,42 +403,29 @@ components:
         id:
           type: string
           format: uuid
-          example: 770e8400-e29b-41d4-a716-446655440002
         user_id:
           type: string
           format: uuid
-          example: 880e8400-e29b-41d4-a716-446655440003
+        workspace_id:
+          type: string
+          format: uuid
         role:
           type: string
           enum: [owner, admin, editor, viewer]
-          description: |
-            Роль участника:
-            - **owner** - Полный контроль, может удалить воркспейс
-            - **admin** - Управление участниками и настройками
-            - **editor** - Редактирование контента
-            - **viewer** - Только просмотр
-          example: editor
         joined_at:
           type: string
           format: date-time
-          example: "2024-02-20T12:00:00Z"
 
     AddMemberRequest:
       type: object
-      required:
-        - user_id
-        - role
+      required: [user_id, role]
       properties:
         user_id:
           type: string
           format: uuid
-          description: UUID пользователя
-          example: 880e8400-e29b-41d4-a716-446655440003
         role:
           type: string
           enum: [admin, editor, viewer]
-          description: Роль (owner назначается автоматически)
-          example: editor
 
     # -------------------------------------------------------------------------
     # Floor Plan Schemas
@@ -483,45 +436,32 @@ components:
         id:
           type: string
           format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
         workspace_id:
           type: string
           format: uuid
-          example: 660e8400-e29b-41d4-a716-446655440001
+        user_id:
+          type: string
+          format: uuid
         name:
           type: string
-          example: План квартиры - этаж 2
         description:
           type: string
-          example: План второго этажа
         address:
           type: string
-          example: г. Москва, ул. Тверская, д. 15
         status:
           type: string
           enum: [uploaded, processing, recognized, failed]
-          description: |
-            Статус обработки:
-            - **uploaded** - Загружен, ожидает обработки
-            - **processing** - Идет распознавание
-            - **recognized** - Успешно распознан
-            - **failed** - Ошибка распознавания
-          example: recognized
         image_url:
           type: string
           format: uri
-          example: https://storage.granula.ru/floorplans/fp-123.jpg
         thumbnail_url:
           type: string
           format: uri
-          example: https://storage.granula.ru/thumbnails/fp-123-thumb.jpg
-        recognition_result:
-          $ref: "#/components/schemas/RecognitionResult"
         scene_id:
           type: string
           format: uuid
-          description: ID связанной 3D сцены
-          example: 770e8400-e29b-41d4-a716-446655440002
+        recognition_result:
+          $ref: "#/components/schemas/RecognitionResult"
         created_at:
           type: string
           format: date-time
@@ -534,73 +474,58 @@ components:
       properties:
         rooms_count:
           type: integer
-          description: Количество распознанных комнат
-          example: 4
         total_area:
           type: number
           format: float
-          description: Общая площадь (кв.м)
-          example: 78.5
         living_area:
           type: number
           format: float
-          description: Жилая площадь (кв.м)
-          example: 52.3
+        confidence:
+          type: number
+          format: float
         rooms:
           type: array
           items:
             $ref: "#/components/schemas/RecognizedRoom"
-        confidence:
-          type: number
-          format: float
-          description: Уверенность распознавания (0-1)
-          example: 0.94
-        processing_time_ms:
-          type: integer
-          description: Время обработки (мс)
-          example: 1250
 
     RecognizedRoom:
       type: object
       properties:
         type:
           type: string
-          enum:
-            [
-              living_room,
-              bedroom,
-              kitchen,
-              bathroom,
-              toilet,
-              hallway,
-              balcony,
-              storage,
-              other,
-            ]
-          example: bedroom
+          enum: [living_room, bedroom, kitchen, bathroom, toilet, hallway, balcony, storage, other]
         name:
           type: string
-          example: Спальня 1
         area:
           type: number
           format: float
-          example: 18.5
-        polygon:
-          type: array
-          items:
-            $ref: "#/components/schemas/Point2D"
 
-    Point2D:
+    UpdateFloorPlanRequest:
       type: object
       properties:
-        x:
-          type: number
-          format: float
-          example: 120.5
-        y:
-          type: number
-          format: float
-          example: 80.3
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+
+    RecognitionStatus:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [pending, processing, completed, failed]
+            progress:
+              type: integer
+              description: Progress 0-100
+            result:
+              $ref: "#/components/schemas/RecognitionResult"
+            error:
+              type: string
 
     # -------------------------------------------------------------------------
     # Scene Schemas
@@ -611,7 +536,6 @@ components:
         id:
           type: string
           format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
         workspace_id:
           type: string
           format: uuid
@@ -620,21 +544,15 @@ components:
           format: uuid
         name:
           type: string
-          example: Сцена квартиры - вариант 1
         description:
           type: string
         status:
           type: string
           enum: [draft, active, archived]
-          example: active
         element_count:
           type: integer
-          example: 42
         branch_count:
           type: integer
-          example: 3
-        statistics:
-          $ref: "#/components/schemas/SceneStatistics"
         created_at:
           type: string
           format: date-time
@@ -642,112 +560,48 @@ components:
           type: string
           format: date-time
 
-    SceneStatistics:
+    CreateSceneRequest:
       type: object
+      required: [name]
       properties:
-        walls_count:
-          type: integer
-          example: 15
-        rooms_count:
-          type: integer
-          example: 4
-        windows_count:
-          type: integer
-          example: 6
-        doors_count:
-          type: integer
-          example: 5
-        furniture_count:
-          type: integer
-          example: 12
-        total_area:
-          type: number
-          format: float
-          example: 78.5
-        living_area:
-          type: number
-          format: float
-          example: 52.3
-
-    Element:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        scene_id:
-          type: string
-          format: uuid
-        type:
-          type: string
-          enum: [wall, room, door, window, furniture, fixture]
-          example: wall
         name:
           type: string
-          example: Несущая стена кухня-гостиная
-        position:
-          $ref: "#/components/schemas/Point3D"
-        dimensions:
-          $ref: "#/components/schemas/Dimensions3D"
-        rotation:
-          $ref: "#/components/schemas/Rotation"
-        properties:
-          type: object
-          additionalProperties: true
-        is_load_bearing:
-          type: boolean
-          example: true
-        created_at:
+        description:
           type: string
-          format: date-time
+        floor_plan_id:
+          type: string
+          format: uuid
 
-    Point3D:
+    UpdateSceneRequest:
       type: object
       properties:
-        x:
-          type: number
-          format: float
-          example: 5.0
-        y:
-          type: number
-          format: float
-          example: 2.5
-        z:
-          type: number
-          format: float
-          example: 0.0
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
 
-    Dimensions3D:
+    SceneComplianceResult:
       type: object
       properties:
-        width:
-          type: number
-          format: float
-          example: 3.5
-        height:
-          type: number
-          format: float
-          example: 2.8
-        depth:
-          type: number
-          format: float
-          example: 0.2
-
-    Rotation:
-      type: object
-      properties:
-        x:
-          type: number
-          format: float
-          example: 0.0
-        y:
-          type: number
-          format: float
-          example: 45.0
-        z:
-          type: number
-          format: float
-          example: 0.0
+        data:
+          type: object
+          properties:
+            scene_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [passed, warning, failed]
+            violations:
+              type: array
+              items:
+                $ref: "#/components/schemas/Violation"
+            checked_at:
+              type: string
+              format: date-time
 
     # -------------------------------------------------------------------------
     # Branch Schemas
@@ -766,16 +620,13 @@ components:
           format: uuid
         name:
           type: string
-          example: Вариант с объединенной кухней
         description:
           type: string
         status:
           type: string
           enum: [active, archived, merged]
-          example: active
         is_main:
           type: boolean
-          example: false
         created_by:
           type: string
           format: uuid
@@ -788,90 +639,129 @@ components:
 
     CreateBranchRequest:
       type: object
-      required:
-        - name
+      required: [name]
       properties:
         name:
           type: string
           minLength: 2
-          maxLength: 255
-          example: Вариант 2 - студия
         description:
           type: string
-          maxLength: 1000
         parent_branch_id:
           type: string
           format: uuid
+
+    UpdateBranchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    BranchComparison:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            source_branch:
+              $ref: "#/components/schemas/Branch"
+            target_branch:
+              $ref: "#/components/schemas/Branch"
+            differences:
+              type: array
+              items:
+                type: object
+                properties:
+                  element_id:
+                    type: string
+                  change_type:
+                    type: string
+                    enum: [added, removed, modified]
+                  description:
+                    type: string
+
+    MergeBranchRequest:
+      type: object
+      required: [target_branch_id]
+      properties:
+        target_branch_id:
+          type: string
+          format: uuid
+        strategy:
+          type: string
+          enum: [overwrite, merge]
+          default: merge
 
     # -------------------------------------------------------------------------
     # Compliance Schemas
     # -------------------------------------------------------------------------
     ComplianceCheckRequest:
       type: object
-      required:
-        - scene_id
+      required: [scene_id]
       properties:
         scene_id:
           type: string
           format: uuid
-          description: ID сцены для проверки
         branch_id:
           type: string
           format: uuid
-          description: ID ветки (опционально)
         categories:
           type: array
           items:
             type: string
-          description: Категории правил для проверки
-          example: [minimum_area, ventilation]
-        operation_type:
-          type: string
-          enum: [construction, renovation, redevelopment]
-          example: redevelopment
 
     ComplianceCheckResponse:
       type: object
       properties:
-        check_id:
-          type: string
-          format: uuid
+        data:
+          type: object
+          properties:
+            check_id:
+              type: string
+              format: uuid
+            scene_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [passed, warning, failed]
+            score:
+              type: integer
+              description: 0-100
+            violation_count:
+              type: integer
+            warning_count:
+              type: integer
+            violations:
+              type: array
+              items:
+                $ref: "#/components/schemas/Violation"
+            checked_at:
+              type: string
+              format: date-time
+
+    CheckOperationRequest:
+      type: object
+      required: [scene_id, operation]
+      properties:
         scene_id:
           type: string
           format: uuid
-        status:
+        branch_id:
           type: string
-          enum: [passed, warning, failed]
-          description: |
-            Общий статус:
-            - **passed** - Все проверки пройдены
-            - **warning** - Есть предупреждения
-            - **failed** - Есть критические нарушения
-          example: warning
-        score:
-          type: integer
-          description: Общий балл соответствия (0-100)
-          example: 78
-        violation_count:
-          type: integer
-          example: 2
-        warning_count:
-          type: integer
-          example: 3
-        violations:
-          type: array
-          items:
-            $ref: "#/components/schemas/Violation"
-        category_stats:
-          type: array
-          items:
-            $ref: "#/components/schemas/CategoryStat"
-        checked_at:
-          type: string
-          format: date-time
-        processing_time_ms:
-          type: integer
-          example: 320
+          format: uuid
+        operation:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [add_wall, remove_wall, move_wall, add_room, remove_room, merge_rooms]
+            element_id:
+              type: string
+              format: uuid
+            parameters:
+              type: object
 
     Violation:
       type: object
@@ -881,100 +771,58 @@ components:
           format: uuid
         rule_id:
           type: string
-          example: SNIP-MIN-AREA-01
         rule_name:
           type: string
-          example: Минимальная площадь жилой комнаты
         category:
           type: string
-          example: minimum_area
         severity:
           type: string
           enum: [error, warning, info]
-          description: |
-            Серьезность:
-            - **error** - Критическое нарушение, блокирует согласование
-            - **warning** - Предупреждение, рекомендуется исправить
-            - **info** - Информационное сообщение
-          example: error
         description:
           type: string
-          example: Площадь спальни (7.5 кв.м) меньше минимально допустимой (8 кв.м)
-        affected_elements:
-          type: array
-          items:
-            type: object
-            properties:
-              element_id:
-                type: string
-                format: uuid
-              element_type:
-                type: string
-              element_name:
-                type: string
         recommendations:
           type: array
           items:
             type: string
-          example:
-            - Увеличить площадь комнаты минимум на 0.5 кв.м
-            - Рассмотреть объединение с соседней комнатой
         legal_reference:
           type: string
-          example: СНиП 31-01-2003, п. 5.3
-
-    CategoryStat:
-      type: object
-      properties:
-        category:
-          type: string
-          example: minimum_area
-        category_name:
-          type: string
-          example: Минимальные площади
-        total_rules:
-          type: integer
-          example: 8
-        passed:
-          type: integer
-          example: 6
-        violations:
-          type: integer
-          example: 1
-        warnings:
-          type: integer
-          example: 1
 
     ComplianceRule:
       type: object
       properties:
         id:
           type: string
-          example: SNIP-MIN-AREA-01
         name:
           type: string
-          example: Минимальная площадь жилой комнаты
         category:
           type: string
-          example: minimum_area
         description:
           type: string
-          example: Площадь жилой комнаты должна быть не менее 8 кв.м
-        default_severity:
+        severity:
           type: string
           enum: [error, warning, info]
-          example: error
         legal_reference:
           type: string
-          example: СНиП 31-01-2003
-        applicable_operations:
-          type: array
-          items:
-            type: string
-          example: [construction, redevelopment]
         is_active:
           type: boolean
-          example: true
+
+    GenerateReportRequest:
+      type: object
+      required: [scene_id]
+      properties:
+        scene_id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+        format:
+          type: string
+          enum: [pdf, html, json]
+          default: pdf
+        include_recommendations:
+          type: boolean
+          default: true
 
     # -------------------------------------------------------------------------
     # Request (Expert) Schemas
@@ -993,66 +841,26 @@ components:
           format: uuid
         title:
           type: string
-          example: Консультация по перепланировке
         description:
           type: string
         category:
           type: string
           enum: [consultation, documentation, expert_visit, full_package]
-          description: |
-            Категория услуги:
-            - **consultation** - Консультация (2000₽)
-            - **documentation** - Подготовка документации (15000₽)
-            - **expert_visit** - Выезд эксперта (5000₽)
-            - **full_package** - Полный пакет (30000₽)
         priority:
           type: string
           enum: [low, normal, high, urgent]
-          example: normal
         status:
           type: string
-          enum:
-            [
-              draft,
-              pending,
-              in_review,
-              approved,
-              rejected,
-              assigned,
-              in_progress,
-              completed,
-              cancelled,
-            ]
-          description: |
-            Статус заявки:
-            - **draft** - Черновик
-            - **pending** - Отправлена на рассмотрение
-            - **in_review** - На рассмотрении
-            - **approved** - Одобрена
-            - **rejected** - Отклонена
-            - **assigned** - Назначен эксперт
-            - **in_progress** - В работе
-            - **completed** - Завершена
-            - **cancelled** - Отменена
-          example: pending
+          enum: [draft, pending, in_review, approved, rejected, assigned, in_progress, completed, cancelled]
         expert_id:
           type: string
           format: uuid
-        assigned_at:
-          type: string
-          format: date-time
         estimated_cost:
           type: integer
-          description: Оценочная стоимость (рубли)
-          example: 2000
         final_cost:
           type: integer
-          description: Финальная стоимость (рубли)
-        rejection_reason:
-          type: string
         contact_phone:
           type: string
-          example: "+79991234567"
         contact_email:
           type: string
           format: email
@@ -1062,17 +870,10 @@ components:
         updated_at:
           type: string
           format: date-time
-        completed_at:
-          type: string
-          format: date-time
 
     CreateExpertRequestRequest:
       type: object
-      required:
-        - workspace_id
-        - title
-        - description
-        - category
+      required: [workspace_id, title, description, category]
       properties:
         workspace_id:
           type: string
@@ -1081,11 +882,9 @@ components:
           type: string
           minLength: 5
           maxLength: 200
-          example: Консультация по перепланировке 3-комнатной квартиры
         description:
           type: string
           minLength: 10
-          maxLength: 5000
         category:
           type: string
           enum: [consultation, documentation, expert_visit, full_package]
@@ -1099,129 +898,132 @@ components:
           type: string
           format: email
 
-    # -------------------------------------------------------------------------
-    # AI Schemas
-    # -------------------------------------------------------------------------
-    ChatMessageRequest:
+    UpdateExpertRequestRequest:
       type: object
-      required:
-        - message
       properties:
-        session_id:
+        title:
           type: string
-          format: uuid
-          description: ID сессии (создается автоматически)
-        message:
+        description:
           type: string
-          minLength: 1
-          maxLength: 4000
-          example: Как лучше организовать пространство в квартире 50 кв.м?
-        scene_id:
+        priority:
           type: string
-          format: uuid
-          description: ID сцены для контекста
+          enum: [low, normal, high, urgent]
+        contact_phone:
+          type: string
+        contact_email:
+          type: string
+          format: email
 
-    ChatMessageResponse:
+    RequestDocument:
       type: object
       properties:
-        session_id:
+        id:
           type: string
           format: uuid
-        message_id:
+        request_id:
           type: string
           format: uuid
-        response:
+        name:
           type: string
-          example: Для квартиры 50 кв.м рекомендую...
-        suggestions:
-          type: array
-          items:
-            $ref: "#/components/schemas/AISuggestion"
-        tokens_used:
-          type: integer
-          example: 450
-        created_at:
+        type:
+          type: string
+        url:
+          type: string
+          format: uri
+        uploaded_at:
           type: string
           format: date-time
 
-    AISuggestion:
+    # -------------------------------------------------------------------------
+    # AI Schemas
+    # -------------------------------------------------------------------------
+    RecognizeRequest:
+      type: object
+      required: [floor_plan_id]
+      properties:
+        floor_plan_id:
+          type: string
+          format: uuid
+        options:
+          type: object
+          properties:
+            detect_furniture:
+              type: boolean
+              default: false
+            detect_dimensions:
+              type: boolean
+              default: true
+
+    RecognizeResponse:
       type: object
       properties:
-        type:
-          type: string
-          enum:
-            [
-              layout_change,
-              furniture_placement,
-              space_optimization,
-              compliance_warning,
-            ]
-        title:
-          type: string
-          example: Объединение кухни и гостиной
-        description:
-          type: string
-        confidence:
-          type: number
-          format: float
-          example: 0.87
+        data:
+          type: object
+          properties:
+            job_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [queued, processing]
 
     GenerateVariantsRequest:
       type: object
-      required:
-        - scene_id
-        - count
+      required: [scene_id, count]
       properties:
         scene_id:
+          type: string
+          format: uuid
+        branch_id:
           type: string
           format: uuid
         count:
           type: integer
           minimum: 1
           maximum: 5
-          example: 3
         style:
           type: string
           enum: [modern, classic, minimalist, scandinavian, loft]
-          example: modern
         priorities:
           type: array
           items:
             type: string
-          example: [maximize_light, open_space]
-        keep_elements:
-          type: array
-          items:
-            type: string
-            format: uuid
-          description: ID элементов, которые нельзя изменять
-        budget_range:
+        constraints:
           type: object
-          properties:
-            min:
-              type: integer
-              example: 100000
-            max:
-              type: integer
-              example: 500000
 
-    GenerateVariantsResponse:
+    GenerateResponse:
       type: object
       properties:
-        task_id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [processing, completed, failed]
-        variants:
-          type: array
-          items:
-            $ref: "#/components/schemas/GeneratedVariant"
-        processing_time_ms:
-          type: integer
-        error:
-          type: string
+        data:
+          type: object
+          properties:
+            job_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [queued, processing]
+
+    GenerationStatus:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            job_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [queued, processing, completed, failed]
+            progress:
+              type: integer
+            variants:
+              type: array
+              items:
+                $ref: "#/components/schemas/GeneratedVariant"
+            error:
+              type: string
 
     GeneratedVariant:
       type: object
@@ -1231,7 +1033,6 @@ components:
           format: uuid
         name:
           type: string
-          example: Вариант 1 - Открытое пространство
         description:
           type: string
         branch_id:
@@ -1239,41 +1040,76 @@ components:
           format: uuid
         quality_score:
           type: integer
-          description: Оценка качества (0-100)
-          example: 85
-        estimated_cost:
-          type: integer
-          description: Оценочная стоимость реализации
-          example: 350000
         preview_url:
           type: string
           format: uri
-        changes:
-          type: array
-          items:
-            type: object
-            properties:
-              type:
-                type: string
-              description:
-                type: string
-              affected_elements:
-                type: array
-                items:
-                  type: string
 
-    # -------------------------------------------------------------------------
-    # Common Schemas
-    # -------------------------------------------------------------------------
-    SuccessResponse:
+    ChatMessageRequest:
       type: object
+      required: [message]
       properties:
-        success:
-          type: boolean
-          example: true
+        session_id:
+          type: string
+          format: uuid
         message:
           type: string
-          example: Operation completed successfully
+          minLength: 1
+          maxLength: 4000
+        scene_id:
+          type: string
+          format: uuid
+
+    ChatMessageResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            session_id:
+              type: string
+              format: uuid
+            message_id:
+              type: string
+              format: uuid
+            response:
+              type: string
+            suggestions:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+
+    ChatHistory:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            session_id:
+              type: string
+              format: uuid
+            messages:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  role:
+                    type: string
+                    enum: [user, assistant]
+                  content:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
 
 # =============================================================================
 # Paths
@@ -1286,7 +1122,7 @@ paths:
     post:
       tags: [auth]
       summary: Регистрация пользователя
-      description: Создает новую учетную запись и возвращает токены аутентификации
+      description: Создает новую учетную запись и возвращает токены
       operationId: register
       requestBody:
         required: true
@@ -1300,7 +1136,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthTokens"
+                $ref: "#/components/schemas/AuthResponse"
         "400":
           description: Ошибка валидации
           content:
@@ -1309,16 +1145,11 @@ paths:
                 $ref: "#/components/schemas/ValidationError"
         "409":
           description: Email уже зарегистрирован
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   /auth/login:
     post:
       tags: [auth]
       summary: Вход в систему
-      description: Аутентификация по email и паролю
       operationId: login
       requestBody:
         required: true
@@ -1332,19 +1163,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthTokens"
+                $ref: "#/components/schemas/AuthResponse"
         "401":
           description: Неверные учетные данные
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   /auth/refresh:
     post:
       tags: [auth]
       summary: Обновление токенов
-      description: Получение новых токенов по refresh token
       operationId: refreshTokens
       requestBody:
         required: true
@@ -1358,19 +1184,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthTokens"
+                $ref: "#/components/schemas/AuthResponse"
         "401":
           description: Недействительный refresh token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   /auth/logout:
     post:
       tags: [auth]
       summary: Выход из системы
-      description: Инвалидация refresh token
       operationId: logout
       security:
         - BearerAuth: []
@@ -1379,10 +1200,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RefreshRequest"
+              $ref: "#/components/schemas/LogoutRequest"
       responses:
         "200":
           description: Успешный выход
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/logout-all:
+    post:
+      tags: [auth]
+      summary: Выход со всех устройств
+      description: Инвалидирует все refresh токены пользователя
+      operationId: logoutAll
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Выход со всех устройств выполнен
           content:
             application/json:
               schema:
@@ -1395,7 +1232,6 @@ paths:
     get:
       tags: [users]
       summary: Получить профиль
-      description: Возвращает профиль текущего пользователя
       operationId: getProfile
       security:
         - BearerAuth: []
@@ -1405,17 +1241,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
         "401":
           description: Не авторизован
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+
     patch:
       tags: [users]
       summary: Обновить профиль
-      description: Обновляет профиль текущего пользователя
       operationId: updateProfile
       security:
         - BearerAuth: []
@@ -1431,7 +1266,170 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+
+    delete:
+      tags: [users]
+      summary: Удалить аккаунт
+      description: Полностью удаляет учетную запись пользователя
+      operationId: deleteAccount
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Аккаунт удален
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /users/me/password:
+    put:
+      tags: [users]
+      summary: Сменить пароль
+      operationId: changePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Пароль изменен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Неверный текущий пароль
+
+  # ---------------------------------------------------------------------------
+  # Notification Endpoints
+  # ---------------------------------------------------------------------------
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: Список уведомлений
+      operationId: getNotifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: is_read
+          in: query
+          description: Фильтр по статусу прочтения
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Список уведомлений
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationList"
+
+    delete:
+      tags: [notifications]
+      summary: Удалить все прочитанные уведомления
+      operationId: deleteAllReadNotifications
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Уведомления удалены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/count:
+    get:
+      tags: [notifications]
+      summary: Количество непрочитанных
+      operationId: getUnreadCount
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Количество непрочитанных уведомлений
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+
+  /notifications/{id}/read:
+    post:
+      tags: [notifications]
+      summary: Отметить как прочитанное
+      operationId: markAsRead
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Отмечено как прочитанное
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/read-all:
+    post:
+      tags: [notifications]
+      summary: Отметить все как прочитанные
+      operationId: markAllAsRead
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Все уведомления отмечены как прочитанные
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/{id}:
+    delete:
+      tags: [notifications]
+      summary: Удалить уведомление
+      operationId: deleteNotification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Уведомление удалено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   # ---------------------------------------------------------------------------
   # Workspace Endpoints
@@ -1440,7 +1438,6 @@ paths:
     get:
       tags: [workspaces]
       summary: Список воркспейсов
-      description: Возвращает список воркспейсов текущего пользователя
       operationId: listWorkspaces
       security:
         - BearerAuth: []
@@ -1450,14 +1447,11 @@ paths:
           schema:
             type: integer
             default: 1
-            minimum: 1
         - name: page_size
           in: query
           schema:
             type: integer
             default: 20
-            minimum: 1
-            maximum: 100
         - name: name
           in: query
           description: Фильтр по названию
@@ -1471,12 +1465,16 @@ paths:
               schema:
                 type: object
                 properties:
-                  workspaces:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Workspace"
-                  pagination:
-                    $ref: "#/components/schemas/Pagination"
+                  data:
+                    type: object
+                    properties:
+                      workspaces:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Workspace"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
     post:
       tags: [workspaces]
       summary: Создать воркспейс
@@ -1495,7 +1493,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Workspace"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Workspace"
 
   /workspaces/{id}:
     get:
@@ -1517,13 +1518,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Workspace"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Workspace"
         "404":
           description: Не найден
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+
     patch:
       tags: [workspaces]
       summary: Обновить воркспейс
@@ -1542,18 +1543,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateWorkspaceRequest"
+              $ref: "#/components/schemas/UpdateWorkspaceRequest"
       responses:
         "200":
           description: Воркспейс обновлен
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Workspace"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Workspace"
+
     delete:
       tags: [workspaces]
       summary: Удалить воркспейс
-      description: Удаляет воркспейс (только владелец)
       operationId: deleteWorkspace
       security:
         - BearerAuth: []
@@ -1575,7 +1579,7 @@ paths:
   /workspaces/{id}/members:
     get:
       tags: [workspaces]
-      summary: Список участников
+      summary: Список участников воркспейса
       operationId: getWorkspaceMembers
       security:
         - BearerAuth: []
@@ -1592,9 +1596,16 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Member"
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      members:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Member"
+
     post:
       tags: [workspaces]
       summary: Добавить участника
@@ -1620,12 +1631,261 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Member"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Member"
+
+  /workspaces/{id}/members/{memberId}:
+    delete:
+      tags: [workspaces]
+      summary: Удалить участника
+      operationId: removeWorkspaceMember
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Участник удален
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /workspaces/{workspace_id}/scenes:
+    get:
+      tags: [workspaces, scenes]
+      summary: Список сцен воркспейса
+      operationId: listWorkspaceScenes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Список сцен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      scenes:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Scene"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
+    post:
+      tags: [workspaces, scenes]
+      summary: Создать сцену в воркспейсе
+      operationId: createWorkspaceScene
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSceneRequest"
+      responses:
+        "201":
+          description: Сцена создана
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Scene"
+
+  # ---------------------------------------------------------------------------
+  # Scene Endpoints
+  # ---------------------------------------------------------------------------
+  /scenes/{id}:
+    get:
+      tags: [scenes]
+      summary: Получить сцену
+      operationId: getScene
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные сцены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Scene"
+
+    patch:
+      tags: [scenes]
+      summary: Обновить сцену
+      operationId: updateScene
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSceneRequest"
+      responses:
+        "200":
+          description: Сцена обновлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Scene"
+
+    delete:
+      tags: [scenes]
+      summary: Удалить сцену
+      operationId: deleteScene
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Сцена удалена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /scenes/{id}/compliance:
+    get:
+      tags: [scenes, compliance]
+      summary: Проверить сцену на соответствие нормам
+      operationId: checkSceneCompliance
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneComplianceResult"
 
   # ---------------------------------------------------------------------------
   # Floor Plan Endpoints
   # ---------------------------------------------------------------------------
   /floor-plans:
+    get:
+      tags: [floor-plans]
+      summary: Список планировок
+      operationId: listFloorPlans
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [uploaded, processing, recognized, failed]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Список планировок
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      floor_plans:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FloorPlan"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
     post:
       tags: [floor-plans]
       summary: Загрузить планировку
@@ -1638,10 +1898,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required:
-                - workspace_id
-                - name
-                - file
+              required: [workspace_id, name, file]
               properties:
                 workspace_id:
                   type: string
@@ -1661,13 +1918,92 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FloorPlan"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FloorPlan"
 
-  /floor-plans/{id}/process:
-    post:
+  /floor-plans/{id}:
+    get:
       tags: [floor-plans]
-      summary: Запустить распознавание
-      operationId: processFloorPlan
+      summary: Получить планировку
+      operationId: getFloorPlan
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные планировки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FloorPlan"
+
+    patch:
+      tags: [floor-plans]
+      summary: Обновить планировку
+      operationId: updateFloorPlan
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFloorPlanRequest"
+      responses:
+        "200":
+          description: Планировка обновлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FloorPlan"
+
+    delete:
+      tags: [floor-plans]
+      summary: Удалить планировку
+      operationId: deleteFloorPlan
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Планировка удалена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /floor-plans/{id}/recognize:
+    post:
+      tags: [floor-plans, ai]
+      summary: Запустить распознавание планировки
+      operationId: startFloorPlanRecognition
       security:
         - BearerAuth: []
       parameters:
@@ -1686,23 +2022,546 @@ paths:
                 create_scene:
                   type: boolean
                   default: true
-                run_compliance:
+                detect_furniture:
                   type: boolean
-                  default: true
+                  default: false
       responses:
         "202":
-          description: Обработка запущена
+          description: Распознавание запущено
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  task_id:
-                    type: string
-                    format: uuid
-                  status:
-                    type: string
-                    example: processing
+                  data:
+                    type: object
+                    properties:
+                      job_id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        example: processing
+
+  /floor-plans/{id}/recognition-status:
+    get:
+      tags: [floor-plans, ai]
+      summary: Статус распознавания планировки
+      operationId: getFloorPlanRecognitionStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Статус распознавания
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecognitionStatus"
+
+  /floor-plans/{id}/download-url:
+    get:
+      tags: [floor-plans]
+      summary: Получить URL для скачивания
+      operationId: getFloorPlanDownloadURL
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: URL для скачивания
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                      expires_at:
+                        type: string
+                        format: date-time
+
+  # ---------------------------------------------------------------------------
+  # Branch Endpoints
+  # ---------------------------------------------------------------------------
+  /scenes/{scene_id}/branches:
+    get:
+      tags: [branches]
+      summary: Список веток сцены
+      operationId: listBranches
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, merged]
+      responses:
+        "200":
+          description: Список веток
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      branches:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Branch"
+
+    post:
+      tags: [branches]
+      summary: Создать ветку
+      operationId: createBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBranchRequest"
+      responses:
+        "201":
+          description: Ветка создана
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Branch"
+
+  /scenes/{scene_id}/branches/{id}:
+    get:
+      tags: [branches]
+      summary: Получить ветку
+      operationId: getBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные ветки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Branch"
+
+    patch:
+      tags: [branches]
+      summary: Обновить ветку
+      operationId: updateBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBranchRequest"
+      responses:
+        "200":
+          description: Ветка обновлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Branch"
+
+    delete:
+      tags: [branches]
+      summary: Удалить ветку
+      operationId: deleteBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Ветка удалена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /scenes/{scene_id}/branches/{id}/activate:
+    post:
+      tags: [branches]
+      summary: Активировать ветку
+      description: Делает ветку активной (текущей для редактирования)
+      operationId: activateBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Ветка активирована
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Branch"
+
+  /scenes/{scene_id}/branches/{id}/duplicate:
+    post:
+      tags: [branches]
+      summary: Дублировать ветку
+      operationId: duplicateBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Название новой ветки
+      responses:
+        "201":
+          description: Ветка продублирована
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Branch"
+
+  /scenes/{scene_id}/branches/{id}/compare/{target_id}:
+    get:
+      tags: [branches]
+      summary: Сравнить две ветки
+      operationId: compareBranches
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          description: ID исходной ветки
+          schema:
+            type: string
+            format: uuid
+        - name: target_id
+          in: path
+          required: true
+          description: ID целевой ветки для сравнения
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Результат сравнения
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchComparison"
+
+  /scenes/{scene_id}/branches/{id}/merge:
+    post:
+      tags: [branches]
+      summary: Слить ветки
+      operationId: mergeBranches
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          description: ID исходной ветки (которая будет слита)
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MergeBranchRequest"
+      responses:
+        "200":
+          description: Ветки слиты
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Branch"
+
+  # ---------------------------------------------------------------------------
+  # AI Endpoints
+  # ---------------------------------------------------------------------------
+  /ai/recognize:
+    post:
+      tags: [ai]
+      summary: Распознать планировку
+      operationId: recognizeFloorPlan
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecognizeRequest"
+      responses:
+        "202":
+          description: Задача распознавания создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecognizeResponse"
+
+  /ai/recognize/{job_id}/status:
+    get:
+      tags: [ai]
+      summary: Статус распознавания
+      operationId: getRecognitionStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Статус задачи
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecognitionStatus"
+
+  /ai/generate:
+    post:
+      tags: [ai]
+      summary: Сгенерировать варианты планировки
+      operationId: generateVariants
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateVariantsRequest"
+      responses:
+        "202":
+          description: Генерация запущена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateResponse"
+
+  /ai/generate/{job_id}/status:
+    get:
+      tags: [ai]
+      summary: Статус генерации
+      operationId: getGenerationStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Статус генерации
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerationStatus"
+
+  /ai/chat:
+    post:
+      tags: [ai]
+      summary: Отправить сообщение AI-ассистенту
+      operationId: sendChatMessage
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageRequest"
+      responses:
+        "200":
+          description: Ответ AI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageResponse"
+        "429":
+          description: Превышен лимит запросов
+
+  /ai/chat/history:
+    get:
+      tags: [ai]
+      summary: История чата
+      operationId: getChatHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: История сообщений
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatHistory"
+
+    delete:
+      tags: [ai]
+      summary: Очистить историю чата
+      operationId: clearChatHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: История очищена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   # ---------------------------------------------------------------------------
   # Compliance Endpoints
@@ -1728,6 +2587,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/ComplianceCheckResponse"
 
+  /compliance/check-operation:
+    post:
+      tags: [compliance]
+      summary: Проверить операцию на соответствие
+      description: Проверяет конкретную операцию (снос стены, перенос и т.д.) до её выполнения
+      operationId: checkOperation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckOperationRequest"
+      responses:
+        "200":
+          description: Результат проверки операции
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceCheckResponse"
+
   /compliance/rules:
     get:
       tags: [compliance]
@@ -1740,11 +2621,10 @@ paths:
           in: query
           schema:
             type: string
-        - name: operation_type
+        - name: is_active
           in: query
           schema:
-            type: string
-            enum: [construction, renovation, redevelopment]
+            type: boolean
       responses:
         "200":
           description: Список правил
@@ -1753,48 +2633,44 @@ paths:
               schema:
                 type: object
                 properties:
-                  rules:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/ComplianceRule"
-                  total_rules:
-                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      rules:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ComplianceRule"
 
-  # ---------------------------------------------------------------------------
-  # AI Endpoints
-  # ---------------------------------------------------------------------------
-  /ai/chat:
-    post:
-      tags: [ai]
-      summary: Отправить сообщение AI
-      operationId: sendChatMessage
+  /compliance/rules/{id}:
+    get:
+      tags: [compliance]
+      summary: Получить правило
+      operationId: getComplianceRule
       security:
         - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ChatMessageRequest"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
-          description: Ответ AI
+          description: Данные правила
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChatMessageResponse"
-        "429":
-          description: Превышен лимит запросов
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ComplianceRule"
 
-  /ai/generate:
+  /compliance/report:
     post:
-      tags: [ai]
-      summary: Сгенерировать варианты
-      operationId: generateVariants
+      tags: [compliance]
+      summary: Сгенерировать отчет
+      description: Генерирует PDF/HTML отчет о соответствии планировки нормам
+      operationId: generateComplianceReport
       security:
         - BearerAuth: []
       requestBody:
@@ -1802,17 +2678,30 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GenerateVariantsRequest"
+              $ref: "#/components/schemas/GenerateReportRequest"
       responses:
-        "202":
-          description: Генерация запущена
+        "200":
+          description: Отчет сгенерирован
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GenerateVariantsResponse"
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      report_id:
+                        type: string
+                        format: uuid
+                      download_url:
+                        type: string
+                        format: uri
+                      expires_at:
+                        type: string
+                        format: date-time
 
   # ---------------------------------------------------------------------------
-  # Request Endpoints
+  # Request (Expert) Endpoints
   # ---------------------------------------------------------------------------
   /requests:
     get:
@@ -1831,18 +2720,7 @@ paths:
           in: query
           schema:
             type: string
-            enum:
-              [
-                draft,
-                pending,
-                in_review,
-                approved,
-                rejected,
-                assigned,
-                in_progress,
-                completed,
-                cancelled,
-              ]
+            enum: [draft, pending, in_review, approved, rejected, assigned, in_progress, completed, cancelled]
         - name: page
           in: query
           schema:
@@ -1861,12 +2739,16 @@ paths:
               schema:
                 type: object
                 properties:
-                  requests:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/ExpertRequest"
-                  pagination:
-                    $ref: "#/components/schemas/Pagination"
+                  data:
+                    type: object
+                    properties:
+                      requests:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ExpertRequest"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
     post:
       tags: [requests]
       summary: Создать заявку
@@ -1885,7 +2767,87 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ExpertRequest"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ExpertRequest"
+
+  /requests/{id}:
+    get:
+      tags: [requests]
+      summary: Получить заявку
+      operationId: getRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные заявки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ExpertRequest"
+
+    patch:
+      tags: [requests]
+      summary: Обновить заявку
+      operationId: updateRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExpertRequestRequest"
+      responses:
+        "200":
+          description: Заявка обновлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ExpertRequest"
+
+    delete:
+      tags: [requests]
+      summary: Удалить заявку
+      description: Удаляет заявку (только в статусе draft)
+      operationId: deleteRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Заявка удалена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   /requests/{id}/submit:
     post:
@@ -1908,37 +2870,111 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ExpertRequest"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ExpertRequest"
 
-  /requests/pricing:
-    get:
+  /requests/{id}/cancel:
+    post:
       tags: [requests]
-      summary: Цены на услуги
-      operationId: getPricing
+      summary: Отменить заявку
+      operationId: cancelRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Причина отмены
       responses:
         "200":
-          description: Информация о ценах
+          description: Заявка отменена
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  categories:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        code:
-                          type: string
-                        name:
-                          type: string
-                        description:
-                          type: string
-                        base_price:
-                          type: integer
-                        estimated_days:
-                          type: string
-                        includes:
-                          type: array
-                          items:
-                            type: string
+                  data:
+                    $ref: "#/components/schemas/ExpertRequest"
+
+  /requests/{id}/documents:
+    get:
+      tags: [requests]
+      summary: Список документов заявки
+      operationId: getRequestDocuments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Список документов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      documents:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RequestDocument"
+
+    post:
+      tags: [requests]
+      summary: Добавить документ к заявке
+      operationId: addRequestDocument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum: [floor_plan, passport, contract, other]
+      responses:
+        "201":
+          description: Документ добавлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/RequestDocument"
