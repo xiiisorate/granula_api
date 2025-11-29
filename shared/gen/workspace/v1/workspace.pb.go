@@ -554,7 +554,9 @@ type CreateWorkspaceRequest struct {
 	// Количество комнат
 	RoomsCount int32 `protobuf:"varint,5,opt,name=rooms_count,json=roomsCount,proto3" json:"rooms_count,omitempty"`
 	// Настройки
-	Settings      *WorkspaceSettings `protobuf:"bytes,6,opt,name=settings,proto3" json:"settings,omitempty"`
+	Settings *WorkspaceSettings `protobuf:"bytes,6,opt,name=settings,proto3" json:"settings,omitempty"`
+	// ID владельца (передается из auth context)
+	OwnerId       string `protobuf:"bytes,7,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -629,6 +631,13 @@ func (x *CreateWorkspaceRequest) GetSettings() *WorkspaceSettings {
 		return x.Settings
 	}
 	return nil
+}
+
+func (x *CreateWorkspaceRequest) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
 }
 
 // CreateWorkspaceResponse - ответ создания воркспейса
@@ -1632,7 +1641,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x127\n" +
 	"\tjoined_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bjoinedAt\x12\x1d\n" +
 	"\n" +
-	"invited_by\x18\a \x01(\tR\tinvitedBy\"\xe5\x01\n" +
+	"invited_by\x18\a \x01(\tR\tinvitedBy\"\x80\x02\n" +
 	"\x16CreateWorkspaceRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x18\n" +
@@ -1641,7 +1650,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"total_area\x18\x04 \x01(\x01R\ttotalArea\x12\x1f\n" +
 	"\vrooms_count\x18\x05 \x01(\x05R\n" +
 	"roomsCount\x12;\n" +
-	"\bsettings\x18\x06 \x01(\v2\x1f.workspace.v1.WorkspaceSettingsR\bsettings\"P\n" +
+	"\bsettings\x18\x06 \x01(\v2\x1f.workspace.v1.WorkspaceSettingsR\bsettings\x12\x19\n" +
+	"\bowner_id\x18\a \x01(\tR\aownerId\"P\n" +
 	"\x17CreateWorkspaceResponse\x125\n" +
 	"\tworkspace\x18\x01 \x01(\v2\x17.workspace.v1.WorkspaceR\tworkspace\"a\n" +
 	"\x13GetWorkspaceRequest\x12!\n" +

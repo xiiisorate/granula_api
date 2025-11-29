@@ -44,6 +44,12 @@ func NewWorkspaceHandler(conn *grpc.ClientConn) *WorkspaceHandler {
 // @Router /workspaces [post]
 // =============================================================================
 func (h *WorkspaceHandler) CreateWorkspace(c *fiber.Ctx) error {
+	// Get user ID from context (set by auth middleware as string)
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+
 	var input CreateWorkspaceInput
 	if err := c.BodyParser(&input); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
@@ -66,6 +72,7 @@ func (h *WorkspaceHandler) CreateWorkspace(c *fiber.Ctx) error {
 		Address:     input.Address,
 		TotalArea:   input.TotalArea,
 		RoomsCount:  int32(input.RoomsCount),
+		OwnerId:     userIDStr, // Set owner from authenticated user
 	}
 
 	if input.Settings != nil {
@@ -146,7 +153,11 @@ func (h *WorkspaceHandler) GetWorkspace(c *fiber.Ctx) error {
 // @Router /workspaces [get]
 // =============================================================================
 func (h *WorkspaceHandler) ListWorkspaces(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(uuid.UUID)
+	// Get user ID from context (set by auth middleware as string)
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
 
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 20)
@@ -157,7 +168,7 @@ func (h *WorkspaceHandler) ListWorkspaces(c *fiber.Ctx) error {
 	defer cancel()
 
 	req := &workspacepb.ListWorkspacesRequest{
-		UserId: userID.String(),
+		UserId: userIDStr,
 		Search: search,
 		Pagination: &commonpb.PaginationRequest{
 			Page:     int32(page),

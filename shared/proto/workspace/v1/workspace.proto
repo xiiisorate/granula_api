@@ -199,6 +199,9 @@ message CreateWorkspaceRequest {
   
   // Настройки
   WorkspaceSettings settings = 6;
+  
+  // ID владельца (передается из auth context)
+  string owner_id = 7;
 }
 
 // CreateWorkspaceResponse - ответ создания воркспейса
