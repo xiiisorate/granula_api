@@ -21,6 +21,39 @@ func NewUserService(userRepo *repository.UserRepository) *UserService {
 	return &UserService{userRepo: userRepo}
 }
 
+// CreateProfileInput contains data for profile creation.
+type CreateProfileInput struct {
+	UserID uuid.UUID
+	Email  string
+	Name   string
+	Role   string
+}
+
+// CreateProfile creates a new user profile.
+func (s *UserService) CreateProfile(input *CreateProfileInput) (*repository.UserProfile, error) {
+	// Check if profile already exists
+	existing, err := s.userRepo.FindByID(input.UserID)
+	if err == nil && existing != nil {
+		return existing, nil // Profile already exists
+	}
+
+	// Create new profile
+	profile := &repository.UserProfile{
+		ID:            input.UserID,
+		Email:         input.Email,
+		Name:          input.Name,
+		Role:          input.Role,
+		EmailVerified: false,
+		Settings:      repository.DefaultSettings(),
+	}
+
+	if err := s.userRepo.Create(profile); err != nil {
+		return nil, errors.ErrInternal
+	}
+
+	return profile, nil
+}
+
 // GetProfile returns a user profile.
 func (s *UserService) GetProfile(userID uuid.UUID) (*repository.UserProfile, error) {
 	profile, err := s.userRepo.FindByID(userID)
@@ -57,7 +90,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate language
 		if input.Settings.Language != "" {
 			if !isValidLanguage(input.Settings.Language) {
-				return nil, errors.NewInvalidArgumentError("language", "invalid language code")
+				return nil, errors.InvalidArgument("language", "invalid language code")
 			}
 			profile.Settings.Language = input.Settings.Language
 		}
@@ -65,7 +98,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate theme
 		if input.Settings.Theme != "" {
 			if !isValidTheme(input.Settings.Theme) {
-				return nil, errors.NewInvalidArgumentError("theme", "invalid theme value")
+				return nil, errors.InvalidArgument("theme", "invalid theme value")
 			}
 			profile.Settings.Theme = input.Settings.Theme
 		}
@@ -73,7 +106,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate units
 		if input.Settings.Units != "" {
 			if !isValidUnits(input.Settings.Units) {
-				return nil, errors.NewInvalidArgumentError("units", "invalid units value")
+				return nil, errors.InvalidArgument("units", "invalid units value")
 			}
 			profile.Settings.Units = input.Settings.Units
 		}
@@ -113,7 +146,7 @@ func (s *UserService) ChangePassword(input *ChangePasswordInput) error {
 
 	// Check if new password is same as old
 	if err := bcrypt.CompareHashAndPassword([]byte(input.PasswordHash), []byte(input.NewPassword)); err == nil {
-		return errors.NewInvalidArgumentError("password", "new password must be different from current")
+		return errors.InvalidArgument("password", "new password must be different from current")
 	}
 
 	return nil

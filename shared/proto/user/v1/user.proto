@@ -8,6 +8,9 @@ import "common/v1/common.proto";
 
 // UserService - сервис управления пользователями
 service UserService {
+  // Создать профиль (вызывается при регистрации)
+  rpc CreateProfile(CreateProfileRequest) returns (CreateProfileResponse);
+  
   // Получить профиль текущего пользователя
   rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
   
@@ -22,6 +25,19 @@ service UserService {
   
   // Удалить пользователя
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+// CreateProfileRequest - запрос создания профиля
+message CreateProfileRequest {
+  string user_id = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4;
+}
+
+// CreateProfileResponse - ответ создания профиля
+message CreateProfileResponse {
+  User user = 1;
 }
 
 // GetProfileRequest - запрос профиля

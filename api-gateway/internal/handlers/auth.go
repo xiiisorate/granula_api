@@ -17,17 +17,21 @@ import (
 	"google.golang.org/grpc/status"
 
 	authpb "github.com/xiiisorate/granula_api/shared/gen/auth/v1"
+	userpb "github.com/xiiisorate/granula_api/shared/gen/user/v1"
+	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 )
 
 // AuthHandler handles authentication-related HTTP requests.
 type AuthHandler struct {
 	authClient authpb.AuthServiceClient
+	userClient userpb.UserServiceClient
 }
 
-// NewAuthHandler creates a new AuthHandler with gRPC client connection.
-func NewAuthHandler(conn *grpc.ClientConn) *AuthHandler {
+// NewAuthHandler creates a new AuthHandler with gRPC client connections.
+func NewAuthHandler(authConn, userConn *grpc.ClientConn) *AuthHandler {
 	return &AuthHandler{
-		authClient: authpb.NewAuthServiceClient(conn),
+		authClient: authpb.NewAuthServiceClient(authConn),
+		userClient: userpb.NewUserServiceClient(userConn),
 	}
 }
 
@@ -100,7 +104,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 
 	// Call Auth Service via gRPC
-	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
 	defer cancel()
 
 	resp, err := h.authClient.Register(ctx, &authpb.RegisterRequest{
@@ -111,6 +115,22 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	if err != nil {
 		return handleGRPCError(err)
+	}
+
+	// Create user profile in User Service
+	_, profileErr := h.userClient.CreateProfile(ctx, &userpb.CreateProfileRequest{
+		UserId: resp.UserId,
+		Email:  input.Email,
+		Name:   input.Name,
+		Role:   "user",
+	})
+
+	if profileErr != nil {
+		// Log error but don't fail registration - profile can be created later
+		logger.Global().Warn("failed to create user profile",
+			logger.String("user_id", resp.UserId),
+			logger.Err(profileErr),
+		)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{

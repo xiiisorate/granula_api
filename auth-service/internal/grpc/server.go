@@ -8,6 +8,7 @@ package server
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -148,6 +149,35 @@ func (s *AuthServer) LogoutAll(ctx context.Context, req *authpb.LogoutAllRequest
 	}, nil
 }
 
+// ChangePassword changes user password.
+func (s *AuthServer) ChangePassword(ctx context.Context, req *authpb.ChangePasswordRequest) (*authpb.ChangePasswordResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if req.CurrentPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "current_password is required")
+	}
+	if req.NewPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "new_password is required")
+	}
+	if len(req.NewPassword) < 8 {
+		return nil, status.Error(codes.InvalidArgument, "new_password must be at least 8 characters")
+	}
+
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+	}
+
+	if err := s.authService.ChangePassword(userID, req.CurrentPassword, req.NewPassword); err != nil {
+		return nil, convertError(err)
+	}
+
+	return &authpb.ChangePasswordResponse{
+		Success: true,
+	}, nil
+}
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
@@ -158,18 +188,26 @@ func convertError(err error) error {
 		return nil
 	}
 
-	// Check for common errors
-	switch err.Error() {
-	case "user not found":
-		return status.Error(codes.NotFound, err.Error())
-	case "email already exists", "provided email already exists":
+	errStr := err.Error()
+
+	// Check for error codes in the message (format: "CODE: message")
+	switch {
+	case strings.Contains(errStr, "NOT_FOUND") || strings.Contains(errStr, "user not found"):
+		return status.Error(codes.NotFound, "user not found")
+	case strings.Contains(errStr, "ALREADY_EXISTS") || strings.Contains(errStr, "email already"):
 		return status.Error(codes.AlreadyExists, "email already registered")
-	case "invalid password":
+	case strings.Contains(errStr, "invalid password") || strings.Contains(errStr, "invalid credentials"):
 		return status.Error(codes.Unauthenticated, "invalid credentials")
-	case "invalid or expired token":
-		return status.Error(codes.Unauthenticated, err.Error())
-	case "password is too weak (min 8 characters)":
-		return status.Error(codes.InvalidArgument, err.Error())
+	case strings.Contains(errStr, "invalid or expired token") || strings.Contains(errStr, "UNAUTHENTICATED"):
+		return status.Error(codes.Unauthenticated, "invalid or expired token")
+	case strings.Contains(errStr, "password is too weak") || strings.Contains(errStr, "min 8 characters"):
+		return status.Error(codes.InvalidArgument, "password is too weak (min 8 characters)")
+	case strings.Contains(errStr, "VALIDATION") || strings.Contains(errStr, "INVALID_ARGUMENT"):
+		// Extract message after ":"
+		if idx := strings.Index(errStr, ": "); idx > 0 {
+			return status.Error(codes.InvalidArgument, errStr[idx+2:])
+		}
+		return status.Error(codes.InvalidArgument, errStr)
 	default:
 		return status.Error(codes.Internal, "internal server error")
 	}

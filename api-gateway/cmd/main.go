@@ -72,8 +72,8 @@ func main() {
 	log.Info("Connected to backend services")
 
 	// Create handlers
-	authHandler := handlers.NewAuthHandler(grpcClients.AuthConn)
-	userHandler := handlers.NewUserHandler(grpcClients.UserConn)
+	authHandler := handlers.NewAuthHandler(grpcClients.AuthConn, grpcClients.UserConn)
+	userHandler := handlers.NewUserHandler(grpcClients.UserConn, grpcClients.AuthConn)
 	notificationHandler := handlers.NewNotificationHandler(grpcClients.NotificationConn)
 
 	// Create Fiber app
@@ -176,7 +176,7 @@ func main() {
 	workspaces.Use(middleware.Auth(cfg))
 	{
 		workspaces.Get("/", placeholderHandler("list workspaces"))
-		workspaces.Post("/", placeholderHandler("create workspace"))
+		workspaces.Post("/", createPlaceholderHandler("create workspace"))
 		workspaces.Get("/:id", placeholderHandler("get workspace"))
 		workspaces.Patch("/:id", placeholderHandler("update workspace"))
 		workspaces.Delete("/:id", placeholderHandler("delete workspace"))
@@ -189,7 +189,7 @@ func main() {
 	scenes.Use(middleware.Auth(cfg))
 	{
 		scenes.Get("/", placeholderHandler("list scenes"))
-		scenes.Post("/", placeholderHandler("create scene"))
+		scenes.Post("/", createPlaceholderHandler("create scene"))
 		scenes.Get("/:id", placeholderHandler("get scene"))
 		scenes.Patch("/:id", placeholderHandler("update scene"))
 		scenes.Delete("/:id", placeholderHandler("delete scene"))
@@ -240,6 +240,17 @@ func main() {
 func placeholderHandler(action string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
+			"message":    "Endpoint pending implementation",
+			"action":     action,
+			"request_id": c.GetRespHeader("X-Request-ID"),
+		})
+	}
+}
+
+// createPlaceholderHandler creates a placeholder handler that returns 201 for create operations.
+func createPlaceholderHandler(action string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 			"message":    "Endpoint pending implementation",
 			"action":     action,
 			"request_id": c.GetRespHeader("X-Request-ID"),

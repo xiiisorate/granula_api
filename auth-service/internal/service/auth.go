@@ -157,6 +157,44 @@ func (s *AuthService) LogoutAll(userID uuid.UUID) (int64, error) {
 	return s.tokenRepo.RevokeByUserID(userID)
 }
 
+// ChangePassword changes user password.
+func (s *AuthService) ChangePassword(userID uuid.UUID, currentPassword, newPassword string) error {
+	// Find user
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return errors.ErrUserNotFound
+	}
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return errors.ErrInvalidPassword
+	}
+
+	// Validate new password
+	if len(newPassword) < 8 {
+		return errors.ErrWeakPassword
+	}
+
+	// Check if new password is same as current
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(newPassword)); err == nil {
+		return errors.InvalidArgument("new_password", "new password must be different from current")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.ErrInternal
+	}
+
+	// Update password
+	user.PasswordHash = string(hashedPassword)
+	if err := s.userRepo.Update(user); err != nil {
+		return errors.ErrInternal
+	}
+
+	return nil
+}
+
 // generateTokens generates access and refresh tokens.
 func (s *AuthService) generateTokens(user *repository.User, deviceID, userAgent, ip *string) (*AuthResult, error) {
 	// Generate access token

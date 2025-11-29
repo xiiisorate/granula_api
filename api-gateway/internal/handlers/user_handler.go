@@ -13,18 +13,21 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 
+	authpb "github.com/xiiisorate/granula_api/shared/gen/auth/v1"
 	userpb "github.com/xiiisorate/granula_api/shared/gen/user/v1"
 )
 
 // UserHandler handles user-related HTTP requests.
 type UserHandler struct {
 	userClient userpb.UserServiceClient
+	authClient authpb.AuthServiceClient
 }
 
-// NewUserHandler creates a new UserHandler with gRPC client connection.
-func NewUserHandler(conn *grpc.ClientConn) *UserHandler {
+// NewUserHandler creates a new UserHandler with gRPC client connections.
+func NewUserHandler(userConn, authConn *grpc.ClientConn) *UserHandler {
 	return &UserHandler{
-		userClient: userpb.NewUserServiceClient(conn),
+		userClient: userpb.NewUserServiceClient(userConn),
+		authClient: authpb.NewAuthServiceClient(authConn),
 	}
 }
 
@@ -179,7 +182,8 @@ func (h *UserHandler) ChangePassword(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	_, err := h.userClient.ChangePassword(ctx, &userpb.ChangePasswordRequest{
+	// Call auth-service for password change (password is stored in auth service)
+	_, err := h.authClient.ChangePassword(ctx, &authpb.ChangePasswordRequest{
 		UserId:          userID.String(),
 		CurrentPassword: input.CurrentPassword,
 		NewPassword:     input.NewPassword,

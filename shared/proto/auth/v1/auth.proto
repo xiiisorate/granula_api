@@ -25,6 +25,21 @@ service AuthService {
   
   // Выход из всех устройств
   rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse);
+  
+  // Изменение пароля
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+}
+
+// ChangePasswordRequest - запрос изменения пароля
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+// ChangePasswordResponse - ответ изменения пароля
+message ChangePasswordResponse {
+  bool success = 1;
 }
 
 // RegisterRequest - запрос регистрации
