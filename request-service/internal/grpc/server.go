@@ -294,7 +294,8 @@ func (s *RequestServer) RejectRequest(ctx context.Context, requestID, reason, re
 		return status.Error(codes.InvalidArgument, "invalid rejected_by")
 	}
 
-	if err := s.service.RejectRequest(ctx, id, reason, rejectedByID); err != nil {
+	_, err = s.service.RejectRequest(ctx, id, reason, rejectedByID)
+	if err != nil {
 		return s.mapError(err)
 	}
 

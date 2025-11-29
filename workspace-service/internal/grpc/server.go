@@ -442,7 +442,7 @@ func (s *WorkspaceServer) mapError(err error) error {
 		return status.Error(codes.PermissionDenied, "access denied")
 	default:
 		// Check for wrapped app errors
-		if appErr, ok := err.(*apperrors.AppError); ok {
+		if appErr, ok := err.(*apperrors.Error); ok {
 			return appErr.ToGRPCError()
 		}
 		// Log and return generic error

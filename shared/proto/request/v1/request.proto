@@ -1,10 +1,24 @@
+// =============================================================================
+// Request Service Proto
+// =============================================================================
+// Сервис управления заявками на экспертную проверку перепланировки.
+// Заявка = запрос пользователя на проверку планировки специалистом.
+//
+// Version: 1.0.0
+// =============================================================================
+
 syntax = "proto3";
 
 package request.v1;
 
-option go_package = "github.com/granula/shared/gen/request/v1;requestv1";
+option go_package = "github.com/xiiisorate/granula_api/shared/gen/request/v1;requestv1";
 
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Request Service
+// =============================================================================
 
 // RequestService - сервис управления заявками
 service RequestService {
@@ -28,99 +42,493 @@ service RequestService {
   
   // Обновить статус
   rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
+  
+  // Отклонить заявку
+  rpc RejectRequest(RejectRequestRequest) returns (RejectRequestResponse);
+  
+  // Завершить заявку
+  rpc CompleteRequest(CompleteRequestRequest) returns (CompleteRequestResponse);
+  
+  // Загрузить документ
+  rpc UploadDocument(UploadDocumentRequest) returns (UploadDocumentResponse);
+  
+  // Получить документы
+  rpc GetDocuments(GetDocumentsRequest) returns (GetDocumentsResponse);
+  
+  // Получить историю статусов
+  rpc GetStatusHistory(GetStatusHistoryRequest) returns (GetStatusHistoryResponse);
 }
+
+// =============================================================================
+// Request Entity
+// =============================================================================
+
+// RequestStatus - статус заявки
+enum RequestStatus {
+  REQUEST_STATUS_UNSPECIFIED = 0;
+  REQUEST_STATUS_DRAFT = 1;          // Черновик
+  REQUEST_STATUS_PENDING = 2;        // Ожидает рассмотрения
+  REQUEST_STATUS_IN_REVIEW = 3;      // На рассмотрении
+  REQUEST_STATUS_APPROVED = 4;       // Одобрена
+  REQUEST_STATUS_REJECTED = 5;       // Отклонена
+  REQUEST_STATUS_COMPLETED = 6;      // Завершена
+  REQUEST_STATUS_CANCELLED = 7;      // Отменена
+}
+
+// RequestCategory - категория заявки
+enum RequestCategory {
+  REQUEST_CATEGORY_UNSPECIFIED = 0;
+  REQUEST_CATEGORY_CONSULTATION = 1;   // Консультация
+  REQUEST_CATEGORY_VERIFICATION = 2;   // Проверка планировки
+  REQUEST_CATEGORY_PROJECT = 3;        // Разработка проекта
+  REQUEST_CATEGORY_APPROVAL = 4;       // Согласование
+}
+
+// RequestPriority - приоритет заявки
+enum RequestPriority {
+  REQUEST_PRIORITY_UNSPECIFIED = 0;
+  REQUEST_PRIORITY_LOW = 1;
+  REQUEST_PRIORITY_NORMAL = 2;
+  REQUEST_PRIORITY_HIGH = 3;
+  REQUEST_PRIORITY_URGENT = 4;
+}
+
+// Request - модель заявки
+message Request {
+  // Уникальный идентификатор
+  string id = 1;
+  
+  // ID воркспейса
+  string workspace_id = 2;
+  
+  // ID сцены (опционально)
+  string scene_id = 3;
+  
+  // ID ветки (опционально)
+  string branch_id = 4;
+  
+  // ID создателя
+  string user_id = 5;
+  
+  // Заголовок заявки
+  string title = 6;
+  
+  // Описание
+  string description = 7;
+  
+  // Категория
+  RequestCategory category = 8;
+  
+  // Приоритет
+  RequestPriority priority = 9;
+  
+  // Статус
+  RequestStatus status = 10;
+  
+  // Контактная информация
+  Contact contact = 11;
+  
+  // Предпочтительное время связи
+  string preferred_time = 12;
+  
+  // Комментарий к заявке
+  string comment = 13;
+  
+  // Назначенный эксперт
+  Expert expert = 14;
+  
+  // Предполагаемая дата завершения
+  google.protobuf.Timestamp estimated_date = 15;
+  
+  // Предполагаемая стоимость
+  double estimated_price = 16;
+  
+  // Причина отклонения
+  string rejection_reason = 17;
+  
+  // Снимок проверки соответствия на момент заявки
+  ComplianceSnapshot compliance_snapshot = 18;
+  
+  // Прикреплённые документы
+  repeated Document documents = 19;
+  
+  // Время создания
+  google.protobuf.Timestamp created_at = 20;
+  
+  // Время обновления
+  google.protobuf.Timestamp updated_at = 21;
+}
+
+// Contact - контактная информация
+message Contact {
+  // Имя контакта
+  string name = 1;
+  
+  // Телефон
+  string phone = 2;
+  
+  // Email
+  string email = 3;
+}
+
+// Expert - информация об эксперте
+message Expert {
+  // ID эксперта
+  string id = 1;
+  
+  // Имя эксперта
+  string name = 2;
+  
+  // Специализация
+  string specialization = 3;
+  
+  // Рейтинг
+  double rating = 4;
+}
+
+// ComplianceSnapshot - снимок проверки соответствия
+message ComplianceSnapshot {
+  // ID проверки
+  string check_id = 1;
+  
+  // Соответствует ли нормам
+  bool is_compliant = 2;
+  
+  // Количество нарушений
+  int32 violations_count = 3;
+  
+  // Количество предупреждений
+  int32 warnings_count = 4;
+  
+  // Время проверки
+  google.protobuf.Timestamp checked_at = 5;
+}
+
+// Document - прикреплённый документ
+message Document {
+  // ID документа
+  string id = 1;
+  
+  // Название файла
+  string filename = 2;
+  
+  // Тип файла
+  string content_type = 3;
+  
+  // Размер в байтах
+  int64 size = 4;
+  
+  // URL для скачивания
+  string url = 5;
+  
+  // ID загрузившего
+  string uploaded_by = 6;
+  
+  // Время загрузки
+  google.protobuf.Timestamp uploaded_at = 7;
+}
+
+// StatusHistoryEntry - запись в истории статусов
+message StatusHistoryEntry {
+  // Статус
+  RequestStatus status = 1;
+  
+  // Комментарий
+  string comment = 2;
+  
+  // ID изменившего
+  string changed_by = 3;
+  
+  // Время изменения
+  google.protobuf.Timestamp changed_at = 4;
+}
+
+// =============================================================================
+// Create Request
+// =============================================================================
 
 // CreateRequestRequest - запрос создания заявки
 message CreateRequestRequest {
+  // ID воркспейса (обязательно)
   string workspace_id = 1;
-  string title = 2;
-  string description = 3;
-  string category = 4;
+  
+  // ID сцены (опционально)
+  string scene_id = 2;
+  
+  // ID ветки (опционально)
+  string branch_id = 3;
+  
+  // Заголовок
+  string title = 4;
+  
+  // Описание
+  string description = 5;
+  
+  // Категория
+  RequestCategory category = 6;
+  
+  // Приоритет
+  RequestPriority priority = 7;
+  
+  // Контактная информация
+  Contact contact = 8;
+  
+  // Предпочтительное время связи
+  string preferred_time = 9;
+  
+  // Комментарий
+  string comment = 10;
 }
 
 // CreateRequestResponse - ответ создания заявки
 message CreateRequestResponse {
+  // Созданная заявка
   Request request = 1;
 }
 
+// =============================================================================
+// Get Request
+// =============================================================================
+
 // GetRequestRequest - запрос получения заявки
 message GetRequestRequest {
+  // ID заявки
   string request_id = 1;
 }
 
 // GetRequestResponse - ответ получения заявки
 message GetRequestResponse {
+  // Заявка
   Request request = 1;
 }
 
+// =============================================================================
+// List Requests
+// =============================================================================
+
 // ListRequestsRequest - запрос списка заявок
 message ListRequestsRequest {
+  // ID воркспейса (фильтр)
   string workspace_id = 1;
-  string status = 2;
-  common.v1.Pagination pagination = 3;
+  
+  // ID пользователя (фильтр)
+  string user_id = 2;
+  
+  // Статус (фильтр)
+  RequestStatus status = 3;
+  
+  // Категория (фильтр)
+  RequestCategory category = 4;
+  
+  // ID эксперта (фильтр)
+  string expert_id = 5;
+  
+  // Пагинация
+  common.v1.PaginationRequest pagination = 6;
+  
+  // Сортировка
+  common.v1.SortField sort = 7;
 }
 
 // ListRequestsResponse - ответ списка заявок
 message ListRequestsResponse {
+  // Список заявок
   repeated Request requests = 1;
-  common.v1.Pagination pagination = 2;
+  
+  // Метаданные пагинации
+  common.v1.PaginationResponse pagination = 2;
 }
+
+// =============================================================================
+// Update Request
+// =============================================================================
 
 // UpdateRequestRequest - запрос обновления заявки
 message UpdateRequestRequest {
+  // ID заявки
   string request_id = 1;
+  
+  // Новый заголовок
   string title = 2;
+  
+  // Новое описание
   string description = 3;
+  
+  // Новая категория
+  RequestCategory category = 4;
+  
+  // Новый приоритет
+  RequestPriority priority = 5;
+  
+  // Новая контактная информация
+  Contact contact = 6;
+  
+  // Новое предпочтительное время
+  string preferred_time = 7;
+  
+  // Новый комментарий
+  string comment = 8;
 }
 
 // UpdateRequestResponse - ответ обновления заявки
 message UpdateRequestResponse {
+  // Обновлённая заявка
   Request request = 1;
 }
 
+// =============================================================================
+// Cancel Request
+// =============================================================================
+
 // CancelRequestRequest - запрос отмены заявки
 message CancelRequestRequest {
+  // ID заявки
   string request_id = 1;
+  
+  // Причина отмены
+  string reason = 2;
 }
 
 // CancelRequestResponse - ответ отмены заявки
 message CancelRequestResponse {
+  // Успешно ли отмена
   bool success = 1;
 }
 
+// =============================================================================
+// Assign Expert
+// =============================================================================
+
 // AssignExpertRequest - запрос назначения эксперта
 message AssignExpertRequest {
+  // ID заявки
   string request_id = 1;
+  
+  // ID эксперта
   string expert_id = 2;
+  
+  // Предполагаемая дата завершения
+  google.protobuf.Timestamp estimated_date = 3;
+  
+  // Предполагаемая стоимость
+  double estimated_price = 4;
 }
 
 // AssignExpertResponse - ответ назначения эксперта
 message AssignExpertResponse {
+  // Обновлённая заявка
   Request request = 1;
 }
 
+// =============================================================================
+// Update Status
+// =============================================================================
+
 // UpdateStatusRequest - запрос обновления статуса
 message UpdateStatusRequest {
+  // ID заявки
   string request_id = 1;
-  string status = 2;
+  
+  // Новый статус
+  RequestStatus status = 2;
+  
+  // Комментарий
   string comment = 3;
 }
 
 // UpdateStatusResponse - ответ обновления статуса
 message UpdateStatusResponse {
+  // Обновлённая заявка
   Request request = 1;
 }
 
-// Request - модель заявки
-message Request {
-  string id = 1;
-  string workspace_id = 2;
-  string title = 3;
-  string description = 4;
-  string category = 5;
-  string status = 6;
-  string expert_id = 7;
-  int64 created_at = 8;
-  int64 updated_at = 9;
+// =============================================================================
+// Reject Request
+// =============================================================================
+
+// RejectRequestRequest - запрос отклонения заявки
+message RejectRequestRequest {
+  // ID заявки
+  string request_id = 1;
+  
+  // Причина отклонения
+  string reason = 2;
 }
 
+// RejectRequestResponse - ответ отклонения заявки
+message RejectRequestResponse {
+  // Обновлённая заявка
+  Request request = 1;
+}
+
+// =============================================================================
+// Complete Request
+// =============================================================================
+
+// CompleteRequestRequest - запрос завершения заявки
+message CompleteRequestRequest {
+  // ID заявки
+  string request_id = 1;
+  
+  // Результат работы (комментарий)
+  string result = 2;
+}
+
+// CompleteRequestResponse - ответ завершения заявки
+message CompleteRequestResponse {
+  // Обновлённая заявка
+  Request request = 1;
+}
+
+// =============================================================================
+// Documents
+// =============================================================================
+
+// UploadDocumentRequest - запрос загрузки документа
+message UploadDocumentRequest {
+  // ID заявки
+  string request_id = 1;
+  
+  // Название файла
+  string filename = 2;
+  
+  // Тип контента
+  string content_type = 3;
+  
+  // Данные файла
+  bytes data = 4;
+}
+
+// UploadDocumentResponse - ответ загрузки документа
+message UploadDocumentResponse {
+  // Загруженный документ
+  Document document = 1;
+}
+
+// GetDocumentsRequest - запрос документов заявки
+message GetDocumentsRequest {
+  // ID заявки
+  string request_id = 1;
+}
+
+// GetDocumentsResponse - ответ со списком документов
+message GetDocumentsResponse {
+  // Список документов
+  repeated Document documents = 1;
+}
+
+// =============================================================================
+// Status History
+// =============================================================================
+
+// GetStatusHistoryRequest - запрос истории статусов
+message GetStatusHistoryRequest {
+  // ID заявки
+  string request_id = 1;
+}
+
+// GetStatusHistoryResponse - ответ с историей статусов
+message GetStatusHistoryResponse {
+  // История статусов
+  repeated StatusHistoryEntry history = 1;
+}

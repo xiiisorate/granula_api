@@ -1,10 +1,24 @@
+// =============================================================================
+// Workspace Service Proto
+// =============================================================================
+// Сервис управления воркспейсами (проектами перепланировки).
+// Воркспейс - контейнер для планировок, сцен, веток и заявок.
+//
+// Version: 1.0.0
+// =============================================================================
+
 syntax = "proto3";
 
 package workspace.v1;
 
-option go_package = "github.com/granula/shared/gen/workspace/v1;workspacev1";
+option go_package = "github.com/xiiisorate/granula_api/shared/gen/workspace/v1;workspacev1";
 
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Workspace Service
+// =============================================================================
 
 // WorkspaceService - сервис управления воркспейсами
 service WorkspaceService {
@@ -28,101 +42,340 @@ service WorkspaceService {
   
   // Удалить участника
   rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+  
+  // Изменить роль участника
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse);
+  
+  // Получить участников воркспейса
+  rpc GetMembers(GetMembersRequest) returns (GetMembersResponse);
 }
+
+// =============================================================================
+// Workspace Entity
+// =============================================================================
+
+// WorkspaceStatus - статус воркспейса
+enum WorkspaceStatus {
+  WORKSPACE_STATUS_UNSPECIFIED = 0;
+  WORKSPACE_STATUS_ACTIVE = 1;      // Активный
+  WORKSPACE_STATUS_ARCHIVED = 2;    // Архивированный
+  WORKSPACE_STATUS_DELETED = 3;     // Удалённый
+}
+
+// MemberRole - роль участника
+enum MemberRole {
+  MEMBER_ROLE_UNSPECIFIED = 0;
+  MEMBER_ROLE_VIEWER = 1;    // Только просмотр
+  MEMBER_ROLE_EDITOR = 2;    // Редактирование
+  MEMBER_ROLE_ADMIN = 3;     // Администратор
+  MEMBER_ROLE_OWNER = 4;     // Владелец
+}
+
+// Workspace - модель воркспейса
+message Workspace {
+  // Уникальный идентификатор
+  string id = 1;
+  
+  // Название воркспейса
+  string name = 2;
+  
+  // Описание
+  string description = 3;
+  
+  // ID владельца
+  string owner_id = 4;
+  
+  // Адрес объекта
+  string address = 5;
+  
+  // Общая площадь (кв.м)
+  double total_area = 6;
+  
+  // Количество комнат
+  int32 rooms_count = 7;
+  
+  // Статус воркспейса
+  WorkspaceStatus status = 8;
+  
+  // Настройки воркспейса
+  WorkspaceSettings settings = 9;
+  
+  // URL превью
+  string preview_url = 10;
+  
+  // Количество планировок
+  int32 floor_plans_count = 11;
+  
+  // Количество сцен
+  int32 scenes_count = 12;
+  
+  // Участники (при детальном запросе)
+  repeated Member members = 13;
+  
+  // Время создания
+  google.protobuf.Timestamp created_at = 14;
+  
+  // Время обновления
+  google.protobuf.Timestamp updated_at = 15;
+  
+  // Время удаления (soft delete)
+  google.protobuf.Timestamp deleted_at = 16;
+}
+
+// WorkspaceSettings - настройки воркспейса
+message WorkspaceSettings {
+  // Тип объекта недвижимости
+  string property_type = 1;
+  
+  // Тип проекта (перепланировка, ремонт и т.д.)
+  string project_type = 2;
+  
+  // Единицы измерения (m, cm, mm)
+  string units = 3;
+  
+  // Высота потолков по умолчанию
+  double default_ceiling_height = 4;
+  
+  // Толщина стен по умолчанию
+  double default_wall_thickness = 5;
+  
+  // Валюта для расчётов
+  string currency = 6;
+  
+  // Регион (для норм и правил)
+  string region = 7;
+  
+  // Автопроверка норм при изменениях
+  bool auto_compliance_check = 8;
+  
+  // Уведомления включены
+  bool notifications_enabled = 9;
+}
+
+// Member - участник воркспейса
+message Member {
+  // ID пользователя
+  string user_id = 1;
+  
+  // Роль в воркспейсе
+  MemberRole role = 2;
+  
+  // Имя пользователя
+  string name = 3;
+  
+  // Email пользователя
+  string email = 4;
+  
+  // URL аватара
+  string avatar_url = 5;
+  
+  // Время присоединения
+  google.protobuf.Timestamp joined_at = 6;
+  
+  // ID пригласившего
+  string invited_by = 7;
+}
+
+// =============================================================================
+// Create Workspace
+// =============================================================================
 
 // CreateWorkspaceRequest - запрос создания воркспейса
 message CreateWorkspaceRequest {
+  // Название воркспейса (обязательно)
   string name = 1;
+  
+  // Описание
   string description = 2;
+  
+  // Адрес объекта
+  string address = 3;
+  
+  // Общая площадь
+  double total_area = 4;
+  
+  // Количество комнат
+  int32 rooms_count = 5;
+  
+  // Настройки
+  WorkspaceSettings settings = 6;
 }
 
 // CreateWorkspaceResponse - ответ создания воркспейса
 message CreateWorkspaceResponse {
+  // Созданный воркспейс
   Workspace workspace = 1;
 }
 
+// =============================================================================
+// Get Workspace
+// =============================================================================
+
 // GetWorkspaceRequest - запрос получения воркспейса
 message GetWorkspaceRequest {
+  // ID воркспейса
   string workspace_id = 1;
+  
+  // Включить участников
+  bool include_members = 2;
 }
 
 // GetWorkspaceResponse - ответ получения воркспейса
 message GetWorkspaceResponse {
+  // Воркспейс
   Workspace workspace = 1;
 }
 
+// =============================================================================
+// List Workspaces
+// =============================================================================
+
 // ListWorkspacesRequest - запрос списка воркспейсов
 message ListWorkspacesRequest {
+  // ID пользователя (фильтр)
   string user_id = 1;
-  common.v1.Pagination pagination = 2;
+  
+  // Статус (фильтр)
+  WorkspaceStatus status = 2;
+  
+  // Поиск по названию
+  string search = 3;
+  
+  // Пагинация
+  common.v1.PaginationRequest pagination = 4;
+  
+  // Сортировка
+  common.v1.SortField sort = 5;
 }
 
 // ListWorkspacesResponse - ответ списка воркспейсов
 message ListWorkspacesResponse {
+  // Список воркспейсов
   repeated Workspace workspaces = 1;
-  common.v1.Pagination pagination = 2;
+  
+  // Метаданные пагинации
+  common.v1.PaginationResponse pagination = 2;
 }
+
+// =============================================================================
+// Update Workspace
+// =============================================================================
 
 // UpdateWorkspaceRequest - запрос обновления воркспейса
 message UpdateWorkspaceRequest {
+  // ID воркспейса
   string workspace_id = 1;
+  
+  // Новое название
   string name = 2;
+  
+  // Новое описание
   string description = 3;
+  
+  // Новый адрес
+  string address = 4;
+  
+  // Новая площадь
+  double total_area = 5;
+  
+  // Новое количество комнат
+  int32 rooms_count = 6;
+  
+  // Новые настройки
+  WorkspaceSettings settings = 7;
 }
 
 // UpdateWorkspaceResponse - ответ обновления воркспейса
 message UpdateWorkspaceResponse {
+  // Обновлённый воркспейс
   Workspace workspace = 1;
 }
 
+// =============================================================================
+// Delete Workspace
+// =============================================================================
+
 // DeleteWorkspaceRequest - запрос удаления воркспейса
 message DeleteWorkspaceRequest {
+  // ID воркспейса
   string workspace_id = 1;
+  
+  // Полное удаление (иначе soft delete)
+  bool permanent = 2;
 }
 
 // DeleteWorkspaceResponse - ответ удаления воркспейса
 message DeleteWorkspaceResponse {
+  // Успешно ли удаление
   bool success = 1;
 }
 
+// =============================================================================
+// Member Management
+// =============================================================================
+
 // AddMemberRequest - запрос добавления участника
 message AddMemberRequest {
+  // ID воркспейса
   string workspace_id = 1;
-  string user_id = 2;
-  string role = 3;
+  
+  // Email или ID пользователя
+  string user_id_or_email = 2;
+  
+  // Роль
+  MemberRole role = 3;
 }
 
 // AddMemberResponse - ответ добавления участника
 message AddMemberResponse {
+  // Добавленный участник
   Member member = 1;
 }
 
 // RemoveMemberRequest - запрос удаления участника
 message RemoveMemberRequest {
+  // ID воркспейса
   string workspace_id = 1;
+  
+  // ID пользователя
   string user_id = 2;
 }
 
 // RemoveMemberResponse - ответ удаления участника
 message RemoveMemberResponse {
+  // Успешно ли удаление
   bool success = 1;
 }
 
-// Workspace - модель воркспейса
-message Workspace {
-  string id = 1;
-  string name = 2;
-  string description = 3;
-  string owner_id = 4;
-  repeated Member members = 5;
-  int64 created_at = 6;
-  int64 updated_at = 7;
+// UpdateMemberRoleRequest - запрос изменения роли участника
+message UpdateMemberRoleRequest {
+  // ID воркспейса
+  string workspace_id = 1;
+  
+  // ID пользователя
+  string user_id = 2;
+  
+  // Новая роль
+  MemberRole role = 3;
 }
 
-// Member - участник воркспейса
-message Member {
-  string user_id = 1;
-  string role = 2;
-  int64 joined_at = 3;
+// UpdateMemberRoleResponse - ответ изменения роли
+message UpdateMemberRoleResponse {
+  // Обновлённый участник
+  Member member = 1;
 }
 
+// GetMembersRequest - запрос участников воркспейса
+message GetMembersRequest {
+  // ID воркспейса
+  string workspace_id = 1;
+  
+  // Фильтр по роли
+  MemberRole role = 2;
+}
+
+// GetMembersResponse - ответ со списком участников
+message GetMembersResponse {
+  // Список участников
+  repeated Member members = 1;
+}

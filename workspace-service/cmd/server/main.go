@@ -168,7 +168,7 @@ func main() {
 
 	// Graceful shutdown
 	log.Info("initiating graceful shutdown",
-		logger.Duration("timeout", shutdownTimeout),
+		logger.Duration("timeout_ms", int64(shutdownTimeout.Milliseconds())),
 	)
 
 	// Mark as not serving
