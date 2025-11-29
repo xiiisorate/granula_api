@@ -19,6 +19,8 @@ import (
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -79,6 +81,12 @@ func main() {
 	// Register notification service
 	notifServer := server.NewNotificationServer(notifService)
 	notifpb.RegisterNotificationServiceServer(grpcServer, notifServer)
+
+	// Register gRPC health check
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("notification-service", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// Enable reflection for debugging
 	if cfg.AppEnv != "production" {
