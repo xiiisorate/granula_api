@@ -71,10 +71,15 @@ func main() {
 
 	log.Info("Connected to backend services")
 
-	// Create handlers
+	// ==========================================================================
+	// Create Handlers
+	// ==========================================================================
 	authHandler := handlers.NewAuthHandler(grpcClients.AuthConn, grpcClients.UserConn)
 	userHandler := handlers.NewUserHandler(grpcClients.UserConn, grpcClients.AuthConn)
 	notificationHandler := handlers.NewNotificationHandler(grpcClients.NotificationConn)
+	workspaceHandler := handlers.NewWorkspaceHandler(grpcClients.WorkspaceConn)
+	sceneHandler := handlers.NewSceneHandler(grpcClients.SceneConn)
+	aiHandler := handlers.NewAIHandler(grpcClients.AIConn)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -113,7 +118,6 @@ func main() {
 	})
 
 	app.Get("/ready", func(c *fiber.Ctx) error {
-		// Check all backend services
 		return c.JSON(fiber.Map{
 			"status":   "ready",
 			"services": grpcClients.HealthCheck(c.Context()),
@@ -170,40 +174,109 @@ func main() {
 	}
 
 	// --------------------------------------------------------------------------
-	// Workspace routes (protected) - placeholder
+	// Workspace routes (protected)
 	// --------------------------------------------------------------------------
 	workspaces := api.Group("/workspaces")
 	workspaces.Use(middleware.Auth(cfg))
 	{
-		workspaces.Get("/", placeholderHandler("list workspaces"))
-		workspaces.Post("/", createPlaceholderHandler("create workspace"))
-		workspaces.Get("/:id", placeholderHandler("get workspace"))
-		workspaces.Patch("/:id", placeholderHandler("update workspace"))
-		workspaces.Delete("/:id", placeholderHandler("delete workspace"))
+		workspaces.Get("/", workspaceHandler.ListWorkspaces)
+		workspaces.Post("/", workspaceHandler.CreateWorkspace)
+		workspaces.Get("/:id", workspaceHandler.GetWorkspace)
+		workspaces.Patch("/:id", workspaceHandler.UpdateWorkspace)
+		workspaces.Delete("/:id", workspaceHandler.DeleteWorkspace)
+
+		// Workspace members
+		workspaces.Get("/:id/members", workspaceHandler.GetMembers)
+		workspaces.Post("/:id/members", workspaceHandler.AddMember)
+		workspaces.Delete("/:id/members/:memberId", workspaceHandler.RemoveMember)
+
+		// Workspace scenes
+		workspaces.Get("/:workspace_id/scenes", sceneHandler.ListScenes)
+		workspaces.Post("/:workspace_id/scenes", sceneHandler.CreateScene)
 	}
 
 	// --------------------------------------------------------------------------
-	// Scene routes (protected) - placeholder
+	// Scene routes (protected)
 	// --------------------------------------------------------------------------
 	scenes := api.Group("/scenes")
 	scenes.Use(middleware.Auth(cfg))
 	{
-		scenes.Get("/", placeholderHandler("list scenes"))
-		scenes.Post("/", createPlaceholderHandler("create scene"))
-		scenes.Get("/:id", placeholderHandler("get scene"))
-		scenes.Patch("/:id", placeholderHandler("update scene"))
-		scenes.Delete("/:id", placeholderHandler("delete scene"))
+		scenes.Get("/:id", sceneHandler.GetScene)
+		scenes.Patch("/:id", sceneHandler.UpdateScene)
+		scenes.Delete("/:id", sceneHandler.DeleteScene)
+		scenes.Get("/:id/compliance", sceneHandler.CheckCompliance)
 	}
 
 	// --------------------------------------------------------------------------
-	// AI routes (protected) - placeholder
+	// AI routes (protected)
 	// --------------------------------------------------------------------------
 	ai := api.Group("/ai")
 	ai.Use(middleware.Auth(cfg))
 	{
-		ai.Post("/recognize", placeholderHandler("recognize floor plan"))
-		ai.Post("/generate", placeholderHandler("generate design"))
-		ai.Post("/chat", placeholderHandler("AI chat"))
+		// Recognition
+		ai.Post("/recognize", aiHandler.RecognizeFloorPlan)
+		ai.Get("/recognize/:job_id/status", aiHandler.GetRecognitionStatus)
+
+		// Generation
+		ai.Post("/generate", aiHandler.GenerateVariants)
+		ai.Get("/generate/:job_id/status", aiHandler.GetGenerationStatus)
+
+		// Chat
+		ai.Post("/chat", aiHandler.SendChatMessage)
+		ai.Get("/chat/history", aiHandler.GetChatHistory)
+		ai.Delete("/chat/history", aiHandler.ClearChatHistory)
+	}
+
+	// --------------------------------------------------------------------------
+	// Placeholder routes for services not yet fully integrated
+	// --------------------------------------------------------------------------
+	// FloorPlan routes
+	floorplans := api.Group("/floor-plans")
+	floorplans.Use(middleware.Auth(cfg))
+	{
+		floorplans.Get("/", placeholderHandler("list floor plans"))
+		floorplans.Post("/", createPlaceholderHandler("upload floor plan"))
+		floorplans.Get("/:id", placeholderHandler("get floor plan"))
+		floorplans.Patch("/:id", placeholderHandler("update floor plan"))
+		floorplans.Delete("/:id", placeholderHandler("delete floor plan"))
+		floorplans.Post("/:id/reprocess", placeholderHandler("reprocess floor plan"))
+		floorplans.Post("/:id/create-scene", createPlaceholderHandler("create scene from floor plan"))
+	}
+
+	// Branch routes
+	branches := api.Group("/scenes/:scene_id/branches")
+	branches.Use(middleware.Auth(cfg))
+	{
+		branches.Get("/", placeholderHandler("list branches"))
+		branches.Post("/", createPlaceholderHandler("create branch"))
+		branches.Get("/:id", placeholderHandler("get branch"))
+		branches.Patch("/:id", placeholderHandler("update branch"))
+		branches.Delete("/:id", placeholderHandler("delete branch"))
+		branches.Post("/:id/activate", placeholderHandler("activate branch"))
+		branches.Post("/:id/duplicate", createPlaceholderHandler("duplicate branch"))
+		branches.Get("/:id/compare/:target_id", placeholderHandler("compare branches"))
+		branches.Post("/:id/merge", placeholderHandler("merge branch"))
+	}
+
+	// Compliance routes
+	compliance := api.Group("/compliance")
+	compliance.Use(middleware.Auth(cfg))
+	{
+		compliance.Post("/check", placeholderHandler("check compliance"))
+		compliance.Post("/check-operation", placeholderHandler("check operation compliance"))
+		compliance.Get("/rules", placeholderHandler("list compliance rules"))
+		compliance.Get("/rules/:id", placeholderHandler("get compliance rule"))
+	}
+
+	// Request routes (expert requests)
+	requests := api.Group("/requests")
+	requests.Use(middleware.Auth(cfg))
+	{
+		requests.Get("/", placeholderHandler("list requests"))
+		requests.Post("/", createPlaceholderHandler("create request"))
+		requests.Get("/:id", placeholderHandler("get request"))
+		requests.Patch("/:id", placeholderHandler("update request"))
+		requests.Delete("/:id", placeholderHandler("cancel request"))
 	}
 
 	// ==========================================================================

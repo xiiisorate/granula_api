@@ -102,4 +102,3 @@ type WorkspaceListResponse struct {
 	// Пагинация
 	Pagination PaginationResponse `json:"pagination"`
 }
-
