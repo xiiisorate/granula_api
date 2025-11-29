@@ -37,8 +37,8 @@ Desktop.ini
 *.log
 logs/
 
-# Generated
-shared/gen/
+# Generated (keep proto generated files in repo for easier development)
+# shared/gen/
 
 # Test
 coverage.out
