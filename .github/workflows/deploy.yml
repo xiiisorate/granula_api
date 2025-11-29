@@ -1,8 +1,6 @@
 # =============================================================================
 # GitHub Actions - CI/CD Pipeline for Granula API
 # =============================================================================
-# Автоматический деплой - билд на сервере для надёжности
-# =============================================================================
 
 name: Deploy Granula API
 
@@ -15,32 +13,18 @@ env:
   COMPOSE_DOCKER_CLI_BUILD: 1
 
 jobs:
-  # ===========================================================================
-  # Job: Test
-  # ===========================================================================
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
           cache: true
+      - run: cd shared && go mod download
+      - run: cd shared && go test -v -race ./...
 
-      - name: Install dependencies
-        run: cd shared && go mod download
-          
-      - name: Run tests
-        run: cd shared && go test -v -race ./...
-
-  # ===========================================================================
-  # Job: Deploy (Build on server)
-  # ===========================================================================
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -49,8 +33,7 @@ jobs:
     environment: production
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
@@ -70,115 +53,31 @@ jobs:
             --exclude 'node_modules' \
             --exclude '__pycache__' \
             --exclude '*.log' \
-            --exclude '.idea' \
-            --exclude '.vscode' \
             ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/
 
-      - name: Create environment file
+      - name: Create env file
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cat > /opt/granula/api/.env << 'EOF'
-          # Granula API - Production Environment
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cat > /opt/granula/api/.env << EOF
           APP_ENV=production
           LOG_LEVEL=info
-          
-          # JWT
+          HTTP_PORT=3000
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           JWT_ACCESS_EXPIRE=15m
           JWT_REFRESH_EXPIRE=168h
-          
-          # PostgreSQL
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          
-          # MongoDB
           MONGO_INITDB_ROOT_USERNAME=granula
           MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_PASSWORD }}
-          
-          # Redis
           REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
-          
-          # MinIO
           MINIO_ROOT_USER=granula
           MINIO_ROOT_PASSWORD=${{ secrets.MINIO_SECRET_KEY }}
-          
-          # OpenRouter AI
           OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-          
-          # API Gateway port
-          HTTP_PORT=3000
           CORS_ALLOWED_ORIGINS=https://granula.ru,https://app.granula.ru,https://api.granula.raitokyokai.tech
-          EOF"
+          EOF'
 
-      - name: Configure Nginx and SSL
+      - name: Configure Nginx
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            # Ensure certbot directory exists
-            mkdir -p /var/www/certbot
-            
-            # Check if SSL cert exists, if not create temporary HTTP-only config
-            if [ ! -f /etc/letsencrypt/live/api.granula.raitokyokai.tech/fullchain.pem ]; then
-              echo "SSL cert not found, creating HTTP-only config for certbot..."
-              cat > /etc/nginx/sites-available/api.granula.conf << 'NGINXEOF'
-server {
-    listen 80;
-    server_name api.granula.raitokyokai.tech;
-    
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-    
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-NGINXEOF
-            else
-              # Copy full SSL config
-              cp /opt/granula/api/deploy/nginx/api.granula.conf /etc/nginx/sites-available/api.granula.conf
-            fi
-            
-            ln -sf /etc/nginx/sites-available/api.granula.conf /etc/nginx/sites-enabled/api.granula.conf
-            rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
-            
-            # Test and reload nginx
-            nginx -t && systemctl reload nginx || echo "Nginx config issue"
-          ENDSSH
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'mkdir -p /var/www/certbot && cp /opt/granula/api/deploy/nginx/api.granula.http.conf /etc/nginx/sites-available/api.granula.conf && ln -sf /etc/nginx/sites-available/api.granula.conf /etc/nginx/sites-enabled/ && rm -f /etc/nginx/sites-enabled/default && nginx -t && systemctl reload nginx'
 
-      - name: Build and Deploy
+      - name: Deploy services
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            cd /opt/granula/api
-            
-            # Stop existing services
-            docker compose down --remove-orphans 2>/dev/null || true
-            
-            # Build images on server
-            echo "Building Docker images..."
-            docker compose build --parallel
-            
-            # Start services
-            echo "Starting services..."
-            docker compose --env-file .env up -d
-            
-            # Wait for services
-            echo "Waiting for services to start..."
-            sleep 60
-            
-            # Show status
-            docker compose ps
-            
-            # Health check
-            echo "Health check..."
-            curl -sf http://localhost:3000/health && echo "API Gateway is healthy!" || echo "Health check pending..."
-            
-            echo "Deployment completed!"
-          ENDSSH
-
-      - name: Verify deployment
-        run: |
-          echo "Checking API Gateway..."
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "curl -s http://localhost:3000/health || echo 'Still starting...'"
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cd /opt/granula/api && docker compose down --remove-orphans 2>/dev/null; docker compose build --parallel && docker compose --env-file .env up -d && sleep 60 && docker compose ps && curl -sf http://localhost:3000/health && echo "Healthy!" || echo "Starting..."'
