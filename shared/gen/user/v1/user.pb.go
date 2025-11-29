@@ -796,7 +796,7 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\fUploadAvatar\x12\x1c.user.v1.UploadAvatarRequest\x1a\x1d.user.v1.UploadAvatarResponse\x12Q\n" +
 	"\x0eChangePassword\x12\x1e.user.v1.ChangePasswordRequest\x1a\x1f.user.v1.ChangePasswordResponse\x12E\n" +
 	"\n" +
-	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponseB.Z,github.com/granula/shared/gen/user/v1;userv1b\x06proto3"
+	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponseB=Z;github.com/xiiisorate/granula_api/shared/gen/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once
