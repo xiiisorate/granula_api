@@ -94,7 +94,7 @@ jobs:
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
             cd /opt/granula/api
             docker compose down --remove-orphans 2>/dev/null || true
-            docker compose build --parallel
+            docker compose build --no-cache --parallel
             docker compose --env-file .env up -d
             sleep 60
             docker compose ps
