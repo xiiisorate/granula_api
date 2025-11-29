@@ -57,7 +57,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate language
 		if input.Settings.Language != "" {
 			if !isValidLanguage(input.Settings.Language) {
-				return nil, errors.NewInvalidArgumentError("invalid language")
+				return nil, errors.NewInvalidArgumentError("language", "invalid language code")
 			}
 			profile.Settings.Language = input.Settings.Language
 		}
@@ -65,7 +65,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate theme
 		if input.Settings.Theme != "" {
 			if !isValidTheme(input.Settings.Theme) {
-				return nil, errors.NewInvalidArgumentError("invalid theme")
+				return nil, errors.NewInvalidArgumentError("theme", "invalid theme value")
 			}
 			profile.Settings.Theme = input.Settings.Theme
 		}
@@ -73,7 +73,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, input *UpdateProfileInput)
 		// Validate units
 		if input.Settings.Units != "" {
 			if !isValidUnits(input.Settings.Units) {
-				return nil, errors.NewInvalidArgumentError("invalid units")
+				return nil, errors.NewInvalidArgumentError("units", "invalid units value")
 			}
 			profile.Settings.Units = input.Settings.Units
 		}
@@ -113,7 +113,7 @@ func (s *UserService) ChangePassword(input *ChangePasswordInput) error {
 
 	// Check if new password is same as old
 	if err := bcrypt.CompareHashAndPassword([]byte(input.PasswordHash), []byte(input.NewPassword)); err == nil {
-		return errors.NewInvalidArgumentError("new password must be different")
+		return errors.NewInvalidArgumentError("password", "new password must be different from current")
 	}
 
 	return nil

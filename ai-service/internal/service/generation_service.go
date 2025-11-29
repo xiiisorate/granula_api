@@ -10,50 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/xiiisorate/granula_api/ai-service/internal/domain/entity"
 	"github.com/xiiisorate/granula_api/ai-service/internal/openrouter"
+	"github.com/xiiisorate/granula_api/ai-service/internal/prompts"
 	"github.com/xiiisorate/granula_api/ai-service/internal/repository/mongodb"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
-)
-
-const (
-	// GenerationSystemPrompt is the system prompt for layout generation.
-	GenerationSystemPrompt = `Ты - AI-архитектор для генерации вариантов перепланировки квартир в России.
-
-Твоя задача - на основе текущей планировки и запроса пользователя предложить варианты перепланировки.
-
-ВАЖНО: Соблюдай российские нормы:
-1. Несущие стены сносить нельзя (только проёмы с усилением)
-2. Санузлы нельзя размещать над жилыми комнатами соседей снизу
-3. Вентиляционные каналы переносить нельзя
-4. Минимальная площадь жилой комнаты - 8 кв.м
-5. Минимальная площадь кухни - 5 кв.м
-
-Верни результат в формате JSON:
-{
-  "variants": [
-    {
-      "id": "variant_1",
-      "name": "Название варианта",
-      "description": "Описание изменений",
-      "score": <0-1>,
-      "changes": [
-        {
-          "type": "DEMOLISH_WALL|ADD_WALL|MERGE_ROOMS|SPLIT_ROOM|MOVE_WET_ZONE",
-          "description": "Описание изменения",
-          "element_ids": ["..."]
-        }
-      ],
-      "is_compliant": true/false,
-      "estimated_cost": <рубли>
-    }
-  ]
-}
-
-Стили генерации:
-- MINIMAL: минимальные изменения, низкая стоимость
-- MODERATE: умеренные изменения, баланс цены и результата
-- CREATIVE: креативные решения, возможно дорогие
-
-Текущая планировка: %s`
 )
 
 // GenerationService handles layout generation.
@@ -145,7 +104,7 @@ func (s *GenerationService) processGeneration(ctx context.Context, job *entity.G
 	job.UpdateProgress(20)
 	_ = s.jobRepo.UpdateGenerationJob(ctx, job)
 
-	// Call OpenRouter
+	// Call OpenRouter with detailed generation prompt
 	messages := []openrouter.Message{
 		{
 			Role:    "user",
@@ -153,11 +112,11 @@ func (s *GenerationService) processGeneration(ctx context.Context, job *entity.G
 		},
 	}
 
-	systemPrompt := fmt.Sprintf(GenerationSystemPrompt, sceneData)
+	systemPrompt := prompts.GetGenerationPrompt(sceneData)
 	resp, err := s.client.ChatCompletionWithOptions(ctx, messages, openrouter.ChatOptions{
 		SystemPrompt: systemPrompt,
-		MaxTokens:    4096,
-		Temperature:  0.8, // Higher temperature for creativity
+		MaxTokens:    8192, // Increased for detailed JSON response with multiple variants
+		Temperature:  0.7,  // Balanced temperature for creativity with consistency
 	})
 	if err != nil {
 		s.log.Error("generation failed", logger.Err(err))

@@ -375,6 +375,47 @@ func FromGRPCError(err error) *Error {
 	}
 }
 
+// -----------------------------------------------------------------------------
+// Predefined errors for common use cases
+// -----------------------------------------------------------------------------
+
+// Authentication errors
+var (
+	// ErrUnauthenticated is returned when authentication is required.
+	ErrUnauthenticated = Unauthenticated("authentication required")
+	// ErrInvalidToken is returned when token is invalid or expired.
+	ErrInvalidToken = Unauthenticated("invalid or expired token")
+	// ErrInvalidPassword is returned when password is incorrect.
+	ErrInvalidPassword = Validation("password", "invalid password")
+	// ErrWeakPassword is returned when password is too weak.
+	ErrWeakPassword = Validation("password", "password must be at least 8 characters")
+)
+
+// User errors
+var (
+	// ErrUserNotFound is returned when user is not found.
+	ErrUserNotFound = NotFoundMsg("user not found")
+	// ErrInvalidEmail is returned when email format is invalid.
+	ErrInvalidEmail = Validation("email", "invalid email format")
+	// ErrEmailExists is returned when email already exists.
+	ErrEmailExists = AlreadyExists("user", "email", "")
+	// ErrInvalidName is returned when name is invalid.
+	ErrInvalidName = Validation("name", "name must be between 2 and 255 characters")
+)
+
+// General errors
+var (
+	// ErrInternal is a generic internal error.
+	ErrInternal = Internal("internal server error")
+	// ErrNotFound is a generic not found error.
+	ErrNotFound = NotFoundMsg("resource not found")
+)
+
+// NewInvalidArgumentError creates a new invalid argument error.
+func NewInvalidArgumentError(field, reason string) *Error {
+	return InvalidArgument(field, reason)
+}
+
 // grpcCodeToCode maps gRPC codes to domain codes.
 func grpcCodeToCode(c codes.Code) Code {
 	switch c {

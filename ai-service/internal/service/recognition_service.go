@@ -11,59 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/xiiisorate/granula_api/ai-service/internal/domain/entity"
 	"github.com/xiiisorate/granula_api/ai-service/internal/openrouter"
+	"github.com/xiiisorate/granula_api/ai-service/internal/prompts"
 	"github.com/xiiisorate/granula_api/ai-service/internal/repository/mongodb"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
-)
-
-const (
-	// RecognitionSystemPrompt is the system prompt for floor plan recognition.
-	RecognitionSystemPrompt = `Ты - AI-система для распознавания планировок квартир.
-
-Твоя задача - проанализировать изображение планировки и извлечь структурированные данные.
-
-Верни результат в формате JSON со следующей структурой:
-{
-  "dimensions": {"width": <метры>, "height": <метры>},
-  "total_area": <площадь в кв.м>,
-  "walls": [
-    {
-      "temp_id": "wall_1",
-      "start": {"x": <метры>, "y": <метры>},
-      "end": {"x": <метры>, "y": <метры>},
-      "thickness": <метры>,
-      "is_load_bearing": <true/false>,
-      "confidence": <0-1>
-    }
-  ],
-  "rooms": [
-    {
-      "temp_id": "room_1",
-      "type": "<LIVING|BEDROOM|KITCHEN|BATHROOM|TOILET|HALLWAY|BALCONY|STORAGE>",
-      "boundary": [{"x": <метры>, "y": <метры>}, ...],
-      "area": <кв.м>,
-      "is_wet_zone": <true/false>,
-      "confidence": <0-1>
-    }
-  ],
-  "openings": [
-    {
-      "temp_id": "opening_1",
-      "type": "<door|window>",
-      "position": {"x": <метры>, "y": <метры>},
-      "width": <метры>,
-      "wall_id": "wall_X",
-      "confidence": <0-1>
-    }
-  ],
-  "warnings": ["...", "..."]
-}
-
-Правила:
-1. Координаты в метрах от левого нижнего угла
-2. Толщина несущих стен обычно 20-40 см, перегородок 8-12 см
-3. Мокрые зоны: ванная, туалет, кухня
-4. Если не уверен в типе стены, укажи is_load_bearing: false и низкий confidence
-5. Площадь комнат рассчитывай по контуру`
 )
 
 // RecognitionService handles floor plan recognition.
@@ -147,11 +97,11 @@ func (s *RecognitionService) processRecognition(ctx context.Context, job *entity
 	job.UpdateProgress(30)
 	_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 
-	// Call OpenRouter
+	// Call OpenRouter with detailed recognition prompt
 	resp, err := s.client.ChatCompletionWithOptions(ctx, messages, openrouter.ChatOptions{
-		SystemPrompt: RecognitionSystemPrompt,
-		MaxTokens:    4096,
-		Temperature:  0.3, // Lower temperature for more consistent output
+		SystemPrompt: prompts.GetRecognitionPrompt(),
+		MaxTokens:    8192, // Increased for detailed JSON response
+		Temperature:  0.2,  // Lower temperature for more consistent output
 	})
 	if err != nil {
 		s.log.Error("recognition failed", logger.Err(err))

@@ -6,7 +6,7 @@ import (
 
 	"github.com/xiiisorate/granula_api/auth-service/internal/repository"
 	"github.com/xiiisorate/granula_api/auth-service/internal/service"
-	"github.com/xiiisorate/github.com/xiiisorate/github.com/xiiisorate/granula_api/shared/pkg/errors"
+	"github.com/xiiisorate/granula_api/shared/pkg/errors"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"

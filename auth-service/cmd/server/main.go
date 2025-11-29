@@ -9,7 +9,7 @@ import (
 	"github.com/xiiisorate/granula_api/auth-service/internal/repository"
 	"github.com/xiiisorate/granula_api/auth-service/internal/server"
 	"github.com/xiiisorate/granula_api/auth-service/internal/service"
-	"github.com/xiiisorate/github.com/xiiisorate/github.com/xiiisorate/granula_api/shared/pkg/logger"
+	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -22,13 +22,15 @@ func main() {
 	cfg := config.Load()
 
 	// Initialize logger
-	logger.Init(logger.Config{
+	log := logger.MustNew(logger.Config{
 		Level:       cfg.LogLevel,
 		ServiceName: "auth-service",
-		Pretty:      cfg.AppEnv != "production",
+		Format:      "json",
+		Development: cfg.AppEnv != "production",
 	})
+	logger.SetGlobal(log)
 
-	logger.Info("Starting Auth Service")
+	log.Info("Starting Auth Service")
 
 	// Connect to database
 	dsn := fmt.Sprintf(
@@ -38,12 +40,12 @@ func main() {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		logger.Fatal("Failed to connect to database", err)
+		log.Fatal("Failed to connect to database", logger.Err(err))
 	}
 
 	// Run migrations
 	if err := repository.Migrate(db); err != nil {
-		logger.Fatal("Failed to run migrations", err)
+		log.Fatal("Failed to run migrations", logger.Err(err))
 	}
 
 	// Initialize repositories
@@ -66,13 +68,13 @@ func main() {
 	address := fmt.Sprintf("%s:%d", cfg.GRPC.Host, cfg.GRPC.Port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		logger.Fatal("Failed to listen", err)
+		log.Fatal("Failed to listen", logger.Err(err))
 	}
 
-	logger.Info(fmt.Sprintf("Auth Service listening on %s", address))
+	log.Info("Auth Service listening", logger.String("address", address))
 
 	if err := grpcServer.Serve(listener); err != nil {
-		logger.Fatal("Failed to serve", err)
+		log.Fatal("Failed to serve", logger.Err(err))
 	}
 }
 

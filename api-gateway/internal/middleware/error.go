@@ -31,14 +31,15 @@ func ErrorHandler(c *fiber.Ctx, err error) error {
 		}
 	}
 
-	// Log error
-	logger.Logger.Error().
-		Err(err).
-		Int("status", code).
-		Str("path", c.Path()).
-		Str("method", c.Method()).
-		Str("request_id", c.GetRespHeader("X-Request-ID")).
-		Msg("request_error")
+	// Log error using global logger
+	log := logger.Global()
+	log.Error("request_error",
+		logger.Err(err),
+		logger.Int("status", code),
+		logger.String("path", c.Path()),
+		logger.String("method", c.Method()),
+		logger.String("request_id", c.GetRespHeader("X-Request-ID")),
+	)
 
 	// Return generic error to client
 	return c.Status(code).JSON(fiber.Map{

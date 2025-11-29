@@ -2,8 +2,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/xiiisorate/granula_api/api-gateway/internal/config"
 	"github.com/xiiisorate/granula_api/api-gateway/internal/handlers"
 	"github.com/xiiisorate/granula_api/api-gateway/internal/middleware"
@@ -32,13 +30,15 @@ func main() {
 	cfg := config.Load()
 
 	// Initialize logger
-	logger.Init(logger.Config{
+	log := logger.MustNew(logger.Config{
 		Level:       cfg.LogLevel,
 		ServiceName: "api-gateway",
-		Pretty:      cfg.AppEnv != "production",
+		Format:      "json",
+		Development: cfg.AppEnv != "production",
 	})
+	logger.SetGlobal(log)
 
-	logger.Info("Starting API Gateway")
+	log.Info("Starting API Gateway")
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -102,11 +102,11 @@ func main() {
 	}
 
 	// Start server
-	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-	logger.Info(fmt.Sprintf("API Gateway listening on %s", address))
+	address := cfg.HTTPAddress()
+	log.Info("API Gateway listening", logger.String("address", address))
 
 	if err := app.Listen(address); err != nil {
-		logger.Fatal("Failed to start server", err)
+		log.Fatal("Failed to start server", logger.Err(err))
 	}
 }
 

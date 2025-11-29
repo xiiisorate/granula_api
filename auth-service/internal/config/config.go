@@ -4,7 +4,7 @@ package config
 import (
 	"time"
 
-	sharedconfig "github.com/xiiisorate/github.com/xiiisorate/github.com/xiiisorate/granula_api/shared/pkg/config"
+	sharedconfig "github.com/xiiisorate/granula_api/shared/pkg/config"
 )
 
 // Config holds all configuration for Auth Service.

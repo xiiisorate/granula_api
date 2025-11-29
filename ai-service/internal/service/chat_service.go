@@ -10,37 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/xiiisorate/granula_api/ai-service/internal/domain/entity"
 	"github.com/xiiisorate/granula_api/ai-service/internal/openrouter"
+	"github.com/xiiisorate/granula_api/ai-service/internal/prompts"
 	"github.com/xiiisorate/granula_api/ai-service/internal/repository/mongodb"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
-)
-
-const (
-	// ChatSystemPrompt is the system prompt for the chat assistant.
-	ChatSystemPrompt = `Ты - AI-ассистент сервиса Granula для планирования ремонта и перепланировки квартир в России.
-
-Твои возможности:
-1. Отвечать на вопросы о перепланировке и ремонте
-2. Объяснять требования СНиП и Жилищного кодекса РФ
-3. Предлагать изменения планировки
-4. Помогать оптимизировать пространство
-
-Правила:
-- Всегда учитывай российские строительные нормы (СНиП, СП, ЖК РФ)
-- Предупреждай о запрещённых перепланировках (снос несущих стен, перенос мокрых зон над жилыми комнатами)
-- Отвечай на русском языке
-- Будь конкретным и практичным
-- Если предлагаешь действие, укажи его в формате JSON в конце ответа:
-
-{"action": {"type": "DEMOLISH_WALL", "element_id": "...", "description": "..."}}
-
-Типы действий:
-- DEMOLISH_WALL: снос стены
-- ADD_WALL: добавление стены
-- MOVE_WET_ZONE: перенос мокрой зоны
-- ADD_FURNITURE: добавление мебели
-- CHANGE_ROOM_TYPE: изменение типа комнаты
-
-Текущая сцена: %s`
 )
 
 // ChatService handles chat operations.
@@ -84,10 +56,11 @@ func (s *ChatService) SendMessage(ctx context.Context, req SendMessageRequest) (
 		return nil, err
 	}
 
-	// Call OpenRouter
-	systemPrompt := fmt.Sprintf(ChatSystemPrompt, s.getSceneSummary(req.SceneID))
+	// Call OpenRouter with detailed chat prompt
+	systemPrompt := prompts.GetChatPrompt(s.getSceneSummary(req.SceneID))
 	resp, err := s.client.ChatCompletionWithOptions(ctx, messages, openrouter.ChatOptions{
 		SystemPrompt: systemPrompt,
+		MaxTokens:    4096,
 	})
 	if err != nil {
 		s.log.Error("OpenRouter request failed", logger.Err(err))
@@ -150,10 +123,11 @@ func (s *ChatService) StreamMessage(ctx context.Context, req SendMessageRequest)
 		return nil, err
 	}
 
-	// Start streaming
-	systemPrompt := fmt.Sprintf(ChatSystemPrompt, s.getSceneSummary(req.SceneID))
+	// Start streaming with detailed chat prompt
+	systemPrompt := prompts.GetChatPrompt(s.getSceneSummary(req.SceneID))
 	stream, err := s.client.ChatCompletionStream(ctx, messages, openrouter.ChatOptions{
 		SystemPrompt: systemPrompt,
+		MaxTokens:    4096,
 	})
 	if err != nil {
 		return nil, err
@@ -337,9 +311,10 @@ func (s *ChatService) parseActions(content string) []entity.SuggestedAction {
 }
 
 // getSceneSummary returns a summary of the scene for context.
-// TODO: This should fetch actual scene data from Scene Service.
+// TODO: This should fetch actual scene data from Scene Service via gRPC.
 func (s *ChatService) getSceneSummary(sceneID string) string {
-	return fmt.Sprintf("Scene ID: %s (данные сцены будут загружены из Scene Service)", sceneID)
+	// В будущем здесь будет вызов Scene Service для получения данных сцены
+	return "Scene ID: " + sceneID + " (данные сцены будут загружены из Scene Service)"
 }
 
 // Request/Response types
