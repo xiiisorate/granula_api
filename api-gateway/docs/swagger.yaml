@@ -2593,6 +2593,154 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /ai/context:
+    get:
+      tags: [ai]
+      summary: Получить контекст AI
+      description: Получить текущий контекст AI для сцены (информация о планировке)
+      operationId: getAIContext
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Контекст AI
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      context_id:
+                        type: string
+                      scene_summary:
+                        type: string
+                        description: Описание планировки для AI
+                      context_size:
+                        type: integer
+                        description: Размер контекста в токенах
+                      updated_at:
+                        type: string
+                        format: date-time
+    post:
+      tags: [ai]
+      summary: Обновить контекст AI
+      description: Принудительно обновить контекст AI после изменений в сцене
+      operationId: updateAIContext
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scene_id
+              properties:
+                scene_id:
+                  type: string
+                  format: uuid
+                branch_id:
+                  type: string
+                  format: uuid
+                force:
+                  type: boolean
+                  default: false
+                  description: Принудительное обновление
+      responses:
+        "200":
+          description: Контекст обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      context_id:
+                        type: string
+                      updated:
+                        type: boolean
+                      context_size:
+                        type: integer
+
+  /scenes/{scene_id}/chat/messages/{message_id}/select:
+    post:
+      tags: [ai, scenes]
+      summary: Выбрать вариант из предложенных AI
+      description: Выбор варианта планировки из предложенных AI. Активирует соответствующую ветку.
+      operationId: selectSuggestion
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scene_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: message_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID сообщения с вариантами
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - suggestion_index
+              properties:
+                suggestion_index:
+                  type: integer
+                  minimum: 0
+                  maximum: 4
+                  description: Индекс выбранного варианта (0-4)
+      responses:
+        "200":
+          description: Вариант выбран и активирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      selected_branch_id:
+                        type: string
+                        format: uuid
+                        description: ID активированной ветки
+                      branch_activated:
+                        type: boolean
+                        description: Была ли ветка активирована
+                      confirmation_message:
+                        type: string
+                        description: Подтверждающее сообщение от AI
+        "400":
+          description: Неверный индекс варианта
+        "404":
+          description: Сообщение не найдено
+
   # ---------------------------------------------------------------------------
   # Compliance Endpoints
   # ---------------------------------------------------------------------------

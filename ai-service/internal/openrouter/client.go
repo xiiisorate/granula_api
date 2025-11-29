@@ -60,7 +60,7 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-// ImageContent for multimodal messages.
+// ImageContent for multimodal messages (legacy, use ContentPart instead).
 type ImageContent struct {
 	Type     string    `json:"type"` // "text" or "image_url"
 	Text     string    `json:"text,omitempty"`
@@ -71,6 +71,35 @@ type ImageContent struct {
 type ImageURL struct {
 	URL    string `json:"url"`
 	Detail string `json:"detail,omitempty"` // "low", "high", "auto"
+}
+
+// =============================================================================
+// Multimodal (Vision) API Types
+// =============================================================================
+// These types support sending images to vision-capable models like Claude Sonnet 4.
+
+// MultimodalMessage represents a message with text and/or images.
+// Used for vision models that can process both text and images.
+type MultimodalMessage struct {
+	Role    string        `json:"role"`    // "system", "user", "assistant"
+	Content []ContentPart `json:"content"` // Array of text and image parts
+}
+
+// ContentPart is a part of multimodal message content.
+// Can be either text or an image URL (base64 data URL supported).
+type ContentPart struct {
+	Type     string    `json:"type"` // "text" or "image_url"
+	Text     string    `json:"text,omitempty"`
+	ImageURL *ImageURL `json:"image_url,omitempty"`
+}
+
+// MultimodalChatRequest is the request body for multimodal chat completions.
+// Note: Messages field uses interface{} to support mixed Message and MultimodalMessage types.
+type MultimodalChatRequest struct {
+	Model       string        `json:"model"`
+	Messages    []interface{} `json:"messages"` // Can be Message or MultimodalMessage
+	MaxTokens   int           `json:"max_tokens,omitempty"`
+	Temperature float64       `json:"temperature,omitempty"`
 }
 
 // ChatRequest is the request body for chat completions.
@@ -430,6 +459,158 @@ func (c *Client) recordRequest() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.requestTimes = append(c.requestTimes, time.Now())
+}
+
+// =============================================================================
+// Vision API Methods
+// =============================================================================
+
+// ChatCompletionWithImages performs a chat completion with image inputs.
+// Use this for vision models like claude-sonnet-4 or gpt-4o.
+//
+// Example usage:
+//
+//	messages := []openrouter.MultimodalMessage{
+//	    {
+//	        Role: "user",
+//	        Content: []openrouter.ContentPart{
+//	            {Type: "text", Text: "Describe this image"},
+//	            {Type: "image_url", ImageURL: &openrouter.ImageURL{URL: "data:image/png;base64,...", Detail: "high"}},
+//	        },
+//	    },
+//	}
+//	resp, err := client.ChatCompletionWithImages(ctx, messages, openrouter.ChatOptions{SystemPrompt: "..."})
+func (c *Client) ChatCompletionWithImages(ctx context.Context, messages []MultimodalMessage, opts ChatOptions) (*ChatResponse, error) {
+	// Wait for rate limit
+	if err := c.waitForRateLimit(ctx); err != nil {
+		return nil, err
+	}
+
+	// Use vision-capable model (Claude Sonnet 4 by default)
+	model := "anthropic/claude-sonnet-4-20250514"
+	if opts.Model != "" {
+		model = opts.Model
+	}
+
+	// Build messages array with optional system prompt
+	allMessages := make([]interface{}, 0, len(messages)+1)
+
+	// Prepend system message if provided
+	if opts.SystemPrompt != "" {
+		systemMsg := MultimodalMessage{
+			Role: "system",
+			Content: []ContentPart{
+				{Type: "text", Text: opts.SystemPrompt},
+			},
+		}
+		allMessages = append(allMessages, systemMsg)
+	}
+
+	// Add user messages
+	for _, msg := range messages {
+		allMessages = append(allMessages, msg)
+	}
+
+	maxTokens := c.cfg.MaxTokens
+	if opts.MaxTokens > 0 {
+		maxTokens = opts.MaxTokens
+	}
+
+	temperature := c.cfg.Temperature
+	if opts.Temperature > 0 {
+		temperature = opts.Temperature
+	}
+
+	req := MultimodalChatRequest{
+		Model:       model,
+		Messages:    allMessages,
+		MaxTokens:   maxTokens,
+		Temperature: temperature,
+	}
+
+	// Execute with retries
+	var lastErr error
+	for attempt := 0; attempt <= c.cfg.MaxRetries; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff
+			backoff := time.Duration(1<<uint(attempt-1)) * 100 * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+
+		resp, err := c.doMultimodalRequest(ctx, req)
+		if err == nil {
+			return resp, nil
+		}
+
+		lastErr = err
+		c.log.Warn("OpenRouter multimodal request failed, retrying",
+			logger.Int("attempt", attempt+1),
+			logger.Err(err),
+		)
+	}
+
+	return nil, apperrors.Wrap(lastErr, "all retries exhausted for multimodal request")
+}
+
+// doMultimodalRequest performs the actual HTTP request for multimodal (vision) completions.
+func (c *Client) doMultimodalRequest(ctx context.Context, req MultimodalChatRequest) (*ChatResponse, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, apperrors.Internal("failed to marshal multimodal request").WithCause(err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.cfg.BaseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil, apperrors.Internal("failed to create request").WithCause(err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+c.cfg.APIKey)
+	httpReq.Header.Set("HTTP-Referer", "https://granula.ru")
+	httpReq.Header.Set("X-Title", "Granula")
+
+	c.log.Debug("sending OpenRouter multimodal request",
+		logger.String("model", req.Model),
+		logger.Int("messages", len(req.Messages)),
+	)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, apperrors.Unavailable("openrouter").WithCause(err)
+	}
+	defer resp.Body.Close()
+
+	// Record request time for rate limiting
+	c.recordRequest()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		c.log.Error("OpenRouter multimodal error response",
+			logger.Int("status", resp.StatusCode),
+			logger.String("body", string(bodyBytes)),
+		)
+
+		if resp.StatusCode == 429 {
+			return nil, apperrors.RateLimited("OpenRouter rate limit exceeded")
+		}
+		return nil, apperrors.Internalf("OpenRouter multimodal error: %d - %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var chatResp ChatResponse
+	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
+		return nil, apperrors.Internal("failed to decode multimodal response").WithCause(err)
+	}
+
+	c.log.Debug("OpenRouter multimodal response received",
+		logger.Int("prompt_tokens", chatResp.Usage.PromptTokens),
+		logger.Int("completion_tokens", chatResp.Usage.CompletionTokens),
+	)
+
+	return &chatResp, nil
 }
 
 // EstimateTokens provides a rough token estimate for a string.

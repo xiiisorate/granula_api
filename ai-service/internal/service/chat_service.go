@@ -1,4 +1,9 @@
+// =============================================================================
 // Package service provides business logic for AI Service.
+// =============================================================================
+// ChatService handles interactive chat with AI assistant.
+// Integrates with Scene Service to provide layout-aware responses.
+// =============================================================================
 package service
 
 import (
@@ -6,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/xiiisorate/granula_api/ai-service/internal/domain/entity"
@@ -15,30 +21,44 @@ import (
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 )
 
-// ChatService handles chat operations.
+// SceneContextProvider provides scene context for AI.
+// This interface allows ChatService to work with Scene Service without import cycles.
+type SceneContextProvider interface {
+	GetSceneContext(ctx context.Context, sceneID string) (string, error)
+	InvalidateCache(sceneID string)
+}
+
+// ChatService handles chat operations with AI assistant.
+// It integrates with Scene Service to provide context-aware responses.
 type ChatService struct {
-	chatRepo *mongodb.ChatRepository
-	client   *openrouter.Client
-	log      *logger.Logger
+	chatRepo    *mongodb.ChatRepository
+	client      *openrouter.Client
+	sceneClient SceneContextProvider // Interface for Scene Service integration (no cycles)
+	log         *logger.Logger
 }
 
 // NewChatService creates a new ChatService.
-func NewChatService(chatRepo *mongodb.ChatRepository, client *openrouter.Client, log *logger.Logger) *ChatService {
+// sceneClient can be nil if Scene Service integration is not available.
+func NewChatService(chatRepo *mongodb.ChatRepository, client *openrouter.Client, sceneClient SceneContextProvider, log *logger.Logger) *ChatService {
 	return &ChatService{
-		chatRepo: chatRepo,
-		client:   client,
-		log:      log,
+		chatRepo:    chatRepo,
+		client:      client,
+		sceneClient: sceneClient,
+		log:         log,
 	}
 }
 
 // SendMessage sends a message and gets a complete response.
+// It loads scene context from Scene Service if available.
 func (s *ChatService) SendMessage(ctx context.Context, req SendMessageRequest) (*ChatResponse, error) {
+	startTime := time.Now() // Track generation time
+
 	s.log.Info("sending chat message",
 		logger.String("scene_id", req.SceneID),
 		logger.String("branch_id", req.BranchID),
 	)
 
-	// Get or create context ID
+	// Get or create context ID for conversation continuity
 	contextID := req.ContextID
 	if contextID == "" {
 		contextID = uuid.New().String()
@@ -50,14 +70,17 @@ func (s *ChatService) SendMessage(ctx context.Context, req SendMessageRequest) (
 		return nil, err
 	}
 
-	// Build message history for LLM
+	// Build message history for LLM (includes recent conversation)
 	messages, err := s.buildMessageHistory(ctx, req.SceneID, req.BranchID, contextID, req.Message)
 	if err != nil {
 		return nil, err
 	}
 
-	// Call OpenRouter with detailed chat prompt
-	systemPrompt := prompts.GetChatPrompt(s.getSceneSummary(req.SceneID))
+	// Get scene context from Scene Service (real data, not placeholder!)
+	sceneContext := s.getSceneSummary(ctx, req.SceneID)
+
+	// Call OpenRouter with detailed chat prompt and scene context
+	systemPrompt := prompts.GetChatPrompt(sceneContext)
 	resp, err := s.client.ChatCompletionWithOptions(ctx, messages, openrouter.ChatOptions{
 		SystemPrompt: systemPrompt,
 		MaxTokens:    4096,
@@ -71,11 +94,14 @@ func (s *ChatService) SendMessage(ctx context.Context, req SendMessageRequest) (
 		return nil, fmt.Errorf("no response from AI")
 	}
 
-	// Parse response
+	// Parse response and extract suggested actions
 	content := resp.Choices[0].Message.Content
 	actions := s.parseActions(content)
 
-	// Save assistant message
+	// Calculate generation time
+	generationTimeMs := time.Since(startTime).Milliseconds()
+
+	// Save assistant message with metadata
 	assistantMsg := entity.NewChatMessage(req.SceneID, req.BranchID, contextID, "assistant", content)
 	assistantMsg.WithActions(actions)
 	assistantMsg.WithTokenUsage(&entity.TokenUsage{
@@ -88,17 +114,24 @@ func (s *ChatService) SendMessage(ctx context.Context, req SendMessageRequest) (
 		s.log.Warn("failed to save assistant message", logger.Err(err))
 	}
 
+	s.log.Info("chat message processed",
+		logger.String("message_id", assistantMsg.ID.String()),
+		logger.Int64("generation_time_ms", generationTimeMs),
+		logger.Int("actions_count", len(actions)),
+	)
+
 	return &ChatResponse{
 		MessageID:        assistantMsg.ID.String(),
 		Response:         content,
 		ContextID:        contextID,
 		Actions:          actions,
-		GenerationTimeMs: 0, // TODO: track time
+		GenerationTimeMs: generationTimeMs,
 		TokenUsage:       assistantMsg.TokenUsage,
 	}, nil
 }
 
 // StreamMessage sends a message and streams the response.
+// It loads scene context from Scene Service for context-aware responses.
 func (s *ChatService) StreamMessage(ctx context.Context, req SendMessageRequest) (<-chan StreamChunk, error) {
 	s.log.Info("streaming chat message",
 		logger.String("scene_id", req.SceneID),
@@ -123,8 +156,11 @@ func (s *ChatService) StreamMessage(ctx context.Context, req SendMessageRequest)
 		return nil, err
 	}
 
-	// Start streaming with detailed chat prompt
-	systemPrompt := prompts.GetChatPrompt(s.getSceneSummary(req.SceneID))
+	// Get scene context from Scene Service (real data!)
+	sceneContext := s.getSceneSummary(ctx, req.SceneID)
+
+	// Start streaming with detailed chat prompt and scene context
+	systemPrompt := prompts.GetChatPrompt(sceneContext)
 	stream, err := s.client.ChatCompletionStream(ctx, messages, openrouter.ChatOptions{
 		SystemPrompt: systemPrompt,
 		MaxTokens:    4096,
@@ -310,11 +346,55 @@ func (s *ChatService) parseActions(content string) []entity.SuggestedAction {
 	return actions
 }
 
-// getSceneSummary returns a summary of the scene for context.
-// TODO: This should fetch actual scene data from Scene Service via gRPC.
-func (s *ChatService) getSceneSummary(sceneID string) string {
-	// В будущем здесь будет вызов Scene Service для получения данных сцены
-	return "Scene ID: " + sceneID + " (данные сцены будут загружены из Scene Service)"
+// getSceneSummary returns a summary of the scene for AI context.
+// It fetches real scene data from Scene Service via gRPC.
+func (s *ChatService) getSceneSummary(ctx context.Context, sceneID string) string {
+	// If no scene ID provided, return default message
+	if sceneID == "" {
+		return "Контекст сцены не загружен. Спроси пользователя о деталях планировки."
+	}
+
+	// If Scene Service client is not available, return placeholder
+	if s.sceneClient == nil {
+		s.log.Debug("scene client not available, returning placeholder",
+			logger.String("scene_id", sceneID),
+		)
+		return fmt.Sprintf("Scene ID: %s (интеграция со Scene Service не настроена)", sceneID)
+	}
+
+	// Create timeout context for Scene Service call
+	sceneCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Fetch scene context from Scene Service
+	summary, err := s.sceneClient.GetSceneContext(sceneCtx, sceneID)
+	if err != nil {
+		s.log.Warn("failed to get scene context from Scene Service",
+			logger.Err(err),
+			logger.String("scene_id", sceneID),
+		)
+		// Return partial context on error
+		return fmt.Sprintf("Scene ID: %s (не удалось загрузить полные данные)", sceneID)
+	}
+
+	return summary
+}
+
+// GetRecentMessages returns recent messages for a conversation.
+// Used by AI Server for GetContext implementation.
+func (s *ChatService) GetRecentMessages(ctx context.Context, sceneID, branchID, contextID string, limit int) ([]*entity.ChatMessage, error) {
+	return s.chatRepo.GetRecentMessages(ctx, sceneID, branchID, contextID, limit)
+}
+
+// GetMessage retrieves a specific message by ID.
+// Used for SelectSuggestion to get message with actions.
+func (s *ChatService) GetMessage(ctx context.Context, messageID uuid.UUID) (*entity.ChatMessage, error) {
+	return s.chatRepo.GetByID(ctx, messageID)
+}
+
+// SaveMessage saves a new message to the repository.
+func (s *ChatService) SaveMessage(ctx context.Context, msg *entity.ChatMessage) error {
+	return s.chatRepo.Save(ctx, msg)
 }
 
 // Request/Response types

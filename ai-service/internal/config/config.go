@@ -38,6 +38,11 @@ type ServiceConfig struct {
 
 	// ShutdownTimeout for graceful shutdown.
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout" default:"30s"`
+
+	// SceneServiceAddr is the address of Scene Service for context integration.
+	// Format: "host:port" (e.g., "scene-service:50053")
+	// Leave empty to disable Scene Service integration.
+	SceneServiceAddr string `mapstructure:"scene_service_addr" default:""`
 }
 
 // WorkerConfig holds worker pool settings.

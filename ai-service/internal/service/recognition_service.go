@@ -56,7 +56,8 @@ func (s *RecognitionService) GetRecognitionStatus(ctx context.Context, jobID uui
 	return s.jobRepo.GetRecognitionJob(ctx, jobID)
 }
 
-// processRecognition performs the actual recognition.
+// processRecognition performs the actual recognition using Vision API.
+// This method sends the REAL image to a vision-capable AI model for analysis.
 func (s *RecognitionService) processRecognition(ctx context.Context, job *entity.RecognitionJob, imageData []byte, imageType string) {
 	startTime := time.Now()
 
@@ -64,87 +65,132 @@ func (s *RecognitionService) processRecognition(ctx context.Context, job *entity
 	job.Start()
 	_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 
-	// Encode image to base64
+	// Encode image to base64 data URL for Vision API
+	// This is the FULL image data, not truncated!
 	base64Image := base64.StdEncoding.EncodeToString(imageData)
 	dataURL := fmt.Sprintf("data:%s;base64,%s", imageType, base64Image)
 
-	// Update progress
+	s.log.Info("processing floor plan image",
+		logger.String("job_id", job.ID.String()),
+		logger.Int("image_size_bytes", len(imageData)),
+		logger.String("image_type", imageType),
+	)
+
+	// Update progress: image prepared
 	job.UpdateProgress(10)
 	_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 
-	// Build prompt with image
+	// Build user prompt based on recognition options
 	prompt := "Проанализируй эту планировку квартиры и извлеки структурированные данные. "
 	if job.Options.DetectLoadBearing {
-		prompt += "Определи несущие стены. "
+		prompt += "Определи несущие стены (по толщине линий и расположению). "
 	}
 	if job.Options.DetectWetZones {
-		prompt += "Определи мокрые зоны. "
+		prompt += "Определи мокрые зоны (ванная, туалет, кухня). "
 	}
 	if job.Options.DetectFurniture {
 		prompt += "Определи мебель и оборудование. "
 	}
-	prompt += "Верни результат в JSON."
+	prompt += "Верни результат ТОЛЬКО в формате JSON без markdown-обёртки."
 
-	// For now, we'll use a text description since Claude doesn't support images via this API directly
-	// In production, you would use a vision model or separate image analysis service
-	messages := []openrouter.Message{
+	// Build multimodal message with REAL image data
+	// This sends the actual image to the Vision API, not just a placeholder!
+	messages := []openrouter.MultimodalMessage{
 		{
-			Role:    "user",
-			Content: prompt + "\n\n[Изображение планировки загружено: " + dataURL[:100] + "...]",
+			Role: "user",
+			Content: []openrouter.ContentPart{
+				{
+					Type: "text",
+					Text: prompt,
+				},
+				{
+					Type: "image_url",
+					ImageURL: &openrouter.ImageURL{
+						URL:    dataURL, // Full base64 image data!
+						Detail: "high",  // High quality for accurate recognition
+					},
+				},
+			},
 		},
 	}
 
+	// Update progress: sending to AI
 	job.UpdateProgress(30)
 	_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 
-	// Call OpenRouter with detailed recognition prompt
-	resp, err := s.client.ChatCompletionWithOptions(ctx, messages, openrouter.ChatOptions{
+	// Call OpenRouter Vision API with detailed recognition prompt
+	// Using Claude Sonnet 4 which has excellent vision capabilities
+	resp, err := s.client.ChatCompletionWithImages(ctx, messages, openrouter.ChatOptions{
 		SystemPrompt: prompts.GetRecognitionPrompt(),
-		MaxTokens:    8192, // Increased for detailed JSON response
-		Temperature:  0.2,  // Lower temperature for more consistent output
+		MaxTokens:    8192,                                 // Large response for detailed JSON
+		Temperature:  0.2,                                  // Low temperature for consistent output
+		Model:        "anthropic/claude-sonnet-4-20250514", // Vision-capable model
 	})
 	if err != nil {
-		s.log.Error("recognition failed", logger.Err(err))
+		s.log.Error("recognition failed - Vision API error",
+			logger.Err(err),
+			logger.String("job_id", job.ID.String()),
+		)
 		job.Fail(err.Error())
 		_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 		return
 	}
 
+	// Update progress: processing AI response
 	job.UpdateProgress(70)
 	_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 
 	if len(resp.Choices) == 0 {
+		s.log.Error("recognition failed - no response from AI",
+			logger.String("job_id", job.ID.String()),
+		)
 		job.Fail("no response from AI")
 		_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 		return
 	}
 
-	// Parse result
+	// Parse recognition result from AI response
 	content := resp.Choices[0].Message.Content
 	result, err := s.parseRecognitionResult(content)
 	if err != nil {
-		s.log.Warn("failed to parse recognition result", logger.Err(err), logger.String("content", content))
-		// Create a minimal result
+		s.log.Warn("failed to parse recognition result",
+			logger.Err(err),
+			logger.String("job_id", job.ID.String()),
+			logger.String("content_preview", truncateString(content, 500)),
+		)
+		// Create a minimal result with warning
 		result = &entity.RecognitionResult{
 			Confidence:   0.5,
-			Warnings:     []string{"Не удалось полностью распознать планировку"},
+			Warnings:     []string{"Не удалось полностью распознать планировку. Проверьте качество изображения."},
 			ModelVersion: "1.0.0",
 		}
 	}
 
 	result.ProcessingTimeMs = time.Since(startTime).Milliseconds()
 
+	// Update progress: finalizing
 	job.UpdateProgress(90)
 	_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 
-	// Complete job
+	// Complete job with result
 	job.Complete(result)
 	_ = s.jobRepo.UpdateRecognitionJob(ctx, job)
 
-	s.log.Info("recognition completed",
+	s.log.Info("recognition completed successfully",
 		logger.String("job_id", job.ID.String()),
 		logger.Int64("processing_time_ms", result.ProcessingTimeMs),
+		logger.F("confidence", result.Confidence),
+		logger.Int("walls_count", len(result.Walls)),
+		logger.Int("rooms_count", len(result.Rooms)),
 	)
+}
+
+// truncateString truncates a string to maxLen characters with ellipsis.
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // parseRecognitionResult parses the AI response into structured result.
@@ -210,4 +256,3 @@ func calculateOverallConfidence(result *entity.RecognitionResult) float64 {
 
 	return total / float64(count)
 }
-

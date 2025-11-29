@@ -696,3 +696,159 @@ type ClearChatInput struct {
 	ContextID string `json:"context_id,omitempty"`
 }
 
+// SelectSuggestionInput - input for selecting a suggestion variant.
+type SelectSuggestionInput struct {
+	SuggestionIndex int `json:"suggestion_index" validate:"gte=0,lte=4"`
+}
+
+// =============================================================================
+// SelectSuggestion selects a variant from AI suggestions.
+// @Summary Выбрать вариант
+// @Description Выбор варианта из предложенных AI
+// @Tags ai
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param scene_id path string true "ID сцены"
+// @Param message_id path string true "ID сообщения с вариантами"
+// @Param body body SelectSuggestionInput true "Индекс варианта"
+// @Success 200 {object} SelectSuggestionResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /scenes/{scene_id}/chat/messages/{message_id}/select [post]
+// =============================================================================
+func (h *AIHandler) SelectSuggestion(c *fiber.Ctx) error {
+	sceneID := c.Params("scene_id")
+	messageID := c.Params("message_id")
+
+	if sceneID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "scene_id is required")
+	}
+	if messageID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "message_id is required")
+	}
+
+	var input SelectSuggestionInput
+	if err := c.BodyParser(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
+	defer cancel()
+
+	resp, err := h.client.SelectSuggestion(ctx, &aipb.SelectSuggestionRequest{
+		SceneId:         sceneID,
+		MessageId:       messageID,
+		SuggestionIndex: int32(input.SuggestionIndex),
+	})
+	if err != nil {
+		return handleGRPCError(err)
+	}
+
+	return c.JSON(fiber.Map{
+		"data": fiber.Map{
+			"selected_branch_id":    resp.SelectedBranchId,
+			"branch_activated":      resp.BranchActivated,
+			"confirmation_message":  resp.ConfirmationMessage,
+		},
+		"request_id": c.GetRespHeader("X-Request-ID"),
+	})
+}
+
+// =============================================================================
+// GetContext retrieves AI context for a scene.
+// @Summary Получить контекст AI
+// @Description Получить текущий контекст AI для сцены
+// @Tags ai
+// @Produce json
+// @Security BearerAuth
+// @Param scene_id query string true "ID сцены"
+// @Param branch_id query string false "ID ветки"
+// @Success 200 {object} ContextResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /ai/context [get]
+// =============================================================================
+func (h *AIHandler) GetContext(c *fiber.Ctx) error {
+	sceneID := c.Query("scene_id")
+	branchID := c.Query("branch_id")
+
+	if sceneID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "scene_id is required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.GetContext(ctx, &aipb.GetContextRequest{
+		SceneId:  sceneID,
+		BranchId: branchID,
+	})
+	if err != nil {
+		return handleGRPCError(err)
+	}
+
+	return c.JSON(fiber.Map{
+		"data": fiber.Map{
+			"context_id":    resp.ContextId,
+			"scene_summary": resp.SceneSummary,
+			"context_size":  resp.ContextSize,
+			"updated_at":    resp.UpdatedAt.AsTime(),
+		},
+		"request_id": c.GetRespHeader("X-Request-ID"),
+	})
+}
+
+// =============================================================================
+// UpdateContext updates AI context for a scene.
+// @Summary Обновить контекст AI
+// @Description Принудительно обновить контекст AI (после изменений сцены)
+// @Tags ai
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body UpdateContextInput true "Параметры обновления"
+// @Success 200 {object} UpdateContextResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /ai/context [post]
+// =============================================================================
+func (h *AIHandler) UpdateContext(c *fiber.Ctx) error {
+	var input UpdateContextInput
+	if err := c.BodyParser(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+	}
+
+	if input.SceneID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "scene_id is required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
+	defer cancel()
+
+	resp, err := h.client.UpdateContext(ctx, &aipb.UpdateContextRequest{
+		SceneId:  input.SceneID,
+		BranchId: input.BranchID,
+		Force:    input.Force,
+	})
+	if err != nil {
+		return handleGRPCError(err)
+	}
+
+	return c.JSON(fiber.Map{
+		"data": fiber.Map{
+			"context_id":   resp.ContextId,
+			"updated":      resp.Updated,
+			"context_size": resp.ContextSize,
+		},
+		"request_id": c.GetRespHeader("X-Request-ID"),
+	})
+}
+
+// UpdateContextInput - input for updating AI context.
+type UpdateContextInput struct {
+	SceneID  string `json:"scene_id"`
+	BranchID string `json:"branch_id,omitempty"`
+	Force    bool   `json:"force,omitempty"`
+}
+
