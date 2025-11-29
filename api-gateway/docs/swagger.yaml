@@ -493,7 +493,18 @@ components:
       properties:
         type:
           type: string
-          enum: [living_room, bedroom, kitchen, bathroom, toilet, hallway, balcony, storage, other]
+          enum:
+            [
+              living_room,
+              bedroom,
+              kitchen,
+              bathroom,
+              toilet,
+              hallway,
+              balcony,
+              storage,
+              other,
+            ]
         name:
           type: string
         area:
@@ -756,7 +767,15 @@ components:
           properties:
             type:
               type: string
-              enum: [add_wall, remove_wall, move_wall, add_room, remove_room, merge_rooms]
+              enum:
+                [
+                  add_wall,
+                  remove_wall,
+                  move_wall,
+                  add_room,
+                  remove_room,
+                  merge_rooms,
+                ]
             element_id:
               type: string
               format: uuid
@@ -851,7 +870,18 @@ components:
           enum: [low, normal, high, urgent]
         status:
           type: string
-          enum: [draft, pending, in_review, approved, rejected, assigned, in_progress, completed, cancelled]
+          enum:
+            [
+              draft,
+              pending,
+              in_review,
+              approved,
+              rejected,
+              assigned,
+              in_progress,
+              completed,
+              cancelled,
+            ]
         expert_id:
           type: string
           format: uuid
@@ -2720,7 +2750,18 @@ paths:
           in: query
           schema:
             type: string
-            enum: [draft, pending, in_review, approved, rejected, assigned, in_progress, completed, cancelled]
+            enum:
+              [
+                draft,
+                pending,
+                in_review,
+                approved,
+                rejected,
+                assigned,
+                in_progress,
+                completed,
+                cancelled,
+              ]
         - name: page
           in: query
           schema:
