@@ -1,0 +1,555 @@
+# =============================================================================
+# Granula API - Production Docker Compose
+# =============================================================================
+# Оптимизированная конфигурация для production окружения.
+#
+# Использование:
+#   docker-compose -f deploy/docker-compose.prod.yml up -d
+#
+# Требует .env файл с секретами.
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # API Gateway
+  # ===========================================================================
+  api-gateway:
+    image: api-api-gateway:latest
+    container_name: granula-api-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      HTTP_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://granula.ru}
+      AUTH_SERVICE_ADDR: auth-service:50051
+      USER_SERVICE_ADDR: user-service:50052
+      WORKSPACE_SERVICE_ADDR: workspace-service:50053
+      NOTIFICATION_SERVICE_ADDR: notification-service:50054
+      SCENE_SERVICE_ADDR: scene-service:50055
+      BRANCH_SERVICE_ADDR: branch-service:50056
+      AI_SERVICE_ADDR: ai-service:50057
+      COMPLIANCE_SERVICE_ADDR: compliance-service:50058
+      FLOORPLAN_SERVICE_ADDR: floorplan-service:50059
+      REQUEST_SERVICE_ADDR: request-service:50060
+    networks:
+      - granula-network
+    depends_on:
+      - auth-service
+      - user-service
+      - notification-service
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # ===========================================================================
+  # Auth Service
+  # ===========================================================================
+  auth-service:
+    image: api-auth-service:latest
+    container_name: granula-auth-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50051
+      DB_HOST: postgres-auth
+      DB_PORT: 5432
+      DB_USER: granula
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: auth_db
+      DB_SSLMODE: disable
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE:-15m}
+      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-168h}
+    networks:
+      - granula-network
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # User Service
+  # ===========================================================================
+  user-service:
+    image: api-user-service:latest
+    container_name: granula-user-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50052
+      DB_HOST: postgres-users
+      DB_PORT: 5432
+      DB_USER: granula
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: users_db
+      DB_SSLMODE: disable
+    networks:
+      - granula-network
+    depends_on:
+      postgres-users:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # Notification Service
+  # ===========================================================================
+  notification-service:
+    image: api-notification-service:latest
+    container_name: granula-notification-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50054
+      DB_HOST: postgres-notifications
+      DB_PORT: 5432
+      DB_USER: granula
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: notifications_db
+      DB_SSLMODE: disable
+    networks:
+      - granula-network
+    depends_on:
+      postgres-notifications:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # Workspace Service
+  # ===========================================================================
+  workspace-service:
+    image: api-workspace-service:latest
+    container_name: granula-workspace-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50053
+      WORKSPACE_DATABASE_HOST: postgres-workspace
+      WORKSPACE_DATABASE_PORT: 5432
+      WORKSPACE_DATABASE_USER: granula
+      WORKSPACE_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      WORKSPACE_DATABASE_DATABASE: workspaces_db
+      WORKSPACE_DATABASE_SSL_MODE: disable
+    networks:
+      - granula-network
+    depends_on:
+      postgres-workspace:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # AI Service
+  # ===========================================================================
+  ai-service:
+    image: api-ai-service:latest
+    container_name: granula-ai-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50057
+      AI_MONGODB_URI: mongodb://granula:${MONGO_PASSWORD}@mongodb:27017/ai_db?authSource=admin
+      AI_OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      AI_OPENROUTER_MODEL: openai/gpt-4o
+    networks:
+      - granula-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # ===========================================================================
+  # Scene Service
+  # ===========================================================================
+  scene-service:
+    image: api-scene-service:latest
+    container_name: granula-scene-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50055
+      SCENE_MONGODB_URI: mongodb://granula:${MONGO_PASSWORD}@mongodb:27017/scenes_db?authSource=admin
+    networks:
+      - granula-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # Branch Service
+  # ===========================================================================
+  branch-service:
+    image: api-branch-service:latest
+    container_name: granula-branch-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50056
+      BRANCH_MONGODB_URI: mongodb://granula:${MONGO_PASSWORD}@mongodb:27017/branches_db?authSource=admin
+    networks:
+      - granula-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # Compliance Service
+  # ===========================================================================
+  compliance-service:
+    image: api-compliance-service:latest
+    container_name: granula-compliance-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50058
+      COMPLIANCE_DATABASE_HOST: postgres-compliance
+      COMPLIANCE_DATABASE_PORT: 5432
+      COMPLIANCE_DATABASE_USER: granula
+      COMPLIANCE_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      COMPLIANCE_DATABASE_DATABASE: compliance_db
+      COMPLIANCE_DATABASE_SSL_MODE: disable
+    networks:
+      - granula-network
+    depends_on:
+      postgres-compliance:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # FloorPlan Service
+  # ===========================================================================
+  floorplan-service:
+    image: api-floorplan-service:latest
+    container_name: granula-floorplan-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50059
+      FLOORPLAN_DATABASE_HOST: postgres-floorplan
+      FLOORPLAN_DATABASE_PORT: 5432
+      FLOORPLAN_DATABASE_USER: granula
+      FLOORPLAN_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      FLOORPLAN_DATABASE_DATABASE: floorplan_db
+      FLOORPLAN_DATABASE_SSL_MODE: disable
+      FLOORPLAN_MINIO_ENDPOINT: minio:9000
+      FLOORPLAN_MINIO_ACCESS_KEY: granula
+      FLOORPLAN_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      FLOORPLAN_MINIO_BUCKET: floorplans
+      FLOORPLAN_MINIO_USE_SSL: "false"
+    networks:
+      - granula-network
+    depends_on:
+      postgres-floorplan:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # Request Service
+  # ===========================================================================
+  request-service:
+    image: api-request-service:latest
+    container_name: granula-request-service
+    restart: always
+    environment:
+      APP_ENV: production
+      GRPC_PORT: 50060
+      REQUEST_DATABASE_HOST: postgres-requests
+      REQUEST_DATABASE_PORT: 5432
+      REQUEST_DATABASE_USER: granula
+      REQUEST_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      REQUEST_DATABASE_DATABASE: requests_db
+      REQUEST_DATABASE_SSL_MODE: disable
+    networks:
+      - granula-network
+    depends_on:
+      postgres-requests:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # PostgreSQL Databases
+  # ===========================================================================
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: granula-postgres-auth
+    restart: always
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: auth_db
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  postgres-users:
+    image: postgres:16-alpine
+    container_name: granula-postgres-users
+    restart: always
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: users_db
+    volumes:
+      - postgres-users-data:/var/lib/postgresql/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula -d users_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-notifications:
+    image: postgres:16-alpine
+    container_name: granula-postgres-notifications
+    restart: always
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: notifications_db
+    volumes:
+      - postgres-notifications-data:/var/lib/postgresql/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula -d notifications_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-workspace:
+    image: postgres:16-alpine
+    container_name: granula-postgres-workspace
+    restart: always
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: workspaces_db
+    volumes:
+      - postgres-workspace-data:/var/lib/postgresql/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula -d workspaces_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-compliance:
+    image: postgres:16-alpine
+    container_name: granula-postgres-compliance
+    restart: always
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: compliance_db
+    volumes:
+      - postgres-compliance-data:/var/lib/postgresql/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula -d compliance_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-floorplan:
+    image: postgres:16-alpine
+    container_name: granula-postgres-floorplan
+    restart: always
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: floorplan_db
+    volumes:
+      - postgres-floorplan-data:/var/lib/postgresql/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula -d floorplan_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-requests:
+    image: postgres:16-alpine
+    container_name: granula-postgres-requests
+    restart: always
+    environment:
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: requests_db
+    volumes:
+      - postgres-requests-data:/var/lib/postgresql/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U granula -d requests_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # MongoDB
+  # ===========================================================================
+  mongodb:
+    image: mongo:7
+    container_name: granula-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: granula
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  # ===========================================================================
+  # Redis
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: granula-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===========================================================================
+  # MinIO (Object Storage)
+  # ===========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: granula-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: granula
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio-data:/data
+    networks:
+      - granula-network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  granula-network:
+    driver: bridge
+
+# =============================================================================
+# Volumes (persistent data)
+# =============================================================================
+volumes:
+  postgres-auth-data:
+  postgres-users-data:
+  postgres-notifications-data:
+  postgres-workspace-data:
+  postgres-compliance-data:
+  postgres-floorplan-data:
+  postgres-requests-data:
+  mongodb-data:
+  redis-data:
+  minio-data:
+

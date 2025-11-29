@@ -558,6 +558,42 @@ func (r *WorkspaceRepository) IsMember(ctx context.Context, workspaceID, userID 
 	return exists, nil
 }
 
+// GetMember retrieves a single member from a workspace.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout
+//   - workspaceID: UUID of the workspace
+//   - userID: UUID of the user
+//
+// Returns:
+//   - *entity.Member: Member entity if found
+//   - error: entity.ErrMemberNotFound if not a member
+func (r *WorkspaceRepository) GetMember(ctx context.Context, workspaceID, userID uuid.UUID) (*entity.Member, error) {
+	query := `
+		SELECT id, workspace_id, user_id, role, joined_at, invited_by
+		FROM workspace_members
+		WHERE workspace_id = $1 AND user_id = $2
+	`
+
+	var m entity.Member
+	err := r.pool.QueryRow(ctx, query, workspaceID, userID).Scan(
+		&m.ID,
+		&m.WorkspaceID,
+		&m.UserID,
+		&m.Role,
+		&m.JoinedAt,
+		&m.InvitedBy,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, entity.ErrMemberNotFound
+		}
+		return nil, fmt.Errorf("get member: %w", err)
+	}
+
+	return &m, nil
+}
+
 // GetMemberRole retrieves the role of a member in a workspace.
 //
 // Parameters:

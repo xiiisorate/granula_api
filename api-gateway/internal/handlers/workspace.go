@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 
+	commonpb "github.com/xiiisorate/granula_api/shared/gen/common/v1"
 	workspacepb "github.com/xiiisorate/granula_api/shared/gen/workspace/v1"
 )
 
@@ -43,8 +44,6 @@ func NewWorkspaceHandler(conn *grpc.ClientConn) *WorkspaceHandler {
 // @Router /workspaces [post]
 // =============================================================================
 func (h *WorkspaceHandler) CreateWorkspace(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(uuid.UUID)
-
 	var input CreateWorkspaceInput
 	if err := c.BodyParser(&input); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
@@ -58,26 +57,39 @@ func (h *WorkspaceHandler) CreateWorkspace(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "name must be less than 255 characters")
 	}
 
-	// NOTE: Workspace service uses custom DTOs, not generated proto types.
-	// Returning mock response until service is updated.
-	// TODO: Fix workspace-service to use generated proto types
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
 
-	mockID := uuid.New().String()
+	req := &workspacepb.CreateWorkspaceRequest{
+		Name:        input.Name,
+		Description: input.Description,
+		Address:     input.Address,
+		TotalArea:   input.TotalArea,
+		RoomsCount:  int32(input.RoomsCount),
+	}
+
+	if input.Settings != nil {
+		req.Settings = &workspacepb.WorkspaceSettings{
+			PropertyType:         input.Settings.PropertyType,
+			ProjectType:          input.Settings.ProjectType,
+			Units:                input.Settings.Units,
+			DefaultCeilingHeight: input.Settings.DefaultCeilingHeight,
+			DefaultWallThickness: input.Settings.DefaultWallThickness,
+			Currency:             input.Settings.Currency,
+			Region:               input.Settings.Region,
+			AutoComplianceCheck:  input.Settings.AutoComplianceCheck,
+			NotificationsEnabled: input.Settings.NotificationsEnabled,
+		}
+	}
+
+	resp, err := h.client.CreateWorkspace(ctx, req)
+	if err != nil {
+		return handleGRPCError(err)
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"data": fiber.Map{
-			"id":           mockID,
-			"owner_id":     userID.String(),
-			"name":         input.Name,
-			"description":  input.Description,
-			"address":      input.Address,
-			"total_area":   input.TotalArea,
-			"rooms_count":  input.RoomsCount,
-			"status":       "active",
-			"created_at":   time.Now(),
-			"updated_at":   time.Now(),
-		},
-		"message":    "Workspace created (mock - service integration pending)",
+		"data":       workspaceToResponse(resp.Workspace),
+		"message":    "Workspace created successfully",
 		"request_id": c.GetRespHeader("X-Request-ID"),
 	})
 }
@@ -134,24 +146,61 @@ func (h *WorkspaceHandler) GetWorkspace(c *fiber.Ctx) error {
 // @Router /workspaces [get]
 // =============================================================================
 func (h *WorkspaceHandler) ListWorkspaces(c *fiber.Ctx) error {
-	_ = c.Locals("userID").(uuid.UUID)
+	userID := c.Locals("userID").(uuid.UUID)
 
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 20)
+	status := c.Query("status", "")
+	search := c.Query("search", "")
 
-	// NOTE: Workspace service uses custom DTOs, not generated proto types.
-	// Returning empty list until service is updated to use proto.
-	// TODO: Fix workspace-service to use generated proto types
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	req := &workspacepb.ListWorkspacesRequest{
+		UserId: userID.String(),
+		Search: search,
+		Pagination: &commonpb.PaginationRequest{
+			Page:     int32(page),
+			PageSize: int32(limit),
+		},
+	}
+
+	// Map status string to proto enum
+	if status != "" {
+		switch status {
+		case "active":
+			req.Status = workspacepb.WorkspaceStatus_WORKSPACE_STATUS_ACTIVE
+		case "archived":
+			req.Status = workspacepb.WorkspaceStatus_WORKSPACE_STATUS_ARCHIVED
+		case "deleted":
+			req.Status = workspacepb.WorkspaceStatus_WORKSPACE_STATUS_DELETED
+		}
+	}
+
+	resp, err := h.client.ListWorkspaces(ctx, req)
+	if err != nil {
+		return handleGRPCError(err)
+	}
+
+	workspaces := make([]fiber.Map, 0, len(resp.Workspaces))
+	for _, ws := range resp.Workspaces {
+		workspaces = append(workspaces, workspaceToResponse(ws))
+	}
+
+	pagination := fiber.Map{
+		"page":        page,
+		"limit":       limit,
+		"total":       0,
+		"total_pages": 0,
+	}
+	if resp.Pagination != nil {
+		pagination["total"] = resp.Pagination.Total
+		pagination["total_pages"] = resp.Pagination.TotalPages
+	}
 
 	return c.JSON(fiber.Map{
-		"data": []fiber.Map{},
-		"pagination": fiber.Map{
-			"page":        page,
-			"limit":       limit,
-			"total":       0,
-			"total_pages": 0,
-		},
-		"message":    "Workspace service integration pending",
+		"data":       workspaces,
+		"pagination": pagination,
 		"request_id": c.GetRespHeader("X-Request-ID"),
 	})
 }

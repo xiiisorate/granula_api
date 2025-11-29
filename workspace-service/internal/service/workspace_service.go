@@ -396,7 +396,7 @@ func (s *WorkspaceService) AddMember(ctx context.Context, workspaceID, userID, m
 		UserID:      memberUserID,
 		Role:        role,
 		JoinedAt:    timeNow(),
-		InvitedBy:   &userID,
+		InvitedBy:   userID,
 	}
 
 	// Add to database
@@ -482,8 +482,9 @@ func (s *WorkspaceService) RemoveMember(ctx context.Context, workspaceID, userID
 //   - role: New role (cannot be owner)
 //
 // Returns:
+//   - *entity.Member: Updated member
 //   - error: Access denied, invalid role, or not found
-func (s *WorkspaceService) UpdateMemberRole(ctx context.Context, workspaceID, userID, memberUserID uuid.UUID, role entity.MemberRole) error {
+func (s *WorkspaceService) UpdateMemberRole(ctx context.Context, workspaceID, userID, memberUserID uuid.UUID, role entity.MemberRole) (*entity.Member, error) {
 	s.log.Info("updating member role",
 		logger.String("workspace_id", workspaceID.String()),
 		logger.String("member_user_id", memberUserID.String()),
@@ -493,26 +494,26 @@ func (s *WorkspaceService) UpdateMemberRole(ctx context.Context, workspaceID, us
 	// Only owner can change roles
 	ws, err := s.repo.GetByID(ctx, workspaceID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if !ws.IsOwner(userID) {
-		return ErrForbidden
+		return nil, ErrForbidden
 	}
 
 	// Cannot change owner's role or make someone else owner
 	if ws.IsOwner(memberUserID) || role == entity.RoleOwner {
-		return entity.ErrInvalidRole
+		return nil, entity.ErrInvalidRole
 	}
 
 	// Validate role
 	if !role.IsValid() {
-		return entity.ErrInvalidRole
+		return nil, entity.ErrInvalidRole
 	}
 
 	// Update in database
 	if err := s.repo.UpdateMemberRole(ctx, workspaceID, memberUserID, role); err != nil {
-		return fmt.Errorf("update role: %w", err)
+		return nil, fmt.Errorf("update role: %w", err)
 	}
 
 	s.log.Info("member role updated successfully",
@@ -520,12 +521,18 @@ func (s *WorkspaceService) UpdateMemberRole(ctx context.Context, workspaceID, us
 		logger.String("member_user_id", memberUserID.String()),
 	)
 
-	return nil
+	// Return updated member
+	member, err := s.repo.GetMember(ctx, workspaceID, memberUserID)
+	if err != nil {
+		return nil, fmt.Errorf("get updated member: %w", err)
+	}
+
+	return member, nil
 }
 
 // GetMembers returns all members of a workspace.
 // Access control: User must be a member.
-func (s *WorkspaceService) GetMembers(ctx context.Context, workspaceID, userID uuid.UUID) ([]entity.Member, error) {
+func (s *WorkspaceService) GetMembers(ctx context.Context, workspaceID, userID uuid.UUID) ([]*entity.Member, error) {
 	// Check membership
 	isMember, err := s.repo.IsMember(ctx, workspaceID, userID)
 	if err != nil {
@@ -535,7 +542,17 @@ func (s *WorkspaceService) GetMembers(ctx context.Context, workspaceID, userID u
 		return nil, ErrForbidden
 	}
 
-	return s.repo.GetMembers(ctx, workspaceID)
+	members, err := s.repo.GetMembers(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to pointer slice
+	result := make([]*entity.Member, len(members))
+	for i := range members {
+		result[i] = &members[i]
+	}
+	return result, nil
 }
 
 // =============================================================================

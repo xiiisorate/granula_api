@@ -21,8 +21,8 @@ import (
 	"syscall"
 
 	"github.com/xiiisorate/granula_api/api-gateway/internal/config"
-	"github.com/xiiisorate/granula_api/api-gateway/internal/handlers"
 	appgrpc "github.com/xiiisorate/granula_api/api-gateway/internal/grpc"
+	"github.com/xiiisorate/granula_api/api-gateway/internal/handlers"
 	"github.com/xiiisorate/granula_api/api-gateway/internal/middleware"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 
@@ -122,6 +122,17 @@ func main() {
 			"status":   "ready",
 			"services": grpcClients.HealthCheck(c.Context()),
 		})
+	})
+
+	// ==========================================================================
+	// Swagger Documentation
+	// ==========================================================================
+	swaggerHandler := handlers.NewSwaggerHandler("./docs/swagger.yaml")
+	app.Get("/swagger", swaggerHandler.ServeUI)
+	app.Get("/swagger/spec.yaml", swaggerHandler.ServeSpec)
+	app.Get("/swagger/spec.json", swaggerHandler.ServeSpecJSON)
+	app.Get("/docs", func(c *fiber.Ctx) error {
+		return c.Redirect("/swagger", fiber.StatusMovedPermanently)
 	})
 
 	// ==========================================================================

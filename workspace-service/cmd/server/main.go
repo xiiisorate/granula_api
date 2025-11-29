@@ -42,6 +42,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	workspacev1 "github.com/xiiisorate/granula_api/shared/gen/workspace/v1"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 	"github.com/xiiisorate/granula_api/workspace-service/internal/config"
 	grpcserver "github.com/xiiisorate/granula_api/workspace-service/internal/grpc"
@@ -118,9 +119,7 @@ func main() {
 
 	// Register workspace service
 	workspaceServer := grpcserver.NewWorkspaceServer(workspaceService, log)
-	// Note: Register with generated protobuf service when available
-	// pb.RegisterWorkspaceServiceServer(grpcSrv, workspaceServer)
-	_ = workspaceServer // Используется после генерации proto
+	workspacev1.RegisterWorkspaceServiceServer(grpcSrv, workspaceServer)
 
 	// Register health check
 	healthServer := health.NewServer()

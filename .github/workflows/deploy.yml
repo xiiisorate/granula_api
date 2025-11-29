@@ -1,0 +1,241 @@
+# =============================================================================
+# GitHub Actions - CI/CD Pipeline for Granula API
+# =============================================================================
+# Автоматический деплой всех микросервисов на production сервер.
+#
+# Triggers:
+#   - Push в main или develop ветки
+#   - Pull request в main
+#
+# Secrets (настроить в GitHub Settings → Secrets):
+#   - SERVER_HOST: IP адрес сервера
+#   - SERVER_USER: Пользователь SSH
+#   - SERVER_SSH_KEY: Приватный SSH ключ
+#   - DOCKER_USERNAME: Docker Hub username (опционально)
+#   - DOCKER_PASSWORD: Docker Hub password (опционально)
+#   - JWT_SECRET: Секрет для JWT токенов
+#   - OPENROUTER_API_KEY: API ключ OpenRouter
+#   - POSTGRES_PASSWORD: Пароль PostgreSQL
+#   - MONGO_PASSWORD: Пароль MongoDB
+#   - MINIO_SECRET_KEY: Секретный ключ MinIO
+# =============================================================================
+
+name: Deploy Granula API
+
+on:
+  push:
+    branches: [main, develop, dev/shared]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  # ===========================================================================
+  # Job: Test
+  # ===========================================================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd shared && go mod download
+          
+      - name: Run tests
+        run: |
+          cd shared && go test -v -race -coverprofile=coverage.out ./...
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./shared/coverage.out
+          fail_ci_if_error: false
+
+  # ===========================================================================
+  # Job: Build
+  # ===========================================================================
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub (optional)
+        if: ${{ secrets.DOCKER_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build images
+        run: |
+          docker-compose -f docker-compose.yml build --parallel
+          
+      - name: Save images
+        run: |
+          mkdir -p /tmp/images
+          docker save api-api-gateway:latest | gzip > /tmp/images/api-gateway.tar.gz
+          docker save api-auth-service:latest | gzip > /tmp/images/auth-service.tar.gz
+          docker save api-user-service:latest | gzip > /tmp/images/user-service.tar.gz
+          docker save api-notification-service:latest | gzip > /tmp/images/notification-service.tar.gz
+          docker save api-workspace-service:latest | gzip > /tmp/images/workspace-service.tar.gz
+          docker save api-ai-service:latest | gzip > /tmp/images/ai-service.tar.gz
+          docker save api-scene-service:latest | gzip > /tmp/images/scene-service.tar.gz
+          docker save api-branch-service:latest | gzip > /tmp/images/branch-service.tar.gz
+          docker save api-floorplan-service:latest | gzip > /tmp/images/floorplan-service.tar.gz
+          docker save api-compliance-service:latest | gzip > /tmp/images/compliance-service.tar.gz
+          docker save api-request-service:latest | gzip > /tmp/images/request-service.tar.gz
+          
+      - name: Upload images artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/images/
+          retention-days: 1
+
+  # ===========================================================================
+  # Job: Deploy
+  # ===========================================================================
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/dev/shared'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download images artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/images/
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment directory
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /opt/granula/api"
+
+      - name: Copy files to server
+        run: |
+          # Copy docker-compose and configs
+          scp docker-compose.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/
+          scp -r deploy/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/
+          scp -r */migrations/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/ 2>/dev/null || true
+          
+          # Copy Docker images
+          scp /tmp/images/*.tar.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/granula/api/images/
+
+      - name: Create environment file
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cat > /opt/granula/api/.env << 'EOF'
+          # =============================================================================
+          # Granula API - Production Environment
+          # =============================================================================
+          
+          # Application
+          APP_ENV=production
+          LOG_LEVEL=info
+          
+          # JWT
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_ACCESS_EXPIRE=15m
+          JWT_REFRESH_EXPIRE=7d
+          
+          # PostgreSQL (shared password for all DBs)
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          
+          # MongoDB
+          MONGO_INITDB_ROOT_USERNAME=granula
+          MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+          
+          # Redis
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          
+          # MinIO
+          MINIO_ROOT_USER=granula
+          MINIO_ROOT_PASSWORD=${{ secrets.MINIO_SECRET_KEY }}
+          
+          # OpenRouter AI
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+          
+          # API Gateway
+          API_GATEWAY_PORT=8080
+          CORS_ALLOWED_ORIGINS=https://granula.ru,https://app.granula.ru
+          
+          # Domain
+          API_DOMAIN=api.granula.raitokyokai.tech
+          EOF"
+
+      - name: Deploy services
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            cd /opt/granula/api
+            
+            # Load Docker images
+            for img in images/*.tar.gz; do
+              echo "Loading $img..."
+              gunzip -c "$img" | docker load
+            done
+            
+            # Stop existing services
+            docker-compose down --remove-orphans || true
+            
+            # Start services
+            docker-compose --env-file .env -f docker-compose.yml up -d
+            
+            # Wait for services to be healthy
+            echo "Waiting for services to start..."
+            sleep 30
+            
+            # Run database migrations
+            echo "Running migrations..."
+            docker-compose exec -T postgres-auth psql -U granula -d auth_db -f /migrations/auth/000001_create_users.up.sql || true
+            docker-compose exec -T postgres-users psql -U granula -d users_db -f /migrations/user/000001_create_profiles.up.sql || true
+            docker-compose exec -T postgres-workspace psql -U granula -d workspaces_db -f /migrations/workspace/000001_create_workspaces.up.sql || true
+            
+            # Health check
+            curl -sf http://localhost:8080/health || exit 1
+            
+            echo "Deployment completed successfully!"
+          ENDSSH
+
+      - name: Notify on success
+        if: success()
+        run: echo "✅ Deployment to production successful!"
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "❌ Deployment failed!"
+

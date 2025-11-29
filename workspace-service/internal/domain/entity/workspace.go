@@ -180,6 +180,12 @@ type Workspace struct {
 	// Cached for quick display in workspace lists.
 	ProjectCount int `json:"project_count" db:"project_count"`
 
+	// FloorPlansCount is the number of floor plans in this workspace.
+	FloorPlansCount int `json:"floor_plans_count" db:"floor_plans_count"`
+
+	// ScenesCount is the number of 3D scenes in this workspace.
+	ScenesCount int `json:"scenes_count" db:"scenes_count"`
+
 	// CreatedAt is the timestamp when the workspace was created.
 	// Set automatically, immutable.
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
@@ -208,10 +214,13 @@ const (
 
 	// StatusArchived - workspace is archived (read-only).
 	StatusArchived WorkspaceStatus = "archived"
+
+	// StatusDeleted - workspace is deleted (soft delete).
+	StatusDeleted WorkspaceStatus = "deleted"
 )
 
 // ValidWorkspaceStatuses contains all valid workspace statuses.
-var ValidWorkspaceStatuses = []WorkspaceStatus{StatusDraft, StatusActive, StatusCompleted, StatusArchived}
+var ValidWorkspaceStatuses = []WorkspaceStatus{StatusDraft, StatusActive, StatusCompleted, StatusArchived, StatusDeleted}
 
 // IsValid checks if the status is valid.
 func (s WorkspaceStatus) IsValid() bool {
@@ -234,8 +243,32 @@ func (s WorkspaceStatus) String() string {
 
 // WorkspaceSettings contains workspace-specific configuration.
 type WorkspaceSettings struct {
+	// PropertyType is the type of property (apartment, house, office, etc.)
+	PropertyType string `json:"property_type" db:"property_type"`
+
+	// ProjectType is the type of project (remodeling, renovation, etc.)
+	ProjectType string `json:"project_type" db:"project_type"`
+
 	// Units is the measurement system: "metric" or "imperial".
 	Units string `json:"units" db:"units"`
+
+	// DefaultCeilingHeight is the default ceiling height in meters.
+	DefaultCeilingHeight float64 `json:"default_ceiling_height" db:"default_ceiling_height"`
+
+	// DefaultWallThickness is the default wall thickness in meters.
+	DefaultWallThickness float64 `json:"default_wall_thickness" db:"default_wall_thickness"`
+
+	// Currency is the currency for cost calculations.
+	Currency string `json:"currency" db:"currency"`
+
+	// Region is the region for compliance rules.
+	Region string `json:"region" db:"region"`
+
+	// AutoComplianceCheck enables automatic compliance checking.
+	AutoComplianceCheck bool `json:"auto_compliance_check" db:"auto_compliance_check"`
+
+	// NotificationsEnabled enables notifications for workspace events.
+	NotificationsEnabled bool `json:"notifications_enabled" db:"notifications_enabled"`
 
 	// GridSize is the grid size in meters for snapping.
 	GridSize float64 `json:"grid_size" db:"grid_size"`
@@ -511,12 +544,21 @@ type Member struct {
 	// Role determines the member's permissions in the workspace.
 	Role MemberRole `json:"role" db:"role"`
 
+	// Name is the display name of the member (from user profile).
+	Name string `json:"name" db:"name"`
+
+	// Email is the email address of the member (from user profile).
+	Email string `json:"email" db:"email"`
+
+	// AvatarURL is the URL to the member's avatar image.
+	AvatarURL string `json:"avatar_url,omitempty" db:"avatar_url"`
+
 	// JoinedAt is when the user became a member.
 	JoinedAt time.Time `json:"joined_at" db:"joined_at"`
 
 	// InvitedBy is the UUID of the user who invited this member.
-	// Nil for workspace owner.
-	InvitedBy *uuid.UUID `json:"invited_by,omitempty" db:"invited_by"`
+	// Empty for workspace owner.
+	InvitedBy uuid.UUID `json:"invited_by,omitempty" db:"invited_by"`
 }
 
 // =============================================================================

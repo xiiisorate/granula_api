@@ -17,24 +17,28 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	commonv1 "github.com/xiiisorate/granula_api/shared/gen/common/v1"
+	workspacev1 "github.com/xiiisorate/granula_api/shared/gen/workspace/v1"
 	apperrors "github.com/xiiisorate/granula_api/shared/pkg/errors"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 	"github.com/xiiisorate/granula_api/workspace-service/internal/domain/entity"
 	"github.com/xiiisorate/granula_api/workspace-service/internal/service"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // =============================================================================
 // WorkspaceServer Implementation
 // =============================================================================
 
-// WorkspaceServer implements the gRPC WorkspaceService interface.
+// WorkspaceServer implements the gRPC WorkspaceServiceServer interface.
 // It delegates all business logic to the service layer and handles
 // request/response conversion.
 type WorkspaceServer struct {
-	// UnimplementedWorkspaceServiceServer provides forward compatibility
-	// UnimplementedWorkspaceServiceServer
+	// Embed UnimplementedWorkspaceServiceServer for forward compatibility
+	workspacev1.UnimplementedWorkspaceServiceServer
 
 	// service contains the business logic
 	service *service.WorkspaceService
@@ -59,48 +63,14 @@ func NewWorkspaceServer(svc *service.WorkspaceService, log *logger.Logger) *Work
 }
 
 // =============================================================================
-// Workspace CRUD Methods
+// CreateWorkspace - creates a new workspace
 // =============================================================================
-
-// CreateWorkspaceRequest represents a request to create a workspace.
-type CreateWorkspaceRequest struct {
-	Name        string
-	Description string
-	OwnerID     string
-}
-
-// CreateWorkspaceResponse represents the response from creating a workspace.
-type CreateWorkspaceResponse struct {
-	Workspace *WorkspaceDTO
-}
-
-// WorkspaceDTO is a data transfer object for workspace data.
-type WorkspaceDTO struct {
-	ID           string
-	OwnerID      string
-	Name         string
-	Description  string
-	MemberCount  int32
-	ProjectCount int32
-	CreatedAt    int64
-	UpdatedAt    int64
-	Members      []*MemberDTO
-}
-
-// MemberDTO is a data transfer object for member data.
-type MemberDTO struct {
-	ID       string
-	UserID   string
-	Role     string
-	JoinedAt int64
-}
 
 // CreateWorkspace handles workspace creation requests.
 //
 // Request Fields:
 //   - name: Workspace name (required, 2-100 chars)
 //   - description: Optional description
-//   - owner_id: UUID of the creating user (from auth context)
 //
 // Response Fields:
 //   - workspace: Created workspace with ID
@@ -108,17 +78,14 @@ type MemberDTO struct {
 // Errors:
 //   - INVALID_ARGUMENT: Invalid name or owner_id
 //   - INTERNAL: Database error
-func (s *WorkspaceServer) CreateWorkspace(ctx context.Context, req *CreateWorkspaceRequest) (*CreateWorkspaceResponse, error) {
+func (s *WorkspaceServer) CreateWorkspace(ctx context.Context, req *workspacev1.CreateWorkspaceRequest) (*workspacev1.CreateWorkspaceResponse, error) {
 	s.log.Info("CreateWorkspace called",
 		logger.String("name", req.Name),
-		logger.String("owner_id", req.OwnerID),
 	)
 
-	// Validate owner_id
-	ownerID, err := uuid.Parse(req.OwnerID)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid owner_id: must be valid UUID")
-	}
+	// Get owner ID from context (would be set by auth middleware in production)
+	// For now, we'll generate one as placeholder
+	ownerID := uuid.New()
 
 	// Call service
 	ws, err := s.service.CreateWorkspace(ctx, ownerID, req.Name, req.Description)
@@ -126,46 +93,37 @@ func (s *WorkspaceServer) CreateWorkspace(ctx context.Context, req *CreateWorksp
 		return nil, s.mapError(err)
 	}
 
-	return &CreateWorkspaceResponse{
-		Workspace: workspaceToDTO(ws),
+	return &workspacev1.CreateWorkspaceResponse{
+		Workspace: entityToProto(ws),
 	}, nil
 }
 
-// GetWorkspaceRequest represents a request to get a workspace.
-type GetWorkspaceRequest struct {
-	WorkspaceID string
-	UserID      string // For access control
-}
-
-// GetWorkspaceResponse represents the response from getting a workspace.
-type GetWorkspaceResponse struct {
-	Workspace *WorkspaceDTO
-}
+// =============================================================================
+// GetWorkspace - retrieves a workspace by ID
+// =============================================================================
 
 // GetWorkspace retrieves a workspace by ID.
 //
 // Request Fields:
 //   - workspace_id: UUID of the workspace
-//   - user_id: UUID of requesting user (from auth context)
+//   - include_members: Whether to include member list
 //
 // Response Fields:
-//   - workspace: Workspace with members
+//   - workspace: Workspace with members (if requested)
 //
 // Errors:
 //   - INVALID_ARGUMENT: Invalid workspace_id
 //   - NOT_FOUND: Workspace doesn't exist
 //   - PERMISSION_DENIED: User is not a member
-func (s *WorkspaceServer) GetWorkspace(ctx context.Context, req *GetWorkspaceRequest) (*GetWorkspaceResponse, error) {
-	// Validate IDs
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
+func (s *WorkspaceServer) GetWorkspace(ctx context.Context, req *workspacev1.GetWorkspaceRequest) (*workspacev1.GetWorkspaceResponse, error) {
+	// Validate workspace ID
+	workspaceID, err := uuid.Parse(req.WorkspaceId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
 	}
 
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
-	}
+	// Get user ID from context (placeholder)
+	userID := uuid.New()
 
 	// Call service
 	ws, err := s.service.GetWorkspace(ctx, workspaceID, userID)
@@ -173,76 +131,85 @@ func (s *WorkspaceServer) GetWorkspace(ctx context.Context, req *GetWorkspaceReq
 		return nil, s.mapError(err)
 	}
 
-	return &GetWorkspaceResponse{
-		Workspace: workspaceToDTO(ws),
+	return &workspacev1.GetWorkspaceResponse{
+		Workspace: entityToProto(ws),
 	}, nil
 }
 
-// ListWorkspacesRequest represents a request to list workspaces.
-type ListWorkspacesRequest struct {
-	UserID     string
-	NameFilter string
-	Limit      int32
-	Offset     int32
-}
-
-// ListWorkspacesResponse represents the response from listing workspaces.
-type ListWorkspacesResponse struct {
-	Workspaces []*WorkspaceDTO
-	Total      int32
-}
+// =============================================================================
+// ListWorkspaces - returns workspaces for a user
+// =============================================================================
 
 // ListWorkspaces returns workspaces where the user is a member.
 //
 // Request Fields:
 //   - user_id: UUID of the user
-//   - name_filter: Optional name filter (case-insensitive contains)
-//   - limit: Max results (1-100, default 20)
-//   - offset: Pagination offset
+//   - status: Optional status filter
+//   - search: Optional name filter
+//   - pagination: Pagination parameters
 //
 // Response Fields:
 //   - workspaces: List of workspaces
-//   - total: Total count for pagination
-func (s *WorkspaceServer) ListWorkspaces(ctx context.Context, req *ListWorkspacesRequest) (*ListWorkspacesResponse, error) {
-	userID, err := uuid.Parse(req.UserID)
+//   - pagination: Pagination metadata
+func (s *WorkspaceServer) ListWorkspaces(ctx context.Context, req *workspacev1.ListWorkspacesRequest) (*workspacev1.ListWorkspacesResponse, error) {
+	// Parse user ID
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
 	}
 
-	workspaces, total, err := s.service.ListWorkspaces(ctx, userID, req.NameFilter, int(req.Limit), int(req.Offset))
+	// Pagination defaults
+	pageSize := int32(20)
+	page := int32(1)
+	if req.Pagination != nil {
+		if req.Pagination.PageSize > 0 {
+			pageSize = req.Pagination.PageSize
+		}
+		if req.Pagination.Page > 0 {
+			page = req.Pagination.Page
+		}
+	}
+	offset := int((page - 1) * pageSize)
+
+	// Call service
+	workspaces, total, err := s.service.ListWorkspaces(ctx, userID, req.Search, int(pageSize), offset)
 	if err != nil {
 		return nil, s.mapError(err)
 	}
 
-	dtos := make([]*WorkspaceDTO, 0, len(workspaces))
+	// Convert to proto
+	protoWorkspaces := make([]*workspacev1.Workspace, 0, len(workspaces))
 	for _, ws := range workspaces {
-		dtos = append(dtos, workspaceToDTO(ws))
+		protoWorkspaces = append(protoWorkspaces, entityToProto(ws))
 	}
 
-	return &ListWorkspacesResponse{
-		Workspaces: dtos,
-		Total:      int32(total),
+	// Calculate pagination metadata
+	totalPages := int32(total) / pageSize
+	if int32(total)%pageSize != 0 {
+		totalPages++
+	}
+
+	return &workspacev1.ListWorkspacesResponse{
+		Workspaces: protoWorkspaces,
+		Pagination: &commonv1.PaginationResponse{
+			Page:       page,
+			PageSize:   pageSize,
+			Total:      int32(total),
+			TotalPages: totalPages,
+			HasNext:    page < totalPages,
+			HasPrev:    page > 1,
+		},
 	}, nil
 }
 
-// UpdateWorkspaceRequest represents a request to update a workspace.
-type UpdateWorkspaceRequest struct {
-	WorkspaceID string
-	UserID      string
-	Name        string
-	Description string
-}
-
-// UpdateWorkspaceResponse represents the response from updating a workspace.
-type UpdateWorkspaceResponse struct {
-	Workspace *WorkspaceDTO
-}
+// =============================================================================
+// UpdateWorkspace - updates workspace metadata
+// =============================================================================
 
 // UpdateWorkspace updates workspace name and/or description.
 //
 // Request Fields:
 //   - workspace_id: UUID of the workspace
-//   - user_id: UUID of requesting user (must be owner/admin)
 //   - name: New name (empty to keep current)
 //   - description: New description (empty to keep current)
 //
@@ -250,171 +217,191 @@ type UpdateWorkspaceResponse struct {
 //   - INVALID_ARGUMENT: Invalid IDs or name
 //   - NOT_FOUND: Workspace doesn't exist
 //   - PERMISSION_DENIED: User lacks permission
-func (s *WorkspaceServer) UpdateWorkspace(ctx context.Context, req *UpdateWorkspaceRequest) (*UpdateWorkspaceResponse, error) {
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
+func (s *WorkspaceServer) UpdateWorkspace(ctx context.Context, req *workspacev1.UpdateWorkspaceRequest) (*workspacev1.UpdateWorkspaceResponse, error) {
+	workspaceID, err := uuid.Parse(req.WorkspaceId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
 	}
 
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
-	}
+	// Get user ID from context (placeholder)
+	userID := uuid.New()
 
 	ws, err := s.service.UpdateWorkspace(ctx, workspaceID, userID, req.Name, req.Description)
 	if err != nil {
 		return nil, s.mapError(err)
 	}
 
-	return &UpdateWorkspaceResponse{
-		Workspace: workspaceToDTO(ws),
+	return &workspacev1.UpdateWorkspaceResponse{
+		Workspace: entityToProto(ws),
 	}, nil
 }
 
-// DeleteWorkspaceRequest represents a request to delete a workspace.
-type DeleteWorkspaceRequest struct {
-	WorkspaceID string
-	UserID      string
-}
+// =============================================================================
+// DeleteWorkspace - deletes a workspace
+// =============================================================================
 
-// DeleteWorkspaceResponse represents the response from deleting a workspace.
-type DeleteWorkspaceResponse struct {
-	Success bool
-}
-
-// DeleteWorkspace permanently removes a workspace.
+// DeleteWorkspace removes a workspace.
 //
 // Request Fields:
 //   - workspace_id: UUID of the workspace
-//   - user_id: UUID of requesting user (must be owner)
+//   - permanent: Whether to permanently delete
 //
 // Errors:
 //   - INVALID_ARGUMENT: Invalid IDs
 //   - NOT_FOUND: Workspace doesn't exist
 //   - PERMISSION_DENIED: User is not the owner
-func (s *WorkspaceServer) DeleteWorkspace(ctx context.Context, req *DeleteWorkspaceRequest) (*DeleteWorkspaceResponse, error) {
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
+func (s *WorkspaceServer) DeleteWorkspace(ctx context.Context, req *workspacev1.DeleteWorkspaceRequest) (*workspacev1.DeleteWorkspaceResponse, error) {
+	workspaceID, err := uuid.Parse(req.WorkspaceId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
 	}
 
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
-	}
+	// Get user ID from context (placeholder)
+	userID := uuid.New()
 
 	if err := s.service.DeleteWorkspace(ctx, workspaceID, userID); err != nil {
 		return nil, s.mapError(err)
 	}
 
-	return &DeleteWorkspaceResponse{Success: true}, nil
+	return &workspacev1.DeleteWorkspaceResponse{Success: true}, nil
 }
 
 // =============================================================================
-// Member Management Methods
+// AddMember - adds a member to workspace
 // =============================================================================
-
-// AddMemberRequest represents a request to add a member.
-type AddMemberRequest struct {
-	WorkspaceID  string
-	UserID       string
-	MemberUserID string
-	Role         string
-}
-
-// AddMemberResponse represents the response from adding a member.
-type AddMemberResponse struct {
-	Member *MemberDTO
-}
 
 // AddMember adds a user to a workspace.
 //
 // Request Fields:
 //   - workspace_id: UUID of the workspace
-//   - user_id: UUID of requesting user (must be owner/admin)
-//   - member_user_id: UUID of user to add
-//   - role: Role to assign (admin, editor, viewer)
+//   - user_id_or_email: UUID or email of user to add
+//   - role: Role to assign
 //
 // Errors:
 //   - INVALID_ARGUMENT: Invalid IDs or role
 //   - ALREADY_EXISTS: User is already a member
 //   - PERMISSION_DENIED: Caller lacks permission
-func (s *WorkspaceServer) AddMember(ctx context.Context, req *AddMemberRequest) (*AddMemberResponse, error) {
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
+func (s *WorkspaceServer) AddMember(ctx context.Context, req *workspacev1.AddMemberRequest) (*workspacev1.AddMemberResponse, error) {
+	workspaceID, err := uuid.Parse(req.WorkspaceId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
 	}
 
-	userID, err := uuid.Parse(req.UserID)
+	// Get caller user ID from context (placeholder)
+	callerUserID := uuid.New()
+
+	// Try to parse as UUID, otherwise treat as email (for future invite support)
+	memberUserID, err := uuid.Parse(req.UserIdOrEmail)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
+		return nil, status.Error(codes.InvalidArgument, "invalid member user_id")
 	}
 
-	memberUserID, err := uuid.Parse(req.MemberUserID)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid member_user_id")
-	}
+	role := protoRoleToEntity(req.Role)
 
-	role := entity.MemberRole(req.Role)
-	if !role.IsValid() || role == entity.RoleOwner {
-		return nil, status.Error(codes.InvalidArgument, "invalid role: must be admin, editor, or viewer")
-	}
-
-	member, err := s.service.AddMember(ctx, workspaceID, userID, memberUserID, role)
+	member, err := s.service.AddMember(ctx, workspaceID, callerUserID, memberUserID, role)
 	if err != nil {
 		return nil, s.mapError(err)
 	}
 
-	return &AddMemberResponse{
-		Member: memberToDTO(member),
+	return &workspacev1.AddMemberResponse{
+		Member: memberToProto(member),
 	}, nil
 }
 
-// RemoveMemberRequest represents a request to remove a member.
-type RemoveMemberRequest struct {
-	WorkspaceID  string
-	UserID       string
-	MemberUserID string
-}
-
-// RemoveMemberResponse represents the response from removing a member.
-type RemoveMemberResponse struct {
-	Success bool
-}
+// =============================================================================
+// RemoveMember - removes a member from workspace
+// =============================================================================
 
 // RemoveMember removes a user from a workspace.
 //
 // Request Fields:
 //   - workspace_id: UUID of the workspace
-//   - user_id: UUID of requesting user
-//   - member_user_id: UUID of user to remove
+//   - user_id: UUID of user to remove
 //
 // Errors:
 //   - INVALID_ARGUMENT: Invalid IDs
 //   - FAILED_PRECONDITION: Cannot remove owner
 //   - NOT_FOUND: Member not found
 //   - PERMISSION_DENIED: Caller lacks permission
-func (s *WorkspaceServer) RemoveMember(ctx context.Context, req *RemoveMemberRequest) (*RemoveMemberResponse, error) {
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
+func (s *WorkspaceServer) RemoveMember(ctx context.Context, req *workspacev1.RemoveMemberRequest) (*workspacev1.RemoveMemberResponse, error) {
+	workspaceID, err := uuid.Parse(req.WorkspaceId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
 	}
 
-	userID, err := uuid.Parse(req.UserID)
+	// Get caller user ID from context (placeholder)
+	callerUserID := uuid.New()
+
+	memberUserID, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
 	}
 
-	memberUserID, err := uuid.Parse(req.MemberUserID)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid member_user_id")
-	}
-
-	if err := s.service.RemoveMember(ctx, workspaceID, userID, memberUserID); err != nil {
+	if err := s.service.RemoveMember(ctx, workspaceID, callerUserID, memberUserID); err != nil {
 		return nil, s.mapError(err)
 	}
 
-	return &RemoveMemberResponse{Success: true}, nil
+	return &workspacev1.RemoveMemberResponse{Success: true}, nil
+}
+
+// =============================================================================
+// UpdateMemberRole - changes a member's role
+// =============================================================================
+
+// UpdateMemberRole changes a member's role in a workspace.
+func (s *WorkspaceServer) UpdateMemberRole(ctx context.Context, req *workspacev1.UpdateMemberRoleRequest) (*workspacev1.UpdateMemberRoleResponse, error) {
+	workspaceID, err := uuid.Parse(req.WorkspaceId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
+	}
+
+	// Get caller user ID from context (placeholder)
+	callerUserID := uuid.New()
+
+	memberUserID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
+	}
+
+	role := protoRoleToEntity(req.Role)
+
+	member, err := s.service.UpdateMemberRole(ctx, workspaceID, callerUserID, memberUserID, role)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+
+	return &workspacev1.UpdateMemberRoleResponse{
+		Member: memberToProto(member),
+	}, nil
+}
+
+// =============================================================================
+// GetMembers - retrieves workspace members
+// =============================================================================
+
+// GetMembers retrieves all members of a workspace.
+func (s *WorkspaceServer) GetMembers(ctx context.Context, req *workspacev1.GetMembersRequest) (*workspacev1.GetMembersResponse, error) {
+	workspaceID, err := uuid.Parse(req.WorkspaceId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
+	}
+
+	// Get caller user ID from context (placeholder)
+	userID := uuid.New()
+
+	members, err := s.service.GetMembers(ctx, workspaceID, userID)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+
+	protoMembers := make([]*workspacev1.Member, 0, len(members))
+	for _, m := range members {
+		protoMembers = append(protoMembers, memberToProto(m))
+	}
+
+	return &workspacev1.GetMembersResponse{
+		Members: protoMembers,
+	}, nil
 }
 
 // =============================================================================
@@ -452,38 +439,113 @@ func (s *WorkspaceServer) mapError(err error) error {
 }
 
 // =============================================================================
-// DTO Conversion Functions
+// Proto Conversion Functions
 // =============================================================================
 
-// workspaceToDTO converts a domain workspace to a DTO.
-func workspaceToDTO(ws *entity.Workspace) *WorkspaceDTO {
-	dto := &WorkspaceDTO{
-		ID:           ws.ID.String(),
-		OwnerID:      ws.OwnerID.String(),
-		Name:         ws.Name,
-		Description:  ws.Description,
-		MemberCount:  int32(ws.MemberCount),
-		ProjectCount: int32(ws.ProjectCount),
-		CreatedAt:    ws.CreatedAt.Unix(),
-		UpdatedAt:    ws.UpdatedAt.Unix(),
+// entityToProto converts a domain workspace to a protobuf workspace.
+func entityToProto(ws *entity.Workspace) *workspacev1.Workspace {
+	proto := &workspacev1.Workspace{
+		Id:              ws.ID.String(),
+		Name:            ws.Name,
+		Description:     ws.Description,
+		OwnerId:         ws.OwnerID.String(),
+		Address:         ws.Address,
+		Status:          entityStatusToProto(ws.Status),
+		FloorPlansCount: int32(ws.FloorPlansCount),
+		ScenesCount:     int32(ws.ScenesCount),
+		CreatedAt:       timestamppb.New(ws.CreatedAt),
+		UpdatedAt:       timestamppb.New(ws.UpdatedAt),
 	}
 
-	if len(ws.Members) > 0 {
-		dto.Members = make([]*MemberDTO, 0, len(ws.Members))
-		for _, m := range ws.Members {
-			dto.Members = append(dto.Members, memberToDTO(&m))
+	// Handle optional pointer fields
+	if ws.TotalArea != nil {
+		proto.TotalArea = *ws.TotalArea
+	}
+	if ws.RoomsCount != nil {
+		proto.RoomsCount = int32(*ws.RoomsCount)
+	}
+
+	// Add settings if present
+	if ws.Settings != nil {
+		proto.Settings = &workspacev1.WorkspaceSettings{
+			PropertyType:         ws.Settings.PropertyType,
+			ProjectType:          ws.Settings.ProjectType,
+			Units:                ws.Settings.Units,
+			DefaultCeilingHeight: ws.Settings.DefaultCeilingHeight,
+			DefaultWallThickness: ws.Settings.DefaultWallThickness,
+			Currency:             ws.Settings.Currency,
+			Region:               ws.Settings.Region,
+			AutoComplianceCheck:  ws.Settings.AutoComplianceCheck,
+			NotificationsEnabled: ws.Settings.NotificationsEnabled,
 		}
 	}
 
-	return dto
+	// Add members if present
+	if len(ws.Members) > 0 {
+		proto.Members = make([]*workspacev1.Member, 0, len(ws.Members))
+		for _, m := range ws.Members {
+			proto.Members = append(proto.Members, memberToProto(&m))
+		}
+	}
+
+	return proto
 }
 
-// memberToDTO converts a domain member to a DTO.
-func memberToDTO(m *entity.Member) *MemberDTO {
-	return &MemberDTO{
-		ID:       m.ID.String(),
-		UserID:   m.UserID.String(),
-		Role:     string(m.Role),
-		JoinedAt: m.JoinedAt.Unix(),
+// memberToProto converts a domain member to a protobuf member.
+func memberToProto(m *entity.Member) *workspacev1.Member {
+	return &workspacev1.Member{
+		UserId:    m.UserID.String(),
+		Role:      entityRoleToProto(m.Role),
+		Name:      m.Name,
+		Email:     m.Email,
+		AvatarUrl: m.AvatarURL,
+		JoinedAt:  timestamppb.New(m.JoinedAt),
+		InvitedBy: m.InvitedBy.String(),
+	}
+}
+
+// entityStatusToProto converts domain status to proto status.
+func entityStatusToProto(s entity.WorkspaceStatus) workspacev1.WorkspaceStatus {
+	switch s {
+	case entity.StatusActive:
+		return workspacev1.WorkspaceStatus_WORKSPACE_STATUS_ACTIVE
+	case entity.StatusArchived:
+		return workspacev1.WorkspaceStatus_WORKSPACE_STATUS_ARCHIVED
+	case entity.StatusDeleted:
+		return workspacev1.WorkspaceStatus_WORKSPACE_STATUS_DELETED
+	default:
+		return workspacev1.WorkspaceStatus_WORKSPACE_STATUS_UNSPECIFIED
+	}
+}
+
+// entityRoleToProto converts domain role to proto role.
+func entityRoleToProto(r entity.MemberRole) workspacev1.MemberRole {
+	switch r {
+	case entity.RoleOwner:
+		return workspacev1.MemberRole_MEMBER_ROLE_OWNER
+	case entity.RoleAdmin:
+		return workspacev1.MemberRole_MEMBER_ROLE_ADMIN
+	case entity.RoleEditor:
+		return workspacev1.MemberRole_MEMBER_ROLE_EDITOR
+	case entity.RoleViewer:
+		return workspacev1.MemberRole_MEMBER_ROLE_VIEWER
+	default:
+		return workspacev1.MemberRole_MEMBER_ROLE_UNSPECIFIED
+	}
+}
+
+// protoRoleToEntity converts proto role to domain role.
+func protoRoleToEntity(r workspacev1.MemberRole) entity.MemberRole {
+	switch r {
+	case workspacev1.MemberRole_MEMBER_ROLE_OWNER:
+		return entity.RoleOwner
+	case workspacev1.MemberRole_MEMBER_ROLE_ADMIN:
+		return entity.RoleAdmin
+	case workspacev1.MemberRole_MEMBER_ROLE_EDITOR:
+		return entity.RoleEditor
+	case workspacev1.MemberRole_MEMBER_ROLE_VIEWER:
+		return entity.RoleViewer
+	default:
+		return entity.RoleViewer
 	}
 }

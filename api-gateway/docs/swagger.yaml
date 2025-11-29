@@ -83,12 +83,12 @@ info:
     url: https://granula.ru/license
 
 servers:
+  - url: http://localhost:8080/api/v1
+    description: Локальная разработка (по умолчанию)
   - url: https://api.granula.ru/api/v1
     description: Production сервер
   - url: https://staging-api.granula.ru/api/v1
     description: Staging сервер
-  - url: http://localhost:8080/api/v1
-    description: Локальная разработка
 
 tags:
   - name: auth
@@ -192,7 +192,7 @@ components:
 
     ValidationError:
       allOf:
-        - $ref: '#/components/schemas/Error'
+        - $ref: "#/components/schemas/Error"
         - type: object
           properties:
             code:
@@ -414,7 +414,7 @@ components:
         members:
           type: array
           items:
-            $ref: '#/components/schemas/Member'
+            $ref: "#/components/schemas/Member"
 
     CreateWorkspaceRequest:
       type: object
@@ -518,7 +518,7 @@ components:
           format: uri
           example: https://storage.granula.ru/thumbnails/fp-123-thumb.jpg
         recognition_result:
-          $ref: '#/components/schemas/RecognitionResult'
+          $ref: "#/components/schemas/RecognitionResult"
         scene_id:
           type: string
           format: uuid
@@ -551,7 +551,7 @@ components:
         rooms:
           type: array
           items:
-            $ref: '#/components/schemas/RecognizedRoom'
+            $ref: "#/components/schemas/RecognizedRoom"
         confidence:
           type: number
           format: float
@@ -567,7 +567,18 @@ components:
       properties:
         type:
           type: string
-          enum: [living_room, bedroom, kitchen, bathroom, toilet, hallway, balcony, storage, other]
+          enum:
+            [
+              living_room,
+              bedroom,
+              kitchen,
+              bathroom,
+              toilet,
+              hallway,
+              balcony,
+              storage,
+              other,
+            ]
           example: bedroom
         name:
           type: string
@@ -579,7 +590,7 @@ components:
         polygon:
           type: array
           items:
-            $ref: '#/components/schemas/Point2D'
+            $ref: "#/components/schemas/Point2D"
 
     Point2D:
       type: object
@@ -625,7 +636,7 @@ components:
           type: integer
           example: 3
         statistics:
-          $ref: '#/components/schemas/SceneStatistics'
+          $ref: "#/components/schemas/SceneStatistics"
         created_at:
           type: string
           format: date-time
@@ -677,11 +688,11 @@ components:
           type: string
           example: Несущая стена кухня-гостиная
         position:
-          $ref: '#/components/schemas/Point3D'
+          $ref: "#/components/schemas/Point3D"
         dimensions:
-          $ref: '#/components/schemas/Dimensions3D'
+          $ref: "#/components/schemas/Dimensions3D"
         rotation:
-          $ref: '#/components/schemas/Rotation'
+          $ref: "#/components/schemas/Rotation"
         properties:
           type: object
           additionalProperties: true
@@ -852,11 +863,11 @@ components:
         violations:
           type: array
           items:
-            $ref: '#/components/schemas/Violation'
+            $ref: "#/components/schemas/Violation"
         category_stats:
           type: array
           items:
-            $ref: '#/components/schemas/CategoryStat'
+            $ref: "#/components/schemas/CategoryStat"
         checked_at:
           type: string
           format: date-time
@@ -1002,7 +1013,18 @@ components:
           example: normal
         status:
           type: string
-          enum: [draft, pending, in_review, approved, rejected, assigned, in_progress, completed, cancelled]
+          enum:
+            [
+              draft,
+              pending,
+              in_review,
+              approved,
+              rejected,
+              assigned,
+              in_progress,
+              completed,
+              cancelled,
+            ]
           description: |
             Статус заявки:
             - **draft** - Черновик
@@ -1116,7 +1138,7 @@ components:
         suggestions:
           type: array
           items:
-            $ref: '#/components/schemas/AISuggestion'
+            $ref: "#/components/schemas/AISuggestion"
         tokens_used:
           type: integer
           example: 450
@@ -1129,7 +1151,13 @@ components:
       properties:
         type:
           type: string
-          enum: [layout_change, furniture_placement, space_optimization, compliance_warning]
+          enum:
+            [
+              layout_change,
+              furniture_placement,
+              space_optimization,
+              compliance_warning,
+            ]
         title:
           type: string
           example: Объединение кухни и гостиной
@@ -1191,7 +1219,7 @@ components:
         variants:
           type: array
           items:
-            $ref: '#/components/schemas/GeneratedVariant'
+            $ref: "#/components/schemas/GeneratedVariant"
         processing_time_ms:
           type: integer
         error:
@@ -1267,26 +1295,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: "#/components/schemas/RegisterRequest"
       responses:
-        '201':
+        "201":
           description: Успешная регистрация
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokens'
-        '400':
+                $ref: "#/components/schemas/AuthTokens"
+        "400":
           description: Ошибка валидации
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
-        '409':
+                $ref: "#/components/schemas/ValidationError"
+        "409":
           description: Email уже зарегистрирован
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /auth/login:
     post:
@@ -1299,20 +1327,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '200':
+        "200":
           description: Успешный вход
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokens'
-        '401':
+                $ref: "#/components/schemas/AuthTokens"
+        "401":
           description: Неверные учетные данные
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /auth/refresh:
     post:
@@ -1325,20 +1353,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RefreshRequest'
+              $ref: "#/components/schemas/RefreshRequest"
       responses:
-        '200':
+        "200":
           description: Токены обновлены
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokens'
-        '401':
+                $ref: "#/components/schemas/AuthTokens"
+        "401":
           description: Недействительный refresh token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /auth/logout:
     post:
@@ -1353,14 +1381,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RefreshRequest'
+              $ref: "#/components/schemas/RefreshRequest"
       responses:
-        '200':
+        "200":
           description: Успешный выход
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: "#/components/schemas/SuccessResponse"
 
   # ---------------------------------------------------------------------------
   # User Endpoints
@@ -1374,18 +1402,18 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           description: Профиль пользователя
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
+                $ref: "#/components/schemas/User"
+        "401":
           description: Не авторизован
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
     patch:
       tags: [users]
       summary: Обновить профиль
@@ -1398,14 +1426,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateUserRequest'
+              $ref: "#/components/schemas/UpdateUserRequest"
       responses:
-        '200':
+        "200":
           description: Профиль обновлен
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: "#/components/schemas/User"
 
   # ---------------------------------------------------------------------------
   # Workspace Endpoints
@@ -1438,7 +1466,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Список воркспейсов
           content:
             application/json:
@@ -1448,9 +1476,9 @@ paths:
                   workspaces:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Workspace'
+                      $ref: "#/components/schemas/Workspace"
                   pagination:
-                    $ref: '#/components/schemas/Pagination'
+                    $ref: "#/components/schemas/Pagination"
     post:
       tags: [workspaces]
       summary: Создать воркспейс
@@ -1462,14 +1490,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateWorkspaceRequest'
+              $ref: "#/components/schemas/CreateWorkspaceRequest"
       responses:
-        '201':
+        "201":
           description: Воркспейс создан
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: "#/components/schemas/Workspace"
 
   /workspaces/{id}:
     get:
@@ -1486,18 +1514,18 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Данные воркспейса
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
-        '404':
+                $ref: "#/components/schemas/Workspace"
+        "404":
           description: Не найден
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
     patch:
       tags: [workspaces]
       summary: Обновить воркспейс
@@ -1516,14 +1544,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateWorkspaceRequest'
+              $ref: "#/components/schemas/CreateWorkspaceRequest"
       responses:
-        '200':
+        "200":
           description: Воркспейс обновлен
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: "#/components/schemas/Workspace"
     delete:
       tags: [workspaces]
       summary: Удалить воркспейс
@@ -1539,12 +1567,12 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Воркспейс удален
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: "#/components/schemas/SuccessResponse"
 
   /workspaces/{id}/members:
     get:
@@ -1561,14 +1589,14 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Список участников
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Member'
+                  $ref: "#/components/schemas/Member"
     post:
       tags: [workspaces]
       summary: Добавить участника
@@ -1587,14 +1615,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AddMemberRequest'
+              $ref: "#/components/schemas/AddMemberRequest"
       responses:
-        '201':
+        "201":
           description: Участник добавлен
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Member'
+                $ref: "#/components/schemas/Member"
 
   # ---------------------------------------------------------------------------
   # Floor Plan Endpoints
@@ -1630,12 +1658,12 @@ paths:
                   type: string
                   format: binary
       responses:
-        '201':
+        "201":
           description: Планировка загружена
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FloorPlan'
+                $ref: "#/components/schemas/FloorPlan"
 
   /floor-plans/{id}/process:
     post:
@@ -1664,7 +1692,7 @@ paths:
                   type: boolean
                   default: true
       responses:
-        '202':
+        "202":
           description: Обработка запущена
           content:
             application/json:
@@ -1693,14 +1721,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ComplianceCheckRequest'
+              $ref: "#/components/schemas/ComplianceCheckRequest"
       responses:
-        '200':
+        "200":
           description: Результат проверки
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComplianceCheckResponse'
+                $ref: "#/components/schemas/ComplianceCheckResponse"
 
   /compliance/rules:
     get:
@@ -1720,7 +1748,7 @@ paths:
             type: string
             enum: [construction, renovation, redevelopment]
       responses:
-        '200':
+        "200":
           description: Список правил
           content:
             application/json:
@@ -1730,7 +1758,7 @@ paths:
                   rules:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ComplianceRule'
+                      $ref: "#/components/schemas/ComplianceRule"
                   total_rules:
                     type: integer
 
@@ -1749,20 +1777,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChatMessageRequest'
+              $ref: "#/components/schemas/ChatMessageRequest"
       responses:
-        '200':
+        "200":
           description: Ответ AI
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatMessageResponse'
-        '429':
+                $ref: "#/components/schemas/ChatMessageResponse"
+        "429":
           description: Превышен лимит запросов
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /ai/generate:
     post:
@@ -1776,14 +1804,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenerateVariantsRequest'
+              $ref: "#/components/schemas/GenerateVariantsRequest"
       responses:
-        '202':
+        "202":
           description: Генерация запущена
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GenerateVariantsResponse'
+                $ref: "#/components/schemas/GenerateVariantsResponse"
 
   # ---------------------------------------------------------------------------
   # Request Endpoints
@@ -1805,7 +1833,18 @@ paths:
           in: query
           schema:
             type: string
-            enum: [draft, pending, in_review, approved, rejected, assigned, in_progress, completed, cancelled]
+            enum:
+              [
+                draft,
+                pending,
+                in_review,
+                approved,
+                rejected,
+                assigned,
+                in_progress,
+                completed,
+                cancelled,
+              ]
         - name: page
           in: query
           schema:
@@ -1817,7 +1856,7 @@ paths:
             type: integer
             default: 20
       responses:
-        '200':
+        "200":
           description: Список заявок
           content:
             application/json:
@@ -1827,9 +1866,9 @@ paths:
                   requests:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ExpertRequest'
+                      $ref: "#/components/schemas/ExpertRequest"
                   pagination:
-                    $ref: '#/components/schemas/Pagination'
+                    $ref: "#/components/schemas/Pagination"
     post:
       tags: [requests]
       summary: Создать заявку
@@ -1841,14 +1880,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateExpertRequestRequest'
+              $ref: "#/components/schemas/CreateExpertRequestRequest"
       responses:
-        '201':
+        "201":
           description: Заявка создана
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExpertRequest'
+                $ref: "#/components/schemas/ExpertRequest"
 
   /requests/{id}/submit:
     post:
@@ -1866,12 +1905,12 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Заявка отправлена
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExpertRequest'
+                $ref: "#/components/schemas/ExpertRequest"
 
   /requests/pricing:
     get:
@@ -1879,7 +1918,7 @@ paths:
       summary: Цены на услуги
       operationId: getPricing
       responses:
-        '200':
+        "200":
           description: Информация о ценах
           content:
             application/json:
@@ -1905,4 +1944,3 @@ paths:
                           type: array
                           items:
                             type: string
-
