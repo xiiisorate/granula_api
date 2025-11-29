@@ -83,12 +83,10 @@ info:
     url: https://granula.ru/license
 
 servers:
-  - url: http://localhost:8080/api/v1
-    description: Локальная разработка (по умолчанию)
-  - url: https://api.granula.ru/api/v1
+  - url: https://api.granula.raitokyokai.tech/api/v1
     description: Production сервер
-  - url: https://staging-api.granula.ru/api/v1
-    description: Staging сервер
+  - url: http://localhost:3001/api/v1
+    description: Локальная разработка
 
 tags:
   - name: auth

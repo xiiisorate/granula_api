@@ -1,6 +1,8 @@
 # =============================================================================
 # GitHub Actions - CI/CD Pipeline for Granula API
 # =============================================================================
+# Автоматический деплой на сервер при push в main
+# =============================================================================
 
 name: Deploy Granula API
 
@@ -74,10 +76,32 @@ jobs:
           CORS_ALLOWED_ORIGINS=https://granula.ru,https://app.granula.ru,https://api.granula.raitokyokai.tech
           EOF'
 
-      - name: Configure Nginx
+      - name: Configure Nginx (only if no SSL yet)
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'mkdir -p /var/www/certbot && cp /opt/granula/api/deploy/nginx/api.granula.http.conf /etc/nginx/sites-available/api.granula.conf && ln -sf /etc/nginx/sites-available/api.granula.conf /etc/nginx/sites-enabled/ && rm -f /etc/nginx/sites-enabled/default && nginx -t && systemctl reload nginx'
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
+            mkdir -p /var/www/certbot
+            # Only copy HTTP config if SSL config does not exist
+            if ! grep -q "listen 443 ssl" /etc/nginx/sites-available/api.granula.conf 2>/dev/null; then
+              cp /opt/granula/api/deploy/nginx/api.granula.http.conf /etc/nginx/sites-available/api.granula.conf
+            fi
+            ln -sf /etc/nginx/sites-available/api.granula.conf /etc/nginx/sites-enabled/
+            rm -f /etc/nginx/sites-enabled/default
+            nginx -t && systemctl reload nginx
+          '
 
       - name: Deploy services
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cd /opt/granula/api && docker compose down --remove-orphans 2>/dev/null; docker compose build --parallel && docker compose --env-file .env up -d && sleep 60 && docker compose ps && curl -sf http://localhost:3001/ && echo "Healthy!" || echo "Starting..."'
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
+            cd /opt/granula/api
+            docker compose down --remove-orphans 2>/dev/null || true
+            docker compose build --parallel
+            docker compose --env-file .env up -d
+            sleep 60
+            docker compose ps
+            curl -sf http://localhost:3001/ && echo "API Gateway is up!" || echo "Starting..."
+          '
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -sf https://api.granula.raitokyokai.tech/ || echo "HTTPS check pending..."
