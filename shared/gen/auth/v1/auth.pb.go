@@ -848,7 +848,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\fRefreshToken\x12\x1c.auth.v1.RefreshTokenRequest\x1a\x1d.auth.v1.RefreshTokenResponse\x129\n" +
 	"\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x17.auth.v1.LogoutResponse\x12B\n" +
 	"\tLogoutAll\x12\x19.auth.v1.LogoutAllRequest\x1a\x1a.auth.v1.LogoutAllResponse\x12Q\n" +
-	"\x0eChangePassword\x12\x1e.auth.v1.ChangePasswordRequest\x1a\x1f.auth.v1.ChangePasswordResponseB.Z,github.com/granula/shared/gen/auth/v1;authv1b\x06proto3"
+	"\x0eChangePassword\x12\x1e.auth.v1.ChangePasswordRequest\x1a\x1f.auth.v1.ChangePasswordResponseB=Z;github.com/xiiisorate/granula_api/shared/gen/auth/v1;authv1b\x06proto3"
 
 var (
 	file_auth_v1_auth_proto_rawDescOnce sync.Once
