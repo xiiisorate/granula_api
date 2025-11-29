@@ -315,7 +315,12 @@ services:
     environment:
       APP_ENV: development
       GRPC_PORT: 50053
-      POSTGRES_DSN: postgres://granula:granula_secret@postgres-workspace:5432/workspaces_db?sslmode=disable
+      POSTGRES_HOST: postgres-workspace
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: granula_secret
+      POSTGRES_DATABASE: workspaces_db
+      POSTGRES_SSL_MODE: disable
       REDIS_URL: redis://redis:6379
     networks:
       - granula-network
@@ -334,13 +339,17 @@ services:
     container_name: granula-floorplan-service
     environment:
       APP_ENV: development
-      GRPC_PORT: 50054
-      POSTGRES_DSN: postgres://granula:granula_secret@postgres-floorplan:5432/floorplans_db?sslmode=disable
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: granula_admin
-      MINIO_SECRET_KEY: granula_secret_key
-      AI_SERVICE_ADDR: ai-service:50057
-      SCENE_SERVICE_ADDR: scene-service:50055
+      FLOORPLAN_SERVICE_GRPC_PORT: 50054
+      FLOORPLAN_POSTGRES_HOST: postgres-floorplan
+      FLOORPLAN_POSTGRES_PORT: 5432
+      FLOORPLAN_POSTGRES_USER: granula
+      FLOORPLAN_POSTGRES_PASSWORD: granula_secret
+      FLOORPLAN_POSTGRES_DATABASE: floorplans_db
+      FLOORPLAN_POSTGRES_SSL_MODE: disable
+      FLOORPLAN_STORAGE_ENDPOINT: minio:9000
+      FLOORPLAN_STORAGE_ACCESS_KEY: granula_admin
+      FLOORPLAN_STORAGE_SECRET_KEY: granula_secret_key
+      FLOORPLAN_AI_SERVICE_ADDRESS: ai-service:50057
     networks:
       - granula-network
     depends_on:
@@ -358,9 +367,10 @@ services:
     container_name: granula-scene-service
     environment:
       APP_ENV: development
-      GRPC_PORT: 50055
-      MONGODB_URI: mongodb://granula:granula_secret@mongodb:27017/scenes_db?authSource=admin
-      COMPLIANCE_SERVICE_ADDR: compliance-service:50058
+      SCENE_SERVICE_GRPC_PORT: 50055
+      SCENE_MONGODB_URI: mongodb://granula:granula_secret@mongodb:27017/scenes_db?authSource=admin
+      SCENE_MONGODB_DATABASE: scenes_db
+      SCENE_COMPLIANCE_ADDR: compliance-service:50058
     networks:
       - granula-network
     depends_on:
@@ -376,9 +386,10 @@ services:
     container_name: granula-branch-service
     environment:
       APP_ENV: development
-      GRPC_PORT: 50056
-      MONGODB_URI: mongodb://granula:granula_secret@mongodb:27017/branches_db?authSource=admin
-      SCENE_SERVICE_ADDR: scene-service:50055
+      BRANCH_SERVICE_GRPC_PORT: 50056
+      BRANCH_MONGODB_URI: mongodb://granula:granula_secret@mongodb:27017/branches_db?authSource=admin
+      BRANCH_MONGODB_DATABASE: branches_db
+      BRANCH_SCENE_ADDR: scene-service:50055
     networks:
       - granula-network
     depends_on:
@@ -394,10 +405,12 @@ services:
     container_name: granula-ai-service
     environment:
       APP_ENV: development
-      GRPC_PORT: 50057
-      MONGODB_URI: mongodb://granula:granula_secret@mongodb:27017/ai_db?authSource=admin
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENROUTER_MODEL: openai/gpt-4o
+      AI_SERVICE_GRPC_PORT: 50057
+      AI_MONGODB_URI: mongodb://granula:granula_secret@mongodb:27017/ai_db?authSource=admin
+      AI_MONGODB_DATABASE: ai_db
+      AI_OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_OPENROUTER_MODEL: openai/gpt-4o
+      AI_OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
     networks:
       - granula-network
     depends_on:
@@ -413,8 +426,13 @@ services:
     container_name: granula-compliance-service
     environment:
       APP_ENV: development
-      GRPC_PORT: 50058
-      POSTGRES_DSN: postgres://granula:granula_secret@postgres-compliance:5432/compliance_db?sslmode=disable
+      COMPLIANCE_SERVICE_GRPC_PORT: 50058
+      COMPLIANCE_DATABASE_HOST: postgres-compliance
+      COMPLIANCE_DATABASE_PORT: 5432
+      COMPLIANCE_DATABASE_USER: granula
+      COMPLIANCE_DATABASE_PASSWORD: granula_secret
+      COMPLIANCE_DATABASE_DATABASE: compliance_db
+      COMPLIANCE_DATABASE_SSL_MODE: disable
     networks:
       - granula-network
     depends_on:
@@ -431,7 +449,12 @@ services:
     environment:
       APP_ENV: development
       GRPC_PORT: 50059
-      POSTGRES_DSN: postgres://granula:granula_secret@postgres-request:5432/requests_db?sslmode=disable
+      POSTGRES_HOST: postgres-request
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: granula
+      POSTGRES_PASSWORD: granula_secret
+      POSTGRES_DATABASE: requests_db
+      POSTGRES_SSL_MODE: disable
       NOTIFICATION_SERVICE_ADDR: notification-service:50060
     networks:
       - granula-network
