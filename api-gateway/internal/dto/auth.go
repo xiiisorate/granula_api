@@ -217,4 +217,3 @@ type PaginationResponse struct {
 	// Есть предыдущая страница
 	HasPrev bool `json:"has_prev" example:"false"`
 }
-

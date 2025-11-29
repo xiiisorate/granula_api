@@ -6,7 +6,8 @@
 // and error codes.
 //
 // To regenerate Swagger docs:
-//   swag init -g cmd/main.go -o internal/swagger/docs
+//
+//	swag init -g cmd/main.go -o internal/swagger/docs
 //
 // =============================================================================
 package swagger
@@ -101,4 +102,3 @@ var SwaggerInfo = struct {
 	Host:        "api.granula.ru",
 	BasePath:    "/api/v1",
 }
-

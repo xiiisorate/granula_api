@@ -262,7 +262,12 @@ services:
     environment:
       APP_ENV: development
       GRPC_PORT: 50051
-      POSTGRES_DSN: postgres://granula:granula_secret@postgres-auth:5432/auth_db?sslmode=disable
+      DB_HOST: postgres-auth
+      DB_PORT: 5432
+      DB_USER: granula
+      DB_PASSWORD: granula_secret
+      DB_NAME: auth_db
+      DB_SSLMODE: disable
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev-secret-change-in-production
     networks:
@@ -283,7 +288,12 @@ services:
     environment:
       APP_ENV: development
       GRPC_PORT: 50052
-      POSTGRES_DSN: postgres://granula:granula_secret@postgres-user:5432/users_db?sslmode=disable
+      DB_HOST: postgres-user
+      DB_PORT: 5432
+      DB_USER: granula
+      DB_PASSWORD: granula_secret
+      DB_NAME: users_db
+      DB_SSLMODE: disable
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: granula_admin
       MINIO_SECRET_KEY: granula_secret_key
@@ -439,7 +449,12 @@ services:
     environment:
       APP_ENV: development
       GRPC_PORT: 50060
-      POSTGRES_DSN: postgres://granula:granula_secret@postgres-auth:5432/auth_db?sslmode=disable
+      DB_HOST: postgres-auth
+      DB_PORT: 5432
+      DB_USER: granula
+      DB_PASSWORD: granula_secret
+      DB_NAME: auth_db
+      DB_SSLMODE: disable
       REDIS_URL: redis://redis:6379
     networks:
       - granula-network

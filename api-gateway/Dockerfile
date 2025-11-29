@@ -1,39 +1,38 @@
-# Build stage
+# =============================================================================
+# API Gateway - Dockerfile
+# =============================================================================
+# Multi-stage build for API Gateway
+# =============================================================================
+
 FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates tzdata
 
-# Copy shared module first
-COPY shared/ /app/shared/
-
-# Initialize shared module
+COPY shared/ ./shared/
 WORKDIR /app/shared
 RUN go mod tidy
 
-# Copy service module
-WORKDIR /app/services/api-gateway
-COPY services/api-gateway/go.mod ./
+WORKDIR /app/api-gateway
+COPY api-gateway/go.mod api-gateway/go.sum* ./
 RUN go mod download || true
 
-# Copy source code
-COPY services/api-gateway/ ./
-
-# Tidy and build
+COPY api-gateway/ ./
 RUN go mod tidy
-RUN CGO_ENABLED=0 GOOS=linux go build -o /api-gateway ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /api-gateway ./cmd/main.go
 
-# Runtime stage
 FROM alpine:3.19
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk --no-cache add ca-certificates tzdata && \
+    addgroup -g 1000 granula && \
+    adduser -u 1000 -G granula -s /bin/sh -D granula
 
 WORKDIR /app
-
 COPY --from=builder /api-gateway .
+COPY api-gateway/docs/ ./docs/
+RUN chown -R granula:granula /app
 
-EXPOSE 8090
-
+USER granula
+EXPOSE 8080
 CMD ["./api-gateway"]
