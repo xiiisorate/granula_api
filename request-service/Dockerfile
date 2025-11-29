@@ -24,9 +24,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # Production stage
 FROM alpine:3.19
 
+# Install runtime dependencies and grpc_health_probe
 RUN apk --no-cache add ca-certificates tzdata && \
     addgroup -g 1000 granula && \
-    adduser -u 1000 -G granula -s /bin/sh -D granula
+    adduser -u 1000 -G granula -s /bin/sh -D granula && \
+    wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.28/grpc_health_probe-linux-amd64 && \
+    chmod +x /bin/grpc_health_probe
 
 WORKDIR /app
 
@@ -38,8 +41,9 @@ USER granula
 
 EXPOSE 50059
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:50059/health || exit 1
+# Health check using gRPC health protocol
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/bin/grpc_health_probe", "-addr=:50059"]
 
 ENTRYPOINT ["./service"]
 
