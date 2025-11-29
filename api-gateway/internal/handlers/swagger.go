@@ -178,6 +178,10 @@ func (h *SwaggerHandler) ServeUI(c *fiber.Ctx) error {
 func (h *SwaggerHandler) ServeSpec(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/yaml; charset=utf-8")
 	c.Set("Access-Control-Allow-Origin", "*")
+	// Prevent caching to always serve fresh spec
+	c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	c.Set("Pragma", "no-cache")
+	c.Set("Expires", "0")
 	return c.SendFile(h.specPath)
 }
 
