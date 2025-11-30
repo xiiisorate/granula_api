@@ -3,15 +3,15 @@
 # =============================================================================
 # Полная документация REST API для сервиса планирования ремонта и перепланировки.
 #
-# Версия: 1.0.0
-# Дата: 2024-11-29
+# Версия: 1.1.0
+# Дата: 2025-11-30
 # =============================================================================
 
 openapi: 3.0.3
 
 info:
   title: Granula API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     # Granula API
 
@@ -527,6 +527,9 @@ components:
         data:
           type: object
           properties:
+            job_id:
+              type: string
+              format: uuid
             status:
               type: string
               enum: [pending, processing, completed, failed]
@@ -534,7 +537,7 @@ components:
               type: integer
               description: Progress 0-100
             result:
-              $ref: "#/components/schemas/RecognitionResult"
+              $ref: "#/components/schemas/AIRecognitionResult"
             error:
               type: string
 
@@ -974,15 +977,31 @@ components:
         floor_plan_id:
           type: string
           format: uuid
+          description: ID планировки для распознавания
+        image_base64:
+          type: string
+          description: Base64-encoded изображение (альтернатива floor_plan_id)
         options:
           type: object
           properties:
-            detect_furniture:
-              type: boolean
-              default: false
-            detect_dimensions:
+            detect_load_bearing:
               type: boolean
               default: true
+              description: Определять несущие стены
+            detect_wet_zones:
+              type: boolean
+              default: true
+              description: Определять мокрые зоны
+            detect_furniture:
+              type: boolean
+              default: true
+              description: Определять мебель и оборудование
+            detail_level:
+              type: integer
+              minimum: 1
+              maximum: 3
+              default: 2
+              description: Уровень детализации (1-3)
 
     RecognizeResponse:
       type: object
@@ -995,7 +1014,162 @@ components:
               format: uuid
             status:
               type: string
-              enum: [queued, processing]
+              enum: [pending, processing, completed, failed]
+            success:
+              type: boolean
+
+    AIRecognitionResult:
+      type: object
+      description: Полный результат распознавания для 3D модели
+      properties:
+        bounds:
+          type: object
+          description: Габариты квартиры в метрах
+          properties:
+            width:
+              type: number
+              description: Ширина по X
+            height:
+              type: number
+              description: Высота потолков
+            depth:
+              type: number
+              description: Глубина по Z
+        total_area:
+          type: number
+          description: Общая площадь в м²
+        stats:
+          type: object
+          properties:
+            totalArea:
+              type: number
+            roomsCount:
+              type: integer
+            wallsCount:
+              type: integer
+            furnitureCount:
+              type: integer
+        walls:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecognizedWall3D"
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecognizedRoom3D"
+        openings:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecognizedOpening"
+        recognition:
+          type: object
+          properties:
+            sourceType:
+              type: string
+              enum: [BTI, technical_passport, architect_plan, sketch, photo]
+            quality:
+              type: string
+              enum: [high, medium, low]
+            scale:
+              type: string
+            buildingType:
+              type: string
+              enum: [panel, brick, monolith, block, frame, unknown]
+
+    RecognizedWall3D:
+      type: object
+      properties:
+        temp_id:
+          type: string
+        start:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+        end:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+        thickness:
+          type: number
+          description: Толщина в метрах (0.08-0.50)
+        is_load_bearing:
+          type: boolean
+          description: Несущая стена
+        material:
+          type: string
+          enum: [brick, concrete, drywall, block, panel, foam_block, gas_block]
+        can_demolish:
+          type: boolean
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    RecognizedRoom3D:
+      type: object
+      properties:
+        temp_id:
+          type: string
+        type:
+          type: string
+          enum: [living, bedroom, kitchen, bathroom, toilet, combined_bathroom, hallway, corridor, storage, balcony, loggia, children, office, dining]
+        name:
+          type: string
+        polygon:
+          type: array
+          items:
+            type: object
+            properties:
+              x:
+                type: number
+              y:
+                type: number
+        area:
+          type: number
+        perimeter:
+          type: number
+        is_wet_zone:
+          type: boolean
+        has_window:
+          type: boolean
+        wall_ids:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+
+    RecognizedOpening:
+      type: object
+      properties:
+        temp_id:
+          type: string
+        type:
+          type: string
+          enum: [door, window, passage, arch]
+        subtype:
+          type: string
+          enum: [single_swing, double_swing, sliding, entrance, balcony, panoramic]
+        wall_id:
+          type: string
+        position:
+          type: number
+          description: Позиция от начала стены в метрах
+        width:
+          type: number
+        height:
+          type: number
+        elevation:
+          type: number
+          description: Высота от пола (0 для дверей, 0.85 для окон)
+        confidence:
+          type: number
 
     GenerateVariantsRequest:
       type: object
