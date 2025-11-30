@@ -264,7 +264,7 @@ def main():
     log("⏳ STEP 5: Polling статуса распознавания...")
     
     recognition_result = None
-    max_attempts = 30
+    max_attempts = 60  # 60 attempts * 3 sec = 3 minutes max wait
     
     for attempt in range(max_attempts):
         log(f"   Попытка {attempt + 1}/{max_attempts}...")

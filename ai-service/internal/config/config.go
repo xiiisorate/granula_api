@@ -82,7 +82,7 @@ func Load() (*Config, error) {
 	cfg.OpenRouter = config.OpenRouterConfig{
 		BaseURL:         "https://openrouter.ai/api/v1",
 		Model:           "anthropic/claude-sonnet-4",
-		Timeout:         180 * time.Second, // 3 min for Vision API with large prompts
+		Timeout:         300 * time.Second, // 5 min for Vision API with large images + prompts
 		MaxTokens:       16512,
 		Temperature:     0.7,
 		MaxRetries:      3,
