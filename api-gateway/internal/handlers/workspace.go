@@ -115,6 +115,12 @@ func (h *WorkspaceHandler) CreateWorkspace(c *fiber.Ctx) error {
 // @Router /workspaces/{id} [get]
 // =============================================================================
 func (h *WorkspaceHandler) GetWorkspace(c *fiber.Ctx) error {
+	// Get user ID from context (set by auth middleware)
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+
 	workspaceID := c.Params("id")
 	if _, err := uuid.Parse(workspaceID); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid workspace ID")
@@ -126,6 +132,7 @@ func (h *WorkspaceHandler) GetWorkspace(c *fiber.Ctx) error {
 	resp, err := h.client.GetWorkspace(ctx, &workspacepb.GetWorkspaceRequest{
 		WorkspaceId:    workspaceID,
 		IncludeMembers: true,
+		UserId:         userIDStr,
 	})
 	if err != nil {
 		return handleGRPCError(err)
@@ -233,6 +240,12 @@ func (h *WorkspaceHandler) ListWorkspaces(c *fiber.Ctx) error {
 // @Router /workspaces/{id} [patch]
 // =============================================================================
 func (h *WorkspaceHandler) UpdateWorkspace(c *fiber.Ctx) error {
+	// Get user ID from context (set by auth middleware)
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+
 	workspaceID := c.Params("id")
 	if _, err := uuid.Parse(workspaceID); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid workspace ID")
@@ -253,6 +266,7 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *fiber.Ctx) error {
 		Address:     input.Address,
 		TotalArea:   input.TotalArea,
 		RoomsCount:  int32(input.RoomsCount),
+		UserId:      userIDStr,
 	}
 
 	if input.Settings != nil {

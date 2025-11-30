@@ -129,8 +129,14 @@ func (s *WorkspaceServer) GetWorkspace(ctx context.Context, req *workspacev1.Get
 		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
 	}
 
-	// Get user ID from context (placeholder)
-	userID := uuid.New()
+	// Parse user ID from request (passed from API Gateway)
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+	}
 
 	// Call service
 	ws, err := s.service.GetWorkspace(ctx, workspaceID, userID)
@@ -230,8 +236,14 @@ func (s *WorkspaceServer) UpdateWorkspace(ctx context.Context, req *workspacev1.
 		return nil, status.Error(codes.InvalidArgument, "invalid workspace_id")
 	}
 
-	// Get user ID from context (placeholder)
-	userID := uuid.New()
+	// Parse user ID from request (passed from API Gateway)
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id format")
+	}
 
 	ws, err := s.service.UpdateWorkspace(ctx, workspaceID, userID, req.Name, req.Description)
 	if err != nil {
