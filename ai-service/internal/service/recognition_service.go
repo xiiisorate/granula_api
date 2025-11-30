@@ -124,7 +124,7 @@ func (s *RecognitionService) processRecognition(ctx context.Context, job *entity
 		SystemPrompt: prompts.GetRecognitionPrompt(),
 		MaxTokens:    8192,                        // Large response for detailed JSON
 		Temperature:  0.2,                         // Low temperature for consistent output
-		Model:        "anthropic/claude-sonnet-4", // Claude Sonnet 4 with Vision
+		Model:        "google/gemini-2.5-pro-preview", // Fast Vision model for floor plan recognition
 	})
 	if err != nil {
 		s.log.Error("recognition failed - Vision API error",
