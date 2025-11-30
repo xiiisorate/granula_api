@@ -64,7 +64,12 @@ type ChangePasswordInput struct {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /users/me [get]
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userIDStr, okStr := c.Locals("user_id").(string)
+	if !okStr || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+	userID, parseErr := uuid.Parse(userIDStr)
+	ok := parseErr == nil
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -110,7 +115,12 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /users/me [patch]
 func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userIDStr, okStr := c.Locals("user_id").(string)
+	if !okStr || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+	userID, parseErr := uuid.Parse(userIDStr)
+	ok := parseErr == nil
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -161,7 +171,12 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /users/me/password [put]
 func (h *UserHandler) ChangePassword(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userIDStr, okStr := c.Locals("user_id").(string)
+	if !okStr || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+	userID, parseErr := uuid.Parse(userIDStr)
+	ok := parseErr == nil
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -211,7 +226,12 @@ func (h *UserHandler) ChangePassword(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /users/me [delete]
 func (h *UserHandler) DeleteAccount(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userIDStr, okStr := c.Locals("user_id").(string)
+	if !okStr || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+	userID, parseErr := uuid.Parse(userIDStr)
+	ok := parseErr == nil
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -232,4 +252,3 @@ func (h *UserHandler) DeleteAccount(c *fiber.Ctx) error {
 		"request_id": c.GetRespHeader("X-Request-ID"),
 	})
 }
-

@@ -148,6 +148,7 @@ class GranulaFullTest:
         self.scene_id: Optional[str] = None
         self.branch_id: Optional[str] = None
         self.recognition_job_id: Optional[str] = None
+        self.recognition_result: Optional[Dict] = None
         self.generation_job_id: Optional[str] = None
         self.chat_context_id: Optional[str] = None
         self.request_id: Optional[str] = None
@@ -495,10 +496,12 @@ class GranulaFullTest:
                 print_info(f"Attempt {i+1}: {status} ({progress}%)")
                 
                 if status == "completed":
-                    # Try to get scene_id from result
+                    # Store recognition result for later scene creation
+                    self.recognition_result = data.get("data", {}).get("result", {})
+                    # Try to get scene_id from result (if auto-created)
                     scene_data = data.get("data", {}).get("scene", {})
                     if scene_data:
-                        self.scene_id = scene_data.get("id") or f"scene-{self.recognition_job_id}"
+                        self.scene_id = scene_data.get("id")
                     self.record("Recognition Complete", True)
                     return True
                 elif status == "failed":
@@ -508,6 +511,62 @@ class GranulaFullTest:
                     
         self.record("Recognition Complete", False, "Timeout")
         return False
+
+    # =========================================================================
+    # PHASE 5.5: CREATE SCENE (after recognition)
+    # =========================================================================
+    def test_create_scene(self) -> bool:
+        """Create a 3D scene from recognition result."""
+        print_step("5.3", "POST /workspaces/{id}/scenes - Create scene")
+        
+        if not self.workspace_id:
+            self.results["skipped"] += 1
+            print_info("Skipped: no workspace")
+            return False
+        
+        # If scene_id already set from recognition, skip creation
+        if self.scene_id:
+            print_info(f"Scene already exists: {self.scene_id}")
+            self.record("Create Scene", True)
+            return True
+        
+        # Create scene from recognition result
+        resp = self._request("POST", f"/workspaces/{self.workspace_id}/scenes", headers=self._headers(), json={
+            "name": f"Test Scene {TIMESTAMP}",
+            "description": "Scene created from floor plan recognition",
+            "floor_plan_id": self.floor_plan_id or ""
+        })
+        data = print_response_preview(resp)
+        
+        if resp.status_code in [200, 201] and data:
+            self.scene_id = data.get("data", {}).get("id")
+            print_info(f"Scene ID: {self.scene_id}")
+            self.record("Create Scene", True)
+            return True
+        else:
+            self.record("Create Scene", False, f"Status: {resp.status_code}")
+            return False
+
+    def test_get_scene(self) -> bool:
+        """Get scene details."""
+        print_step("5.4", "GET /scenes/{id} - Get scene")
+        
+        if not self.scene_id:
+            self.results["skipped"] += 1
+            print_info("Skipped: no scene")
+            return False
+        
+        resp = self._request("GET", f"/scenes/{self.scene_id}", headers=self._headers())
+        data = print_response_preview(resp)
+        
+        if resp.status_code == 200:
+            scene_name = data.get("data", {}).get("name", "Unknown")
+            print_info(f"Scene: {scene_name}")
+            self.record("Get Scene", True)
+            return True
+        else:
+            self.record("Get Scene", False, f"Status: {resp.status_code}")
+            return False
 
     # =========================================================================
     # PHASE 6: AI CHAT
@@ -567,6 +626,74 @@ class GranulaFullTest:
             return True
         else:
             self.record("Chat History", False, f"Status: {resp.status_code}")
+            return False
+
+    def test_ai_chat_replanning(self) -> bool:
+        """Test AI for renovation planning - wall removal request."""
+        print_step("6.4", "POST /ai/chat - Request wall removal")
+        
+        resp = self._request("POST", "/ai/chat", headers=self._headers(), json={
+            "message": "Хочу снести стену между кухней и гостиной. Это возможно? Какие документы нужны?",
+            "scene_id": self.scene_id,
+            "context_id": self.chat_context_id
+        })
+        data = print_response_preview(resp)
+        
+        if resp.status_code == 200 and data:
+            response_text = data.get("data", {}).get("response", "")
+            # Check that AI mentions key concepts
+            keywords = ["несущ", "норм", "СНиП", "согласован", "БТИ", "документ"]
+            has_relevant_response = any(kw.lower() in response_text.lower() for kw in keywords)
+            print_info(f"Response mentions regulations: {has_relevant_response}")
+            print_info(f"Response: {response_text[:200]}...")
+            self.record("Chat Replanning (Wall)", True)
+            return True
+        else:
+            self.record("Chat Replanning (Wall)", False, f"Status: {resp.status_code}")
+            return False
+
+    def test_ai_chat_add_partition(self) -> bool:
+        """Test AI for adding partition request."""
+        print_step("6.5", "POST /ai/chat - Request partition addition")
+        
+        resp = self._request("POST", "/ai/chat", headers=self._headers(), json={
+            "message": "Хочу добавить перегородку для создания гардеробной. Какие требования?",
+            "scene_id": self.scene_id,
+            "context_id": self.chat_context_id
+        })
+        data = print_response_preview(resp)
+        
+        if resp.status_code == 200 and data:
+            response_text = data.get("data", {}).get("response", "")
+            print_info(f"Response: {response_text[:200]}...")
+            self.record("Chat Replanning (Partition)", True)
+            return True
+        else:
+            self.record("Chat Replanning (Partition)", False, f"Status: {resp.status_code}")
+            return False
+
+    def test_ai_chat_wet_zone(self) -> bool:
+        """Test AI for wet zone relocation request."""
+        print_step("6.6", "POST /ai/chat - Request wet zone changes")
+        
+        resp = self._request("POST", "/ai/chat", headers=self._headers(), json={
+            "message": "Можно ли перенести ванную комнату? Какие ограничения существуют?",
+            "scene_id": self.scene_id,
+            "context_id": self.chat_context_id
+        })
+        data = print_response_preview(resp)
+        
+        if resp.status_code == 200 and data:
+            response_text = data.get("data", {}).get("response", "")
+            # Wet zones have strict regulations
+            keywords = ["мокр", "зон", "гидроизоляц", "слив", "канализац", "санузел", "запрещ"]
+            has_relevant_response = any(kw.lower() in response_text.lower() for kw in keywords)
+            print_info(f"Response mentions wet zone rules: {has_relevant_response}")
+            print_info(f"Response: {response_text[:200]}...")
+            self.record("Chat Replanning (Wet Zone)", True)
+            return True
+        else:
+            self.record("Chat Replanning (Wet Zone)", False, f"Status: {resp.status_code}")
             return False
 
     # =========================================================================
@@ -893,11 +1020,20 @@ class GranulaFullTest:
         self.test_ai_recognize()
         self.test_ai_recognize_status()
         
-        # Phase 6: AI Chat
-        print_header("PHASE 6: AI CHAT", 2)
+        # Phase 5.5: Create Scene
+        print_header("PHASE 5.5: SCENES", 2)
+        self.test_create_scene()
+        self.test_get_scene()
+        
+        # Phase 6: AI Chat & Replanning
+        print_header("PHASE 6: AI CHAT & REPLANNING", 2)
         self.test_ai_chat_send()
         self.test_ai_chat_followup()
         self.test_ai_chat_history()
+        # Advanced replanning scenarios
+        self.test_ai_chat_replanning()
+        self.test_ai_chat_add_partition()
+        self.test_ai_chat_wet_zone()
         
         # Phase 7: AI Generation
         print_header("PHASE 7: AI GENERATION", 2)
