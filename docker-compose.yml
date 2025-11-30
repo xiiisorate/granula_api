@@ -409,11 +409,14 @@ services:
       AI_OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       AI_OPENROUTER_MODEL: openai/gpt-4o
       AI_OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
+      AI_SERVICE_SCENE_SERVICE_ADDR: scene-service:50055
     networks:
       - granula-network
     depends_on:
       mongodb:
         condition: service_healthy
+      scene-service:
+        condition: service_started
     restart: unless-stopped
 
   # Compliance Service
