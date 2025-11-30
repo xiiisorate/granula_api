@@ -100,7 +100,21 @@ jobs:
             # Build and start (--build forces rebuild)
             docker compose --env-file .env up -d --build --force-recreate
             
-            sleep 60
+            # Wait for PostgreSQL containers to be healthy
+            echo "Waiting for PostgreSQL containers to be healthy..."
+            for i in {1..30}; do
+              if docker exec granula-postgres-workspace pg_isready -U granula -d workspaces_db > /dev/null 2>&1 && \
+                 docker exec granula-postgres-floorplan pg_isready -U granula -d floorplans_db > /dev/null 2>&1 && \
+                 docker exec granula-postgres-compliance pg_isready -U granula -d compliance_db > /dev/null 2>&1 && \
+                 docker exec granula-postgres-request pg_isready -U granula -d requests_db > /dev/null 2>&1; then
+                echo "All PostgreSQL containers are ready!"
+                break
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 2
+            done
+            
+            sleep 5
             docker compose ps
           '
 
@@ -109,33 +123,52 @@ jobs:
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
             cd /opt/granula/api
             
-            echo "=== Running database migrations ==="
-            
-            # Wait for PostgreSQL containers to be ready
-            sleep 15
+            echo "========================================="
+            echo "  Running Database Migrations"
+            echo "========================================="
             
             # Workspace service migrations
-            echo "[1/5] Applying workspace-service migrations..."
-            docker exec -i granula-postgres-workspace psql -U granula -d workspaces_db < workspace-service/migrations/000001_create_workspaces.up.sql 2>&1 || echo "Already applied or skipped"
+            echo ""
+            echo "[1/4] Applying workspace-service migrations..."
+            docker exec -i granula-postgres-workspace psql -U granula -d workspaces_db < workspace-service/migrations/000001_create_workspaces.up.sql 2>&1
+            echo "Workspace tables:"
+            docker exec -i granula-postgres-workspace psql -U granula -d workspaces_db -c "\dt" 2>&1 | head -15
             
             # FloorPlan service migrations
-            echo "[2/5] Applying floorplan-service migrations..."
-            docker exec -i granula-postgres-floorplan psql -U granula -d floorplans_db < floorplan-service/migrations/000001_create_floor_plans.up.sql 2>&1 || echo "Already applied or skipped"
+            echo ""
+            echo "[2/4] Applying floorplan-service migrations..."
+            docker exec -i granula-postgres-floorplan psql -U granula -d floorplans_db < floorplan-service/migrations/000001_create_floor_plans.up.sql 2>&1
+            echo "FloorPlan tables:"
+            docker exec -i granula-postgres-floorplan psql -U granula -d floorplans_db -c "\dt" 2>&1 | head -15
             
-            # Compliance service migrations
-            echo "[3/5] Applying compliance-service migrations..."
-            docker exec -i granula-postgres-compliance psql -U granula -d compliance_db < compliance-service/migrations/000001_create_compliance_rules.up.sql 2>&1 || echo "Already applied or skipped"
+            # Compliance service migrations  
+            echo ""
+            echo "[3/4] Applying compliance-service migrations..."
+            docker exec -i granula-postgres-compliance psql -U granula -d compliance_db < compliance-service/migrations/000001_create_compliance_rules.up.sql 2>&1
+            echo "Compliance tables:"
+            docker exec -i granula-postgres-compliance psql -U granula -d compliance_db -c "\dt" 2>&1 | head -15
             
             # Request service migrations
-            echo "[4/5] Applying request-service migrations..."
-            docker exec -i granula-postgres-request psql -U granula -d requests_db < request-service/migrations/000001_create_requests.up.sql 2>&1 || echo "Already applied or skipped"
+            echo ""
+            echo "[4/4] Applying request-service migrations..."
+            docker exec -i granula-postgres-request psql -U granula -d requests_db < request-service/migrations/000001_create_requests.up.sql 2>&1
+            echo "Request tables:"
+            docker exec -i granula-postgres-request psql -U granula -d requests_db -c "\dt" 2>&1 | head -15
             
-            # Verify tables exist
-            echo "[5/5] Verifying migrations..."
-            docker exec -i granula-postgres-workspace psql -U granula -d workspaces_db -c "\dt" 2>/dev/null | head -20
-            docker exec -i granula-postgres-floorplan psql -U granula -d floorplans_db -c "\dt" 2>/dev/null | head -20
-            
-            echo "=== Migrations completed ==="
+            echo ""
+            echo "========================================="
+            echo "  Migrations completed!"
+            echo "========================================="
+          '
+      
+      - name: Restart services after migrations
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
+            cd /opt/granula/api
+            echo "Restarting services to pick up new tables..."
+            docker compose restart workspace-service floorplan-service request-service compliance-service
+            sleep 10
+            docker compose ps
           '
 
       - name: Health check
