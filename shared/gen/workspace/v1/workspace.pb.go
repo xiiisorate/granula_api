@@ -693,8 +693,10 @@ type GetWorkspaceRequest struct {
 	WorkspaceId string `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
 	// Включить участников
 	IncludeMembers bool `protobuf:"varint,2,opt,name=include_members,json=includeMembers,proto3" json:"include_members,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// ID пользователя (для проверки доступа)
+	UserId        string `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetWorkspaceRequest) Reset() {
@@ -739,6 +741,13 @@ func (x *GetWorkspaceRequest) GetIncludeMembers() bool {
 		return x.IncludeMembers
 	}
 	return false
+}
+
+func (x *GetWorkspaceRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
 }
 
 // GetWorkspaceResponse - ответ получения воркспейса
@@ -940,7 +949,9 @@ type UpdateWorkspaceRequest struct {
 	// Новое количество комнат
 	RoomsCount int32 `protobuf:"varint,6,opt,name=rooms_count,json=roomsCount,proto3" json:"rooms_count,omitempty"`
 	// Новые настройки
-	Settings      *WorkspaceSettings `protobuf:"bytes,7,opt,name=settings,proto3" json:"settings,omitempty"`
+	Settings *WorkspaceSettings `protobuf:"bytes,7,opt,name=settings,proto3" json:"settings,omitempty"`
+	// ID пользователя (для проверки доступа)
+	UserId        string `protobuf:"bytes,8,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1022,6 +1033,13 @@ func (x *UpdateWorkspaceRequest) GetSettings() *WorkspaceSettings {
 		return x.Settings
 	}
 	return nil
+}
+
+func (x *UpdateWorkspaceRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
 }
 
 // UpdateWorkspaceResponse - ответ обновления воркспейса
@@ -1653,10 +1671,11 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bsettings\x18\x06 \x01(\v2\x1f.workspace.v1.WorkspaceSettingsR\bsettings\x12\x19\n" +
 	"\bowner_id\x18\a \x01(\tR\aownerId\"P\n" +
 	"\x17CreateWorkspaceResponse\x125\n" +
-	"\tworkspace\x18\x01 \x01(\v2\x17.workspace.v1.WorkspaceR\tworkspace\"a\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x17.workspace.v1.WorkspaceR\tworkspace\"z\n" +
 	"\x13GetWorkspaceRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12'\n" +
-	"\x0finclude_members\x18\x02 \x01(\bR\x0eincludeMembers\"M\n" +
+	"\x0finclude_members\x18\x02 \x01(\bR\x0eincludeMembers\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\"M\n" +
 	"\x14GetWorkspaceResponse\x125\n" +
 	"\tworkspace\x18\x01 \x01(\v2\x17.workspace.v1.WorkspaceR\tworkspace\"\xe7\x01\n" +
 	"\x15ListWorkspacesRequest\x12\x17\n" +
@@ -1673,7 +1692,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"workspaces\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\x88\x02\n" +
+	"pagination\"\xa1\x02\n" +
 	"\x16UpdateWorkspaceRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1683,7 +1702,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"total_area\x18\x05 \x01(\x01R\ttotalArea\x12\x1f\n" +
 	"\vrooms_count\x18\x06 \x01(\x05R\n" +
 	"roomsCount\x12;\n" +
-	"\bsettings\x18\a \x01(\v2\x1f.workspace.v1.WorkspaceSettingsR\bsettings\"P\n" +
+	"\bsettings\x18\a \x01(\v2\x1f.workspace.v1.WorkspaceSettingsR\bsettings\x12\x17\n" +
+	"\auser_id\x18\b \x01(\tR\x06userId\"P\n" +
 	"\x17UpdateWorkspaceResponse\x125\n" +
 	"\tworkspace\x18\x01 \x01(\v2\x17.workspace.v1.WorkspaceR\tworkspace\"Y\n" +
 	"\x16DeleteWorkspaceRequest\x12!\n" +

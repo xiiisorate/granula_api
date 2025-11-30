@@ -221,6 +221,9 @@ message GetWorkspaceRequest {
   
   // Включить участников
   bool include_members = 2;
+  
+  // ID пользователя (для проверки доступа)
+  string user_id = 3;
 }
 
 // GetWorkspaceResponse - ответ получения воркспейса
@@ -286,6 +289,9 @@ message UpdateWorkspaceRequest {
   
   // Новые настройки
   WorkspaceSettings settings = 7;
+  
+  // ID пользователя (для проверки доступа)
+  string user_id = 8;
 }
 
 // UpdateWorkspaceResponse - ответ обновления воркспейса
