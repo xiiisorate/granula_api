@@ -1,0 +1,23 @@
+﻿python : Traceback (most recent call last):
+строка:1 знак:13
++ chcp 65001; python test_full_user_flow.py 2>&1 | Out-File -Encoding U ...
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last) 
+   ::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "R:\granula\api\tests\test_full_user_flow.py", line 1100, in <module>
+    test.run()
+    ~~~~~~~~^^
+  File "R:\granula\api\tests\test_full_user_flow.py", line 984, in run
+    print_header("GRANULA API - FULL USER FLOW TEST")
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "R:\granula\api\tests\test_full_user_flow.py", line 82, in print_header
+    print(f"\n{Colors.CYAN}{Colors.BOLD}{sep}{Colors.RESET}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Catalyst\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings
+\cp1251.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 11-80: 
+character maps to <undefined>

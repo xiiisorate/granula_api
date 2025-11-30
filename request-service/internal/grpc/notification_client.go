@@ -536,4 +536,3 @@ func (c *NotificationClient) SendRequestCompleted(ctx context.Context, userID, r
 
 	return nil
 }
-

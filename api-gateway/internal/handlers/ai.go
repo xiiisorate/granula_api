@@ -78,9 +78,41 @@ func (h *AIHandler) RecognizeFloorPlan(c *fiber.Ctx) error {
 		}
 
 		if input.ImageBase64 != "" {
-			imageData, err = base64.StdEncoding.DecodeString(input.ImageBase64)
+			// Handle data URL format: "data:image/jpeg;base64,/9j/4AAQ..."
+			base64Data := input.ImageBase64
+			if len(base64Data) > 5 && base64Data[:5] == "data:" {
+				// Extract MIME type and base64 content
+				commaIdx := -1
+				for i := 0; i < len(base64Data) && i < 100; i++ {
+					if base64Data[i] == ',' {
+						commaIdx = i
+						break
+					}
+				}
+				if commaIdx > 0 {
+					// Extract mime type from "data:image/jpeg;base64"
+					header := base64Data[:commaIdx]
+					if input.ImageType == "" {
+						// Parse mime from header like "data:image/jpeg;base64"
+						colonIdx := 5 // after "data:"
+						semiIdx := -1
+						for i := colonIdx; i < len(header); i++ {
+							if header[i] == ';' {
+								semiIdx = i
+								break
+							}
+						}
+						if semiIdx > colonIdx {
+							input.ImageType = header[colonIdx:semiIdx]
+						}
+					}
+					base64Data = base64Data[commaIdx+1:]
+				}
+			}
+			
+			imageData, err = base64.StdEncoding.DecodeString(base64Data)
 			if err != nil {
-				return fiber.NewError(fiber.StatusBadRequest, "invalid base64 image data")
+				return fiber.NewError(fiber.StatusBadRequest, "invalid base64 image data: "+err.Error())
 			}
 			imageType = input.ImageType
 		} else if input.ImageURL != "" {
@@ -167,13 +199,100 @@ func (h *AIHandler) GetRecognitionStatus(c *fiber.Ctx) error {
 		return handleGRPCError(err)
 	}
 
+	result := fiber.Map{
+		"job_id":   resp.JobId,
+		"status":   jobStatusToString(resp.Status),
+		"progress": resp.Progress,
+		"error":    resp.Error,
+	}
+
+	// Include scene result if completed
+	if resp.Status == aipb.JobStatus_JOB_STATUS_COMPLETED && resp.Scene != nil {
+		walls := make([]fiber.Map, 0, len(resp.Scene.Walls))
+		for _, w := range resp.Scene.Walls {
+			walls = append(walls, fiber.Map{
+				"temp_id":                 w.TempId,
+				"start":                   point2DToMap(w.Start),
+				"end":                     point2DToMap(w.End),
+				"thickness":               w.Thickness,
+				"is_load_bearing":         w.IsLoadBearing,
+				"confidence":              w.Confidence,
+				"load_bearing_confidence": w.LoadBearingConfidence,
+			})
+		}
+
+		rooms := make([]fiber.Map, 0, len(resp.Scene.Rooms))
+		for _, r := range resp.Scene.Rooms {
+			rooms = append(rooms, fiber.Map{
+				"temp_id":     r.TempId,
+				"type":        roomTypeToString(r.Type),
+				"area":        r.Area,
+				"is_wet_zone": r.IsWetZone,
+				"confidence":  r.Confidence,
+				"wall_ids":    r.WallIds,
+			})
+		}
+
+		openings := make([]fiber.Map, 0, len(resp.Scene.Openings))
+		for _, o := range resp.Scene.Openings {
+			openings = append(openings, fiber.Map{
+				"temp_id":    o.TempId,
+				"type":       openingTypeToString(o.Type),
+				"position":   point2DToMap(o.Position),
+				"width":      o.Width,
+				"wall_id":    o.WallId,
+				"confidence": o.Confidence,
+			})
+		}
+
+		elements := make([]fiber.Map, 0, len(resp.Scene.Elements))
+		for _, e := range resp.Scene.Elements {
+			elem := fiber.Map{
+				"temp_id":      e.TempId,
+				"element_type": e.ElementType,
+				"position":     point2DToMap(e.Position),
+				"room_id":      e.RoomId,
+				"confidence":   e.Confidence,
+				"rotation":     e.Rotation,
+			}
+			if e.Dimensions != nil {
+				elem["dimensions"] = fiber.Map{
+					"width":  e.Dimensions.Width,
+					"height": e.Dimensions.Height,
+				}
+			}
+			elements = append(elements, elem)
+		}
+
+		result["result"] = fiber.Map{
+			"total_area": resp.Scene.TotalArea,
+			"walls":      walls,
+			"rooms":      rooms,
+			"openings":   openings,
+			"elements":   elements,
+		}
+
+		// Add dimensions if present
+		if resp.Scene.Dimensions != nil {
+			result["result"].(fiber.Map)["dimensions"] = fiber.Map{
+				"width":  resp.Scene.Dimensions.Width,
+				"height": resp.Scene.Dimensions.Height,
+			}
+		}
+
+		// Add metadata if present
+		if resp.Scene.Metadata != nil {
+			result["result"].(fiber.Map)["metadata"] = fiber.Map{
+				"model_version":        resp.Scene.Metadata.ModelVersion,
+				"processing_time_ms":   resp.Scene.Metadata.ProcessingTimeMs,
+				"detected_scale":       resp.Scene.Metadata.DetectedScale,
+				"detected_orientation": resp.Scene.Metadata.DetectedOrientation,
+			}
+		}
+	}
+
 	return c.JSON(fiber.Map{
-		"data": fiber.Map{
-			"job_id":   resp.JobId,
-			"status":   jobStatusToString(resp.Status),
-			"progress": resp.Progress,
-			"error":    resp.Error,
-		},
+		"data":       result,
 		"request_id": c.GetRespHeader("X-Request-ID"),
 	})
 }
