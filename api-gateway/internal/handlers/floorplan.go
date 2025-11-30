@@ -464,7 +464,6 @@ func (h *FloorPlanHandler) StartRecognition(c *fiber.Ctx) error {
 // @Router /floor-plans/{id}/recognition-status [get]
 func (h *FloorPlanHandler) GetRecognitionStatus(c *fiber.Ctx) error {
 	// Get floor plan ID from path
-	// Note: The job_id is derived from floor_plan_id in the service
 	id := c.Params("id")
 	if id == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "floor plan ID is required")
@@ -474,8 +473,20 @@ func (h *FloorPlanHandler) GetRecognitionStatus(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
+	// First, get floor plan to retrieve recognition_job_id
+	getReq := &floorplanpb.GetRequest{Id: id}
+	fpResp, err := h.client.Get(ctx, getReq)
+	if err != nil {
+		return HandleGRPCError(err)
+	}
+
+	// Check if floor plan has recognition job
+	if fpResp.FloorPlan.RecognitionJobId == nil || *fpResp.FloorPlan.RecognitionJobId == "" {
+		return fiber.NewError(fiber.StatusNotFound, "no recognition job found for this floor plan")
+	}
+
 	req := &floorplanpb.GetRecognitionStatusRequest{
-		JobId: id, // Using floor plan ID as job ID
+		JobId: *fpResp.FloorPlan.RecognitionJobId,
 	}
 
 	// Call gRPC service
