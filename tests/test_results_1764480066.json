@@ -1,0 +1,627 @@
+{
+  "timestamp": "2025-11-30T08:21:06.501653",
+  "api_base": "https://api.granula.raitokyokai.tech/api/v1",
+  "test_email": "debug_1764480066@test.ru",
+  "steps": [
+    {
+      "label": "POST /auth/register",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/auth/register",
+      "body": {
+        "data": {
+          "user_id": "c99f9b63-238c-42a5-8208-5390c266fa02",
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYzk5ZjliNjMtMjM4Yy00MmE1LTgyMDgtNTM5MGMyNjZmYTAyIiwiZW1haWwiOiJkZWJ1Z18xNzY0NDgwMDY2QHRlc3QucnUiLCJyb2xlIjoidXNlciIsImV4cCI6MTc2NDQ4MDk2OSwibmJmIjoxNzY0NDgwMDY5LCJpYXQiOjE3NjQ0ODAwNjl9.FFJUbIes37q3kn4gSGA1pLHreWskDR-VjliogitZZQc",
+          "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYzk5ZjliNjMtMjM4Yy00MmE1LTgyMDgtNTM5MGMyNjZmYTAyIiwiZW1haWwiOiJkZWJ1Z18xNzY0NDgwMDY2QHRlc3QucnUiLCJyb2xlIjoidXNlciIsImV4cCI6MTc2NTA4NDg2OSwibmJmIjoxNzY0NDgwMDY5LCJpYXQiOjE3NjQ0ODAwNjksImp0aSI6IjliZTExMGE3LTMyMmQtNDA4ZS05MmEzLWE1M2YyNmRhMGFiZSJ9.aPY1tvyZCJRFYRgMmEsI5P86Lt31iS0NQL9h0EFCZd8",
+          "expires_in": 900
+        },
+        "message": "User registered successfully",
+        "request_id": "76d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "POST /workspaces",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/workspaces",
+      "body": {
+        "data": {
+          "address": "",
+          "created_at": "2025-11-30T05:21:11.132092357Z",
+          "description": "Тест распознавания",
+          "floor_plans_count": 0,
+          "id": "ebde735a-b299-484e-9fc0-9c65847acab2",
+          "members": [
+            {
+              "avatar_url": "",
+              "email": "",
+              "invited_by": "00000000-0000-0000-0000-000000000000",
+              "joined_at": "2025-11-30T05:21:11.132092357Z",
+              "name": "",
+              "role": "owner",
+              "user_id": "c99f9b63-238c-42a5-8208-5390c266fa02"
+            }
+          ],
+          "name": "Debug Workspace 1764480066",
+          "owner_id": "c99f9b63-238c-42a5-8208-5390c266fa02",
+          "preview_url": "",
+          "rooms_count": 0,
+          "scenes_count": 0,
+          "settings": {
+            "auto_compliance_check": false,
+            "currency": "",
+            "default_ceiling_height": 0,
+            "default_wall_thickness": 0,
+            "notifications_enabled": false,
+            "project_type": "",
+            "property_type": "",
+            "region": "",
+            "units": "metric"
+          },
+          "status": "unknown",
+          "total_area": 0,
+          "updated_at": "2025-11-30T05:21:11.132107024Z"
+        },
+        "message": "Workspace created successfully",
+        "request_id": "77d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "POST /floor-plans",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/floor-plans",
+      "body": {
+        "data": {
+          "created_at": "2025-11-30T05:21:13.112110218Z",
+          "description": "",
+          "file_info": {
+            "height": 0,
+            "id": "c74d8051-9bd2-43f7-9e01-91fdeb918a3a",
+            "mime_type": "image/jpeg",
+            "original_name": "1.jpg",
+            "size": 574840,
+            "width": 0
+          },
+          "id": "7b491367-5a9a-45e0-85ef-b98e200f211d",
+          "name": "План 1.jpg",
+          "owner_id": "c99f9b63-238c-42a5-8208-5390c266fa02",
+          "status": "uploaded",
+          "updated_at": "2025-11-30T05:21:13.112110218Z",
+          "workspace_id": "ebde735a-b299-484e-9fc0-9c65847acab2"
+        },
+        "message": "Floor plan uploaded successfully",
+        "request_id": "78d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "POST /ai/recognize",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize",
+      "body": {
+        "data": {
+          "confidence": 0,
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "status": "pending",
+          "success": true,
+          "warnings": null
+        },
+        "request_id": "79d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "7ad96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "7bd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "7cd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "7dd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "7ed96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "80d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "81d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "82d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "83d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "84d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "85d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "86d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "88d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "89d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "8ad96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "8bd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "8cd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "8dd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "8ed96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "90d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "91d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "98d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "99d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "9ad96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "9bd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "9dd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "9ed96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "9fd96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "a0d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/95afadc3-17fe-47e4-8298-690b77f116b1/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "a2d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "POST /workspaces/ebde735a-b299-484e-9fc0-9c65847acab2/scenes",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/workspaces/ebde735a-b299-484e-9fc0-9c65847acab2/scenes",
+      "body": {
+        "data": {
+          "created_at": "2025-11-30T05:23:34.496864712Z",
+          "description": "Created from recognition result",
+          "dimensions": {
+            "height": 0,
+            "width": 0
+          },
+          "floor_plan_id": "7b491367-5a9a-45e0-85ef-b98e200f211d",
+          "id": "9d20234a-a378-42e0-a62b-46b1587b0fef",
+          "main_branch_id": "41e9486b-b4be-4b45-9aec-477728fbfa38",
+          "name": "Scene from 1.jpg",
+          "owner_id": "c99f9b63-238c-42a5-8208-5390c266fa02",
+          "updated_at": "2025-11-30T05:23:34.496864712Z",
+          "workspace_id": "ebde735a-b299-484e-9fc0-9c65847acab2"
+        },
+        "message": "Scene created successfully",
+        "request_id": "a3d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "GET /scenes/9d20234a-a378-42e0-a62b-46b1587b0fef",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/scenes/9d20234a-a378-42e0-a62b-46b1587b0fef",
+      "body": {
+        "data": {
+          "created_at": "2025-11-30T05:23:34.496Z",
+          "description": "Created from recognition result",
+          "dimensions": {
+            "height": 0,
+            "width": 0
+          },
+          "floor_plan_id": "7b491367-5a9a-45e0-85ef-b98e200f211d",
+          "id": "9d20234a-a378-42e0-a62b-46b1587b0fef",
+          "main_branch_id": "41e9486b-b4be-4b45-9aec-477728fbfa38",
+          "name": "Scene from 1.jpg",
+          "owner_id": "c99f9b63-238c-42a5-8208-5390c266fa02",
+          "updated_at": "2025-11-30T05:23:34.496Z",
+          "workspace_id": "ebde735a-b299-484e-9fc0-9c65847acab2"
+        },
+        "request_id": "a4d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    },
+    {
+      "label": "POST /ai/chat",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/chat",
+      "body": {
+        "data": {
+          "actions": [],
+          "context_id": "8d276ec3-c665-441e-85f2-a83d17913dbe",
+          "generation_time_ms": 2697,
+          "message_id": "4914e5df-21ec-44a5-abe2-0ff67132305b",
+          "response": "Чтобы ответить на ваш вопрос, нужно учесть несколько факторов:\n\n1. **Тип стены:** \n   - Если стена несущая (обычно это стена толщиной ≥20 см из бетона или кирпича), то её снос запрещён. Однако, возможно устройство проёма до 0.9 м с обязательным усилением по проекту.\n\n2. **Тип плиты:** \n   - Если на кухне установлена газовая плита, то полное объединение кухни с жилой комнатой запрещено. Между кухней и жилой зоной должна быть дверь (можно раздвижную) согласно нормам газоснабжения.\n   - Если на кухне электроплита, и стена ненесущая, снос возможен. Потребуется согласование проекта.\n\n3. **Согласование:** \n   - Если стена ненесущая и на кухне электроплита, то снос можно согласовать. Требуется подготовка проекта перепланировки и его утверждение в соответствующих инстанциях.\n\n**Рекомендация:** Уточните параметры стены (несущая или нет) и тип плиты на кухне, чтобы дать более точный ответ.",
+          "token_usage": {
+            "completion_tokens": 253,
+            "prompt_tokens": 1851,
+            "total_tokens": 2104
+          }
+        },
+        "request_id": "a6d96194-ea0e-4a2f-90ce-7b17893085c6"
+      }
+    }
+  ],
+  "recognition_result": null,
+  "scene_data": {
+    "created_at": "2025-11-30T05:23:34.496Z",
+    "description": "Created from recognition result",
+    "dimensions": {
+      "height": 0,
+      "width": 0
+    },
+    "floor_plan_id": "7b491367-5a9a-45e0-85ef-b98e200f211d",
+    "id": "9d20234a-a378-42e0-a62b-46b1587b0fef",
+    "main_branch_id": "41e9486b-b4be-4b45-9aec-477728fbfa38",
+    "name": "Scene from 1.jpg",
+    "owner_id": "c99f9b63-238c-42a5-8208-5390c266fa02",
+    "updated_at": "2025-11-30T05:23:34.496Z",
+    "workspace_id": "ebde735a-b299-484e-9fc0-9c65847acab2"
+  },
+  "summary": {
+    "success": false,
+    "errors": [
+      "Recognition timeout"
+    ]
+  },
+  "test_image": "1.jpg",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkI...",
+  "workspace_id": "ebde735a-b299-484e-9fc0-9c65847acab2",
+  "floor_plan_id": "7b491367-5a9a-45e0-85ef-b98e200f211d",
+  "job_id": "95afadc3-17fe-47e4-8298-690b77f116b1",
+  "scene_id": "9d20234a-a378-42e0-a62b-46b1587b0fef",
+  "chat_response": "Чтобы ответить на ваш вопрос, нужно учесть несколько факторов:\n\n1. **Тип стены:** \n   - Если стена несущая (обычно это стена толщиной ≥20 см из бетона или кирпича), то её снос запрещён. Однако, возможно устройство проёма до 0.9 м с обязательным усилением по проекту.\n\n2. **Тип плиты:** \n   - Если на кухне установлена газовая плита, то полное объединение кухни с жилой комнатой запрещено. Между кухней и жилой зоной должна быть дверь (можно раздвижную) согласно нормам газоснабжения.\n   - Если на кух"
+}
