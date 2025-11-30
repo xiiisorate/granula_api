@@ -40,9 +40,9 @@ type ServiceConfig struct {
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout" default:"30s"`
 
 	// SceneServiceAddr is the address of Scene Service for context integration.
-	// Format: "host:port" (e.g., "scene-service:50053")
+	// Format: "host:port" (e.g., "scene-service:50055")
 	// Leave empty to disable Scene Service integration.
-	SceneServiceAddr string `mapstructure:"scene_service_addr" default:""`
+	SceneServiceAddr string `mapstructure:"scene_service_addr" default:"scene-service:50055"`
 }
 
 // WorkerConfig holds worker pool settings.
@@ -72,10 +72,11 @@ func Load() (*Config, error) {
 
 	// Set defaults
 	cfg.Service = ServiceConfig{
-		Name:            "ai-service",
-		Version:         "1.0.0",
-		GRPCPort:        50057,
-		ShutdownTimeout: 30 * time.Second,
+		Name:             "ai-service",
+		Version:          "1.0.0",
+		GRPCPort:         50057,
+		ShutdownTimeout:  30 * time.Second,
+		SceneServiceAddr: "scene-service:50055",
 	}
 
 	cfg.OpenRouter = config.OpenRouterConfig{

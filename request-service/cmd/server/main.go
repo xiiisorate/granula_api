@@ -69,9 +69,22 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Initialize Notification Client (optional - continues without if unavailable)
+	var notificationClient *grpcserver.NotificationClient
+	notificationClient, err = grpcserver.NewNotificationClient(cfg.NotificationServiceAddr, log)
+	if err != nil {
+		log.Warn("notification service unavailable, notifications will be disabled",
+			logger.String("address", cfg.NotificationServiceAddr),
+			logger.Err(err),
+		)
+		notificationClient = nil
+	} else {
+		defer notificationClient.Close()
+	}
+
 	// Initialize layers
 	requestRepo := postgres.NewRequestRepository(pool)
-	requestService := service.NewRequestService(requestRepo, log)
+	requestService := service.NewRequestService(requestRepo, notificationClient, log)
 
 	// Create gRPC server
 	grpcSrv := grpc.NewServer(

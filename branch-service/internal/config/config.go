@@ -9,9 +9,19 @@ import (
 
 // Config holds all configuration for Branch Service.
 type Config struct {
-	Service ServiceConfig      `mapstructure:"service"`
-	MongoDB config.MongoConfig `mapstructure:"mongodb"`
-	Logger  LoggerConfig       `mapstructure:"logger"`
+	Service  ServiceConfig      `mapstructure:"service"`
+	MongoDB  config.MongoConfig `mapstructure:"mongodb"`
+	Logger   LoggerConfig       `mapstructure:"logger"`
+	Services ServicesConfig     `mapstructure:"services"`
+}
+
+// ServicesConfig holds addresses of dependent services.
+type ServicesConfig struct {
+	// SceneServiceAddr is the gRPC address of the Scene Service.
+	// Used for copying elements between branches.
+	// Format: "host:port"
+	// Default: "scene-service:50055"
+	SceneServiceAddr string `mapstructure:"scene_service_addr" default:"scene-service:50055"`
 }
 
 // ServiceConfig holds service-specific settings.
@@ -44,6 +54,9 @@ func Load() (*Config, error) {
 		MaxPoolSize:    100,
 	}
 	cfg.Logger = LoggerConfig{Level: "info", Format: "json"}
+	cfg.Services = ServicesConfig{
+		SceneServiceAddr: "scene-service:50055",
+	}
 
 	if err := config.LoadFromEnv(cfg, "BRANCH"); err != nil {
 		return nil, err

@@ -36,17 +36,41 @@ var (
 // RequestService
 // =============================================================================
 
+// NotificationSender is an interface for sending notifications.
+// This allows for easier testing and decoupling from the notification client implementation.
+type NotificationSender interface {
+	SendRequestSubmitted(ctx context.Context, userID, requestID, serviceType string) error
+	SendRequestStatusChanged(ctx context.Context, userID, requestID, oldStatus, newStatus, comment string) error
+	SendRequestAssigned(ctx context.Context, userID, requestID, expertID, expertName string) error
+	SendRequestRejected(ctx context.Context, userID, requestID, reason string) error
+	SendRequestCompleted(ctx context.Context, userID, requestID string, finalCost int) error
+	NotifyStaff(ctx context.Context, requestID, serviceType, workspaceID string) error
+}
+
 // RequestService provides business operations for expert request management.
+// It integrates with Notification Service to send status updates to users.
 type RequestService struct {
-	repo *postgres.RequestRepository
-	log  *logger.Logger
+	repo         *postgres.RequestRepository
+	notification NotificationSender // Optional: nil if notifications are disabled
+	log          *logger.Logger
 }
 
 // NewRequestService creates a new RequestService instance.
-func NewRequestService(repo *postgres.RequestRepository, log *logger.Logger) *RequestService {
+//
+// Parameters:
+//   - repo: PostgreSQL repository for data persistence
+//   - notification: Notification client for sending alerts (can be nil)
+//   - log: Logger instance for operational logging
+//
+// Returns:
+//   - *RequestService: Initialized service ready for use
+//
+// Note: If notification is nil, notifications will be silently skipped.
+func NewRequestService(repo *postgres.RequestRepository, notification NotificationSender, log *logger.Logger) *RequestService {
 	return &RequestService{
-		repo: repo,
-		log:  log,
+		repo:         repo,
+		notification: notification,
+		log:          log,
 	}
 }
 
@@ -215,7 +239,20 @@ func (s *RequestService) SubmitRequest(ctx context.Context, requestID, userID uu
 		logger.String("request_id", requestID.String()),
 	)
 
-	// TODO: Send notification to staff
+	// Send notification to staff about new request
+	if s.notification != nil {
+		go func() {
+			// Use background context as the request context may be cancelled
+			ctx := context.Background()
+			if err := s.notification.NotifyStaff(ctx, req.ID.String(), string(req.Category), req.WorkspaceID.String()); err != nil {
+				s.log.Warn("failed to notify staff about new request", logger.Err(err))
+			}
+			// Also notify the user that their request was submitted
+			if err := s.notification.SendRequestSubmitted(ctx, req.UserID.String(), req.ID.String(), string(req.Category)); err != nil {
+				s.log.Warn("failed to notify user about request submission", logger.Err(err))
+			}
+		}()
+	}
 
 	return req, nil
 }
@@ -306,7 +343,22 @@ func (s *RequestService) UpdateStatus(
 		logger.String("status", string(newStatus)),
 	)
 
-	// TODO: Send notification to user
+	// Send notification to user about status change
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			oldStatus := "" // Previous status before the change
+			// Get the previous status from history if available
+			if len(req.StatusHistory) > 1 {
+				oldStatus = string(req.StatusHistory[len(req.StatusHistory)-2].FromStatus)
+			} else if len(req.StatusHistory) == 1 {
+				oldStatus = string(req.StatusHistory[0].FromStatus)
+			}
+			if err := s.notification.SendRequestStatusChanged(ctx, req.UserID.String(), req.ID.String(), oldStatus, string(newStatus), comment); err != nil {
+				s.log.Warn("failed to notify user about status change", logger.Err(err))
+			}
+		}()
+	}
 
 	return req, nil
 }
@@ -350,7 +402,18 @@ func (s *RequestService) AssignExpert(
 		logger.String("expert_id", expertID.String()),
 	)
 
-	// TODO: Send notifications to user and expert
+	// Send notifications to user and expert about assignment
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			// Note: In production, fetch expert name from User Service
+			// For now, use expert ID as placeholder
+			expertName := expertID.String()
+			if err := s.notification.SendRequestAssigned(ctx, req.UserID.String(), req.ID.String(), expertID.String(), expertName); err != nil {
+				s.log.Warn("failed to notify about expert assignment", logger.Err(err))
+			}
+		}()
+	}
 
 	return req, nil
 }
@@ -393,7 +456,15 @@ func (s *RequestService) RejectRequest(
 		logger.String("request_id", requestID.String()),
 	)
 
-	// TODO: Send notification to user
+	// Send notification to user about rejection
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			if err := s.notification.SendRequestRejected(ctx, req.UserID.String(), req.ID.String(), reason); err != nil {
+				s.log.Warn("failed to notify user about request rejection", logger.Err(err))
+			}
+		}()
+	}
 
 	return req, nil
 }
@@ -439,7 +510,19 @@ func (s *RequestService) CompleteRequest(
 		logger.String("request_id", requestID.String()),
 	)
 
-	// TODO: Send notification to user
+	// Send notification to user about completion
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			cost := 0
+			if req.FinalCost != nil {
+				cost = *req.FinalCost
+			}
+			if err := s.notification.SendRequestCompleted(ctx, req.UserID.String(), req.ID.String(), cost); err != nil {
+				s.log.Warn("failed to notify user about request completion", logger.Err(err))
+			}
+		}()
+	}
 
 	return req, nil
 }
