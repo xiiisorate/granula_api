@@ -2589,7 +2589,9 @@ paths:
       tags: [floor-plans, ai]
       summary: Статус распознавания с моделью
       description: |
-        Получить текущий статус задачи AI распознавания.
+        Получить текущий статус задачи AI распознавания для планировки.
+        
+        ⚠️ **ВАЖНО:** В URL передаётся ID планировки (floor_plan_id), НЕ job_id!
         
         **При завершении распознавания** (status=completed) в ответе будет поле `model` 
         с полной 3D моделью планировки.
@@ -2600,6 +2602,8 @@ paths:
         - **elements.rooms** - комнаты с полигонами
         - **elements.furniture** - мебель и сантехника
         - **elements.utilities** - стояки и вентиляция
+        
+        Возвращает 404 если распознавание не было запущено для данной планировки.
       operationId: getFloorPlanRecognitionStatus
       security:
         - BearerAuth: []
@@ -2607,6 +2611,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: ID планировки (floor_plan_id), НЕ job_id задачи распознавания
           schema:
             type: string
             format: uuid
