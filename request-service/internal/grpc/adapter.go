@@ -90,9 +90,7 @@ func (a *RequestServiceAdapter) CreateRequest(ctx context.Context, req *requestp
 
 // GetRequest retrieves a request by ID.
 func (a *RequestServiceAdapter) GetRequest(ctx context.Context, req *requestpb.GetRequestRequest) (*requestpb.GetRequestResponse, error) {
-	// GetRequest requires both request_id and user_id for authorization
-	// For now we pass empty user_id, service will handle it
-	result, err := a.server.GetRequest(ctx, req.GetRequestId(), "")
+	result, err := a.server.GetRequest(ctx, req.GetRequestId(), req.GetUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -148,13 +146,26 @@ func (a *RequestServiceAdapter) ListRequests(ctx context.Context, req *requestpb
 
 // CancelRequest cancels a request.
 func (a *RequestServiceAdapter) CancelRequest(ctx context.Context, req *requestpb.CancelRequestRequest) (*requestpb.CancelRequestResponse, error) {
-	// TODO: Implement when CancelRequest is added to RequestServer
-	return nil, status.Error(codes.Unimplemented, "CancelRequest not implemented")
+	err := a.server.CancelRequest(ctx, req.GetRequestId(), req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+
+	return &requestpb.CancelRequestResponse{
+		Success: true,
+	}, nil
 }
 
 // UpdateRequest updates request fields.
 func (a *RequestServiceAdapter) UpdateRequest(ctx context.Context, req *requestpb.UpdateRequestRequest) (*requestpb.UpdateRequestResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "UpdateRequest not implemented")
+	result, err := a.server.UpdateRequest(ctx, req.GetRequestId(), req.GetUserId(), req.GetTitle(), req.GetDescription())
+	if err != nil {
+		return nil, err
+	}
+
+	return &requestpb.UpdateRequestResponse{
+		Request: dtoToProtoRequest(result),
+	}, nil
 }
 
 // AssignExpert assigns an expert to a request.

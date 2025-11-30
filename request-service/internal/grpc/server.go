@@ -206,6 +206,26 @@ func (s *RequestServer) ListRequests(ctx context.Context, req *ListRequestsDTO) 
 	}, nil
 }
 
+// UpdateRequest updates request title and description.
+func (s *RequestServer) UpdateRequest(ctx context.Context, requestID, userID, title, description string) (*RequestResponseDTO, error) {
+	id, err := uuid.Parse(requestID)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request_id")
+	}
+
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
+	}
+
+	request, err := s.service.UpdateRequest(ctx, id, uid, title, description)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+
+	return requestToDTO(request), nil
+}
+
 // =============================================================================
 // Status Transition Methods
 // =============================================================================

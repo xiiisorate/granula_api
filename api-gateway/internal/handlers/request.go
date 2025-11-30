@@ -285,6 +285,7 @@ func (h *RequestHandler) Get(c *fiber.Ctx) error {
 
 	req := &requestpb.GetRequestRequest{
 		RequestId: id,
+		UserId:    userID,
 	}
 
 	// Call gRPC service
@@ -352,6 +353,7 @@ func (h *RequestHandler) Update(c *fiber.Ctx) error {
 
 	req := &requestpb.UpdateRequestRequest{
 		RequestId:     id,
+		UserId:        userID,
 		Title:         input.Title,
 		Description:   input.Description,
 		PreferredTime: input.PreferredTime,
@@ -403,6 +405,9 @@ type CancelRequestInput struct {
 // @Failure 404 {object} ErrorResponse "Заявка не найдена"
 // @Router /requests/{id}/cancel [post]
 func (h *RequestHandler) Cancel(c *fiber.Ctx) error {
+	// Extract user ID from context
+	userID := GetUserIDFromContext(c)
+
 	// Get request ID from path
 	id := c.Params("id")
 	if id == "" {
@@ -419,6 +424,7 @@ func (h *RequestHandler) Cancel(c *fiber.Ctx) error {
 
 	req := &requestpb.CancelRequestRequest{
 		RequestId: id,
+		UserId:    userID,
 		Reason:    input.Reason,
 	}
 

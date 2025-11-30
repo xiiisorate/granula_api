@@ -1013,7 +1013,9 @@ func (x *CreateRequestResponse) GetRequest() *Request {
 type GetRequestRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ID заявки
-	RequestId     string `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	RequestId string `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// ID пользователя (для проверки доступа)
+	UserId        string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1051,6 +1053,13 @@ func (*GetRequestRequest) Descriptor() ([]byte, []int) {
 func (x *GetRequestRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *GetRequestRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -1261,20 +1270,22 @@ type UpdateRequestRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ID заявки
 	RequestId string `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// ID пользователя (для проверки доступа)
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Новый заголовок
-	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
 	// Новое описание
-	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	// Новая категория
-	Category RequestCategory `protobuf:"varint,4,opt,name=category,proto3,enum=request.v1.RequestCategory" json:"category,omitempty"`
+	Category RequestCategory `protobuf:"varint,5,opt,name=category,proto3,enum=request.v1.RequestCategory" json:"category,omitempty"`
 	// Новый приоритет
-	Priority RequestPriority `protobuf:"varint,5,opt,name=priority,proto3,enum=request.v1.RequestPriority" json:"priority,omitempty"`
+	Priority RequestPriority `protobuf:"varint,6,opt,name=priority,proto3,enum=request.v1.RequestPriority" json:"priority,omitempty"`
 	// Новая контактная информация
-	Contact *Contact `protobuf:"bytes,6,opt,name=contact,proto3" json:"contact,omitempty"`
+	Contact *Contact `protobuf:"bytes,7,opt,name=contact,proto3" json:"contact,omitempty"`
 	// Новое предпочтительное время
-	PreferredTime string `protobuf:"bytes,7,opt,name=preferred_time,json=preferredTime,proto3" json:"preferred_time,omitempty"`
+	PreferredTime string `protobuf:"bytes,8,opt,name=preferred_time,json=preferredTime,proto3" json:"preferred_time,omitempty"`
 	// Новый комментарий
-	Comment       string `protobuf:"bytes,8,opt,name=comment,proto3" json:"comment,omitempty"`
+	Comment       string `protobuf:"bytes,9,opt,name=comment,proto3" json:"comment,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1312,6 +1323,13 @@ func (*UpdateRequestRequest) Descriptor() ([]byte, []int) {
 func (x *UpdateRequestRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *UpdateRequestRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -1416,8 +1434,10 @@ type CancelRequestRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ID заявки
 	RequestId string `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// ID пользователя (для проверки доступа)
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Причина отмены
-	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	Reason        string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1455,6 +1475,13 @@ func (*CancelRequestRequest) Descriptor() ([]byte, []int) {
 func (x *CancelRequestRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *CancelRequestRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -2324,10 +2351,11 @@ const file_request_v1_request_proto_rawDesc = "" +
 	"\acomment\x18\n" +
 	" \x01(\tR\acomment\"F\n" +
 	"\x15CreateRequestResponse\x12-\n" +
-	"\arequest\x18\x01 \x01(\v2\x13.request.v1.RequestR\arequest\"2\n" +
+	"\arequest\x18\x01 \x01(\v2\x13.request.v1.RequestR\arequest\"K\n" +
 	"\x11GetRequestRequest\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"C\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\"C\n" +
 	"\x12GetRequestResponse\x12-\n" +
 	"\arequest\x18\x01 \x01(\v2\x13.request.v1.RequestR\arequest\"\xc2\x02\n" +
 	"\x13ListRequestsRequest\x12!\n" +
@@ -2344,23 +2372,25 @@ const file_request_v1_request_proto_rawDesc = "" +
 	"\brequests\x18\x01 \x03(\v2\x13.request.v1.RequestR\brequests\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xcf\x02\n" +
+	"pagination\"\xe8\x02\n" +
 	"\x14UpdateRequestRequest\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x127\n" +
-	"\bcategory\x18\x04 \x01(\x0e2\x1b.request.v1.RequestCategoryR\bcategory\x127\n" +
-	"\bpriority\x18\x05 \x01(\x0e2\x1b.request.v1.RequestPriorityR\bpriority\x12-\n" +
-	"\acontact\x18\x06 \x01(\v2\x13.request.v1.ContactR\acontact\x12%\n" +
-	"\x0epreferred_time\x18\a \x01(\tR\rpreferredTime\x12\x18\n" +
-	"\acomment\x18\b \x01(\tR\acomment\"F\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x127\n" +
+	"\bcategory\x18\x05 \x01(\x0e2\x1b.request.v1.RequestCategoryR\bcategory\x127\n" +
+	"\bpriority\x18\x06 \x01(\x0e2\x1b.request.v1.RequestPriorityR\bpriority\x12-\n" +
+	"\acontact\x18\a \x01(\v2\x13.request.v1.ContactR\acontact\x12%\n" +
+	"\x0epreferred_time\x18\b \x01(\tR\rpreferredTime\x12\x18\n" +
+	"\acomment\x18\t \x01(\tR\acomment\"F\n" +
 	"\x15UpdateRequestResponse\x12-\n" +
-	"\arequest\x18\x01 \x01(\v2\x13.request.v1.RequestR\arequest\"M\n" +
+	"\arequest\x18\x01 \x01(\v2\x13.request.v1.RequestR\arequest\"f\n" +
 	"\x14CancelRequestRequest\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"1\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"1\n" +
 	"\x15CancelRequestResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xbd\x01\n" +
 	"\x13AssignExpertRequest\x12\x1d\n" +

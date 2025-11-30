@@ -297,6 +297,8 @@ message CreateRequestResponse {
 message GetRequestRequest {
   // ID заявки
   string request_id = 1;
+  // ID пользователя (для проверки доступа)
+  string user_id = 2;
 }
 
 // GetRequestResponse - ответ получения заявки
@@ -351,26 +353,29 @@ message UpdateRequestRequest {
   // ID заявки
   string request_id = 1;
   
+  // ID пользователя (для проверки доступа)
+  string user_id = 2;
+  
   // Новый заголовок
-  string title = 2;
+  string title = 3;
   
   // Новое описание
-  string description = 3;
+  string description = 4;
   
   // Новая категория
-  RequestCategory category = 4;
+  RequestCategory category = 5;
   
   // Новый приоритет
-  RequestPriority priority = 5;
+  RequestPriority priority = 6;
   
   // Новая контактная информация
-  Contact contact = 6;
+  Contact contact = 7;
   
   // Новое предпочтительное время
-  string preferred_time = 7;
+  string preferred_time = 8;
   
   // Новый комментарий
-  string comment = 8;
+  string comment = 9;
 }
 
 // UpdateRequestResponse - ответ обновления заявки
@@ -388,8 +393,11 @@ message CancelRequestRequest {
   // ID заявки
   string request_id = 1;
   
+  // ID пользователя (для проверки доступа)
+  string user_id = 2;
+  
   // Причина отмены
-  string reason = 2;
+  string reason = 3;
 }
 
 // CancelRequestResponse - ответ отмены заявки
