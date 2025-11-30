@@ -1,0 +1,17 @@
+{
+  "dimensions": {
+    "height": 0,
+    "width": 0
+  },
+  "elements": [],
+  "metadata": {
+    "detected_orientation": 0,
+    "detected_scale": 0,
+    "model_version": "1.0.0",
+    "processing_time_ms": 77433
+  },
+  "openings": [],
+  "rooms": [],
+  "total_area": 0,
+  "walls": []
+}
