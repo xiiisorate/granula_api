@@ -100,9 +100,55 @@ jobs:
             # Build and start (--build forces rebuild)
             docker compose --env-file .env up -d --build --force-recreate
             
-            sleep 90
+            sleep 60
             docker compose ps
-            curl -sf http://localhost:3001/health && echo "API Gateway is up!" || echo "Starting..."
+          '
+
+      - name: Run database migrations
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '
+            cd /opt/granula/api
+            
+            echo "=== Running migrations ==="
+            
+            # Wait for PostgreSQL containers to be ready
+            sleep 10
+            
+            # Workspace service migrations
+            echo "Applying workspace-service migrations..."
+            docker exec -i granula-postgres-workspace psql -U granula -d workspaces_db < workspace-service/migrations/000001_create_workspaces.up.sql 2>/dev/null || echo "Workspace migrations already applied or failed"
+            
+            # Auth service migrations (if exist)
+            if [ -f "auth-service/migrations/000001_create_users.up.sql" ]; then
+              echo "Applying auth-service migrations..."
+              docker exec -i granula-postgres-auth psql -U granula -d auth_db < auth-service/migrations/000001_create_users.up.sql 2>/dev/null || echo "Auth migrations already applied or failed"
+            fi
+            
+            # User service migrations (if exist)
+            if [ -f "user-service/migrations/000001_create_profiles.up.sql" ]; then
+              echo "Applying user-service migrations..."
+              docker exec -i granula-postgres-user psql -U granula -d users_db < user-service/migrations/000001_create_profiles.up.sql 2>/dev/null || echo "User migrations already applied or failed"
+            fi
+            
+            # Request service migrations (if exist)
+            if [ -f "request-service/migrations/000001_create_requests.up.sql" ]; then
+              echo "Applying request-service migrations..."
+              docker exec -i granula-postgres-request psql -U granula -d requests_db < request-service/migrations/000001_create_requests.up.sql 2>/dev/null || echo "Request migrations already applied or failed"
+            fi
+            
+            # FloorPlan service migrations (if exist)
+            if [ -f "floorplan-service/migrations/000001_create_floorplans.up.sql" ]; then
+              echo "Applying floorplan-service migrations..."
+              docker exec -i granula-postgres-floorplan psql -U granula -d floorplans_db < floorplan-service/migrations/000001_create_floorplans.up.sql 2>/dev/null || echo "FloorPlan migrations already applied or failed"
+            fi
+            
+            # Compliance service migrations (if exist)
+            if [ -f "compliance-service/migrations/000001_create_rules.up.sql" ]; then
+              echo "Applying compliance-service migrations..."
+              docker exec -i granula-postgres-compliance psql -U granula -d compliance_db < compliance-service/migrations/000001_create_rules.up.sql 2>/dev/null || echo "Compliance migrations already applied or failed"
+            fi
+            
+            echo "=== Migrations completed ==="
           '
 
       - name: Health check
