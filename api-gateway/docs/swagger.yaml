@@ -28,49 +28,91 @@ info:
 
     ## Типичный Flow работы
 
-    ### 1. Регистрация и авторизация
+    ### Шаг 1: Регистрация
     ```
-    POST /auth/register → получаем access_token
+    POST /auth/register
+    Body: { "email": "user@test.ru", "password": "Pass123!", "name": "Иван" }
+    ```
+    **Ответ:** `{ "data": { "access_token": "eyJ...", "user_id": "..." } }`
+    
+    👉 Сохраняем `access_token` для всех последующих запросов
+
+    ### Шаг 2: Создание воркспейса
+    ```
+    POST /workspaces
+    Headers: Authorization: Bearer {access_token}
+    Body: { "name": "Моя квартира" }
+    ```
+    **Ответ:** `{ "data": { "id": "abc-123-...", ... } }`
+    
+    👉 Сохраняем `data.id` — это **workspace_id**
+
+    ### Шаг 3: Загрузка планировки
+    ```
+    POST /floor-plans (multipart/form-data)
+    Headers: Authorization: Bearer {access_token}
+    Form: workspace_id={workspace_id}, name="План БТИ", file=<картинка.jpg>
+    ```
+    **Ответ:** 
+    ```json
+    { 
+      "data": { 
+        "id": "d6ffeb60-a90b-487c-85b7-7d046dac496e",  // ← ЭТО floor_plan_id!
+        "status": "uploaded",
+        ... 
+      } 
+    }
+    ```
+    
+    👉 Сохраняем `data.id` — это **floor_plan_id**
+
+    ### Шаг 4: Запуск распознавания
+    ```
+    POST /ai/recognize
+    Headers: Authorization: Bearer {access_token}
+    Body: { "floor_plan_id": "{floor_plan_id}" }
+    ```
+    **Ответ:** `{ "data": { "job_id": "job-456-...", "status": "processing" } }`
+    
+    👉 Сохраняем `data.job_id` — это **job_id** (НЕ floor_plan_id!)
+
+    ### Шаг 5: Polling статуса (по job_id!)
+    ```
+    GET /ai/recognize/{job_id}/status
+    ```
+    **Ответ:** `{ "data": { "status": "processing", "progress": 45 } }`
+    
+    Повторяем каждые 2-3 секунды пока `status` != `"completed"`
+
+    ### Шаг 6: Получение результата (по floor_plan_id!)
+    ```
+    GET /floor-plans/{floor_plan_id}
+    ```
+    **Ответ:** 
+    ```json
+    { 
+      "data": { 
+        "id": "d6ffeb60-a90b-...",
+        "status": "recognized",
+        "model": { "walls": [...], "rooms": [...], ... }  // ← 3D модель!
+      } 
+    }
     ```
 
-    ### 2. Создание проекта
-    ```
-    POST /workspaces → создаём воркспейс (проект квартиры)
-    ```
+    ## ⚠️ Важно: Различие ID
 
-    ### 3. Загрузка и распознавание планировки
-    ```
-    POST /floor-plans (с файлом) → получаем floor_plan_id
-    POST /ai/recognize (с floor_plan_id) → получаем job_id
-    GET /ai/recognize/{job_id}/status → polling пока status != "completed"
-    ```
+    | Что | Название | Откуда берётся | Пример |
+    |-----|----------|----------------|--------|
+    | Планировка | `floor_plan_id` | POST /floor-plans → `response.data.id` | `d6ffeb60-a90b-487c-...` |
+    | Задача AI | `job_id` | POST /ai/recognize → `response.data.job_id` | `job-456-def-...` |
+    | Воркспейс | `workspace_id` | POST /workspaces → `response.data.id` | `abc-123-...` |
+    | Сцена | `scene_id` | POST /workspaces/{id}/scenes → `response.data.id` | `scene-789-...` |
 
-    ### 4. Получение результата распознавания
-    ```
-    GET /floor-plans/{floor_plan_id} → получаем планировку с полем "model"
-    ```
-    или
-    ```
-    GET /floor-plans/{floor_plan_id}/recognition-status → статус + model
-    ```
-
-    ### 5. Работа с 3D редактором
-    ```
-    POST /workspaces/{workspace_id}/scenes → создаём сцену из планировки
-    GET /scenes/{scene_id} → данные сцены для редактора
-    ```
-
-    ## Важно: Различие ID
-
-    | Сущность | Поле | Где получить |
-    |----------|------|--------------|
-    | Планировка | `floor_plan_id` | POST /floor-plans → response.data.id |
-    | Задача распознавания | `job_id` | POST /ai/recognize → response.data.job_id |
-    | Воркспейс | `workspace_id` | POST /workspaces → response.data.id |
-    | Сцена | `scene_id` | POST /workspaces/{id}/scenes → response.data.id |
-    | Заявка | `request_id` | POST /requests → response.data.id |
-
-    ⚠️ **НЕ ПУТАТЬ:** `floor_plan_id` и `job_id` - это РАЗНЫЕ идентификаторы!
+    🚨 **ЧАСТАЯ ОШИБКА:** Путают `floor_plan_id` и `job_id`!
+    - `floor_plan_id` — ID загруженной картинки в базе
+    - `job_id` — ID задачи AI-распознавания
+    
+    Для получения модели используйте `floor_plan_id`, НЕ `job_id`!
 
     ## Аутентификация
 
