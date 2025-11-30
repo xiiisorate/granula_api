@@ -207,7 +207,7 @@ func (s *FloorPlanService) StartRecognition(ctx context.Context, id uuid.UUID, o
 	return fp, resp.JobId, nil
 }
 
-// GetRecognitionStatus gets the recognition status.
+// GetRecognitionStatus gets the recognition status with full model.
 func (s *FloorPlanService) GetRecognitionStatus(ctx context.Context, jobID string) (*RecognitionStatus, error) {
 	resp, err := s.aiClient.GetRecognitionStatus(ctx, &pb.GetRecognitionStatusRequest{
 		JobId: jobID,
@@ -216,12 +216,19 @@ func (s *FloorPlanService) GetRecognitionStatus(ctx context.Context, jobID strin
 		return nil, apperrors.Internal("failed to get recognition status").WithCause(err)
 	}
 
-	return &RecognitionStatus{
+	status := &RecognitionStatus{
 		JobID:    resp.JobId,
 		Status:   resp.Status.String(),
 		Progress: int(resp.Progress),
 		Error:    resp.Error,
-	}, nil
+	}
+
+	// If recognition is complete, include the model
+	if resp.Scene != nil {
+		status.Model = convertAISceneToModel(resp.Scene)
+	}
+
+	return status, nil
 }
 
 // GetDownloadURL generates a presigned URL for downloading.
@@ -265,10 +272,295 @@ type RecognitionStatus struct {
 	Status   string
 	Progress int
 	Error    string
+	Model    *RecognitionModel
+}
+
+// RecognitionModel represents the recognition result model.
+type RecognitionModel struct {
+	Bounds           Bounds3D
+	TotalArea        float64
+	Confidence       float64
+	Elements         SceneElements
+	Recognition      RecognitionMeta
+	Warnings         []string
+	ProcessingTimeMs int64
+}
+
+// Bounds3D represents 3D bounds.
+type Bounds3D struct {
+	Width  float64
+	Height float64
+	Depth  float64
+}
+
+// SceneElements contains all scene elements.
+type SceneElements struct {
+	Walls     []Wall3D
+	Rooms     []Room3D
+	Furniture []Furniture
+	Utilities []Utility
+}
+
+// Wall3D represents a 3D wall.
+type Wall3D struct {
+	ID         string
+	Type       string
+	Name       string
+	Start      Point3D
+	End        Point3D
+	Height     float64
+	Thickness  float64
+	Properties WallProperties
+	Openings   []Opening3D
+	Metadata   ElementMetadata
+}
+
+// Point3D represents a 3D point.
+type Point3D struct {
+	X, Y, Z float64
+}
+
+// Point2D represents a 2D point.
+type Point2D struct {
+	X, Y float64
+}
+
+// WallProperties contains wall properties.
+type WallProperties struct {
+	IsLoadBearing  bool
+	Material       string
+	CanDemolish    bool
+	StructuralType string
+}
+
+// Opening3D represents an opening in a wall.
+type Opening3D struct {
+	ID            string
+	Type          string
+	Subtype       string
+	Position      float64
+	Width         float64
+	Height        float64
+	Elevation     float64
+	OpensTo       string
+	HasDoor       bool
+	ConnectsRooms []string
+}
+
+// Room3D represents a 3D room.
+type Room3D struct {
+	ID         string
+	Type       string
+	Name       string
+	RoomType   string
+	Polygon    []Point2D
+	Area       float64
+	Perimeter  float64
+	Properties RoomProperties
+	WallIDs    []string
+	Metadata   RoomMetadata
+}
+
+// RoomProperties contains room properties.
+type RoomProperties struct {
+	HasWetZone     bool
+	HasVentilation bool
+	HasWindow      bool
+	MinAllowedArea float64
+	CeilingHeight  float64
+}
+
+// RoomMetadata contains room metadata.
+type RoomMetadata struct {
+	Confidence  float64
+	LabelOnPlan string
+	AreaOnPlan  float64
+}
+
+// Furniture represents furniture item.
+type Furniture struct {
+	ID            string
+	Type          string
+	Name          string
+	FurnitureType string
+	Position      Point3D
+	Rotation      Rotation3D
+	Dimensions    Dimensions3D
+	RoomID        string
+	Properties    FurnitureProperties
+}
+
+// Rotation3D represents 3D rotation.
+type Rotation3D struct {
+	X, Y, Z float64
+}
+
+// Dimensions3D represents 3D dimensions.
+type Dimensions3D struct {
+	Width, Height, Depth float64
+}
+
+// FurnitureProperties contains furniture properties.
+type FurnitureProperties struct {
+	CanRelocate   bool
+	Category      string
+	RequiresWater bool
+	RequiresGas   bool
+	RequiresDrain bool
+}
+
+// Utility represents a utility element.
+type Utility struct {
+	ID          string
+	Type        string
+	Name        string
+	UtilityType string
+	Position    Point3D
+	Dimensions  UtilityDimensions
+	RoomID      string
+	Properties  UtilityProperties
+}
+
+// UtilityDimensions contains utility dimensions.
+type UtilityDimensions struct {
+	Diameter float64
+	Width    float64
+	Depth    float64
+}
+
+// UtilityProperties contains utility properties.
+type UtilityProperties struct {
+	CanRelocate         bool
+	ProtectionZone      float64
+	SharedWithNeighbors bool
+}
+
+// ElementMetadata contains element metadata.
+type ElementMetadata struct {
+	Confidence float64
+	Source     string
+	Locked     bool
+	Visible    bool
+	ModelURL   string
+}
+
+// RecognitionMeta contains recognition metadata.
+type RecognitionMeta struct {
+	SourceType     string
+	Quality        string
+	Scale          string
+	Orientation    int
+	HasDimensions  bool
+	HasAnnotations bool
+	BuildingType   string
 }
 
 // calculateMD5 calculates MD5 checksum.
 func calculateMD5(data []byte) string {
 	hash := md5.Sum(data)
 	return hex.EncodeToString(hash[:])
+}
+
+// convertAISceneToModel converts AI recognized scene to internal model.
+func convertAISceneToModel(scene *pb.RecognizedScene) *RecognitionModel {
+	if scene == nil {
+		return nil
+	}
+
+	model := &RecognitionModel{
+		TotalArea: float64(scene.TotalArea),
+	}
+
+	// Convert dimensions to bounds
+	if scene.Dimensions != nil {
+		model.Bounds = Bounds3D{
+			Width:  scene.Dimensions.Width,
+			Depth:  scene.Dimensions.Height,
+			Height: 2.7, // Default ceiling height
+		}
+	}
+
+	// Convert walls
+	for _, w := range scene.Walls {
+		wall := Wall3D{
+			ID:        w.TempId,
+			Type:      "wall",
+			Thickness: float64(w.Thickness),
+			Properties: WallProperties{
+				IsLoadBearing: w.IsLoadBearing,
+			},
+			Metadata: ElementMetadata{
+				Confidence: float64(w.Confidence),
+			},
+		}
+		if w.Start != nil {
+			wall.Start = Point3D{X: w.Start.X, Y: 0, Z: w.Start.Y}
+		}
+		if w.End != nil {
+			wall.End = Point3D{X: w.End.X, Y: 0, Z: w.End.Y}
+		}
+		model.Elements.Walls = append(model.Elements.Walls, wall)
+	}
+
+	// Convert rooms
+	for _, r := range scene.Rooms {
+		room := Room3D{
+			ID:       r.TempId,
+			Type:     "room",
+			RoomType: r.Type.String(),
+			Area:     float64(r.Area),
+			Properties: RoomProperties{
+				HasWetZone: r.IsWetZone,
+			},
+			WallIDs: r.WallIds,
+			Metadata: RoomMetadata{
+				Confidence: float64(r.Confidence),
+			},
+		}
+		if r.Boundary != nil {
+			for _, v := range r.Boundary.Vertices {
+				room.Polygon = append(room.Polygon, Point2D{X: v.X, Y: v.Y})
+			}
+		}
+		model.Elements.Rooms = append(model.Elements.Rooms, room)
+	}
+
+	// Convert openings
+	for _, o := range scene.Openings {
+		// Find wall and add opening to it
+		for i := range model.Elements.Walls {
+			if model.Elements.Walls[i].ID == o.WallId {
+				opening := Opening3D{
+					ID:       o.TempId,
+					Type:     o.Type.String(),
+					Width:    float64(o.Width),
+					Position: o.Position.X,
+				}
+				model.Elements.Walls[i].Openings = append(model.Elements.Walls[i].Openings, opening)
+				break
+			}
+		}
+	}
+
+	// Set metadata
+	if scene.Metadata != nil {
+		model.ProcessingTimeMs = scene.Metadata.ProcessingTimeMs
+	}
+
+	// Calculate confidence
+	var totalConf float64
+	var count int
+	for _, w := range model.Elements.Walls {
+		totalConf += w.Metadata.Confidence
+		count++
+	}
+	for _, r := range model.Elements.Rooms {
+		totalConf += r.Metadata.Confidence
+		count++
+	}
+	if count > 0 {
+		model.Confidence = totalConf / float64(count)
+	}
+
+	return model
 }

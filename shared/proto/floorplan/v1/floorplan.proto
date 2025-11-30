@@ -167,6 +167,202 @@ message GetRecognitionStatusResponse {
   string status = 2;
   int32 progress = 3;
   string error = 4;
+  // Recognition model (when status = completed)
+  RecognitionModel model = 5;
+}
+
+// Recognition model - результат распознавания планировки
+message RecognitionModel {
+  // 3D bounds of the apartment
+  Bounds3D bounds = 1;
+  // Total area in square meters
+  double total_area = 2;
+  // Recognition confidence (0-1)
+  double confidence = 3;
+  // Scene elements
+  SceneElements elements = 4;
+  // Recognition metadata
+  RecognitionMeta recognition = 5;
+  // Warnings
+  repeated string warnings = 6;
+  // Processing time in ms
+  int64 processing_time_ms = 7;
+}
+
+// 3D bounds
+message Bounds3D {
+  double width = 1;
+  double height = 2;
+  double depth = 3;
+}
+
+// Scene elements container
+message SceneElements {
+  repeated Wall3D walls = 1;
+  repeated Room3D rooms = 2;
+  repeated Furniture furniture = 3;
+  repeated Utility utilities = 4;
+}
+
+// 3D Wall
+message Wall3D {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  Point3D start = 4;
+  Point3D end = 5;
+  double height = 6;
+  double thickness = 7;
+  WallProperties properties = 8;
+  repeated Opening3D openings = 9;
+  ElementMetadata metadata = 10;
+}
+
+// 3D Point
+message Point3D {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+// 2D Point  
+message Point2D {
+  double x = 1;
+  double y = 2;
+}
+
+// Wall properties
+message WallProperties {
+  bool is_load_bearing = 1;
+  string material = 2;
+  bool can_demolish = 3;
+  string structural_type = 4;
+}
+
+// Opening in wall (door/window)
+message Opening3D {
+  string id = 1;
+  string type = 2;
+  string subtype = 3;
+  double position = 4;
+  double width = 5;
+  double height = 6;
+  double elevation = 7;
+  string opens_to = 8;
+  bool has_door = 9;
+  repeated string connects_rooms = 10;
+}
+
+// 3D Room
+message Room3D {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  string room_type = 4;
+  repeated Point2D polygon = 5;
+  double area = 6;
+  double perimeter = 7;
+  RoomProperties properties = 8;
+  repeated string wall_ids = 9;
+  RoomMetadata room_metadata = 10;
+}
+
+// Room properties
+message RoomProperties {
+  bool has_wet_zone = 1;
+  bool has_ventilation = 2;
+  bool has_window = 3;
+  double min_allowed_area = 4;
+  double ceiling_height = 5;
+}
+
+// Room metadata
+message RoomMetadata {
+  double confidence = 1;
+  string label_on_plan = 2;
+  double area_on_plan = 3;
+}
+
+// Furniture
+message Furniture {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  string furniture_type = 4;
+  Point3D position = 5;
+  Rotation3D rotation = 6;
+  Dimensions3D dimensions = 7;
+  string room_id = 8;
+  FurnitureProperties properties = 9;
+}
+
+// 3D Rotation
+message Rotation3D {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+// 3D Dimensions
+message Dimensions3D {
+  double width = 1;
+  double height = 2;
+  double depth = 3;
+}
+
+// Furniture properties
+message FurnitureProperties {
+  bool can_relocate = 1;
+  string category = 2;
+  bool requires_water = 3;
+  bool requires_gas = 4;
+  bool requires_drain = 5;
+}
+
+// Utility (risers, vents)
+message Utility {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  string utility_type = 4;
+  Point3D position = 5;
+  UtilityDimensions dimensions = 6;
+  string room_id = 7;
+  UtilityProperties properties = 8;
+}
+
+// Utility dimensions
+message UtilityDimensions {
+  double diameter = 1;
+  double width = 2;
+  double depth = 3;
+}
+
+// Utility properties
+message UtilityProperties {
+  bool can_relocate = 1;
+  double protection_zone = 2;
+  bool shared_with_neighbors = 3;
+}
+
+// Element metadata
+message ElementMetadata {
+  double confidence = 1;
+  string source = 2;
+  bool locked = 3;
+  bool visible = 4;
+  string model_url = 5;
+}
+
+// Recognition metadata
+message RecognitionMeta {
+  string source_type = 1;
+  string quality = 2;
+  string scale = 3;
+  int32 orientation = 4;
+  bool has_dimensions = 5;
+  bool has_annotations = 6;
+  string building_type = 7;
 }
 
 // Get download URL request

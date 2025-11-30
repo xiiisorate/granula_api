@@ -182,12 +182,19 @@ func (s *FloorPlanServer) GetRecognitionStatus(ctx context.Context, req *pb.GetR
 		return nil, apperrors.FromGRPCError(err).ToGRPCError()
 	}
 
-	return &pb.GetRecognitionStatusResponse{
+	resp := &pb.GetRecognitionStatusResponse{
 		JobId:    status.JobID,
 		Status:   status.Status,
 		Progress: int32(status.Progress),
 		Error:    status.Error,
-	}, nil
+	}
+
+	// Include model if available
+	if status.Model != nil {
+		resp.Model = convertModelToPB(status.Model)
+	}
+
+	return resp, nil
 }
 
 // GetDownloadURL generates a presigned download URL.
@@ -260,5 +267,149 @@ func convertStatusToPB(status entity.FloorPlanStatus) pb.FloorPlanStatus {
 	default:
 		return pb.FloorPlanStatus_FLOOR_PLAN_STATUS_UNSPECIFIED
 	}
+}
+
+// convertModelToPB converts service model to proto.
+func convertModelToPB(model *service.RecognitionModel) *pb.RecognitionModel {
+	if model == nil {
+		return nil
+	}
+
+	pbModel := &pb.RecognitionModel{
+		Bounds: &pb.Bounds3D{
+			Width:  model.Bounds.Width,
+			Height: model.Bounds.Height,
+			Depth:  model.Bounds.Depth,
+		},
+		TotalArea:        model.TotalArea,
+		Confidence:       model.Confidence,
+		Warnings:         model.Warnings,
+		ProcessingTimeMs: model.ProcessingTimeMs,
+		Elements:         &pb.SceneElements{},
+		Recognition: &pb.RecognitionMeta{
+			SourceType:     model.Recognition.SourceType,
+			Quality:        model.Recognition.Quality,
+			Scale:          model.Recognition.Scale,
+			Orientation:    int32(model.Recognition.Orientation),
+			HasDimensions:  model.Recognition.HasDimensions,
+			HasAnnotations: model.Recognition.HasAnnotations,
+			BuildingType:   model.Recognition.BuildingType,
+		},
+	}
+
+	// Convert walls
+	for _, w := range model.Elements.Walls {
+		pbWall := &pb.Wall3D{
+			Id:        w.ID,
+			Type:      w.Type,
+			Name:      w.Name,
+			Start:     &pb.Point3D{X: w.Start.X, Y: w.Start.Y, Z: w.Start.Z},
+			End:       &pb.Point3D{X: w.End.X, Y: w.End.Y, Z: w.End.Z},
+			Height:    w.Height,
+			Thickness: w.Thickness,
+			Properties: &pb.WallProperties{
+				IsLoadBearing:  w.Properties.IsLoadBearing,
+				Material:       w.Properties.Material,
+				CanDemolish:    w.Properties.CanDemolish,
+				StructuralType: w.Properties.StructuralType,
+			},
+			Metadata: &pb.ElementMetadata{
+				Confidence: w.Metadata.Confidence,
+				Source:     w.Metadata.Source,
+				Locked:     w.Metadata.Locked,
+				Visible:    w.Metadata.Visible,
+				ModelUrl:   w.Metadata.ModelURL,
+			},
+		}
+		for _, o := range w.Openings {
+			pbWall.Openings = append(pbWall.Openings, &pb.Opening3D{
+				Id:            o.ID,
+				Type:          o.Type,
+				Subtype:       o.Subtype,
+				Position:      o.Position,
+				Width:         o.Width,
+				Height:        o.Height,
+				Elevation:     o.Elevation,
+				OpensTo:       o.OpensTo,
+				HasDoor:       o.HasDoor,
+				ConnectsRooms: o.ConnectsRooms,
+			})
+		}
+		pbModel.Elements.Walls = append(pbModel.Elements.Walls, pbWall)
+	}
+
+	// Convert rooms
+	for _, r := range model.Elements.Rooms {
+		pbRoom := &pb.Room3D{
+			Id:        r.ID,
+			Type:      r.Type,
+			Name:      r.Name,
+			RoomType:  r.RoomType,
+			Area:      r.Area,
+			Perimeter: r.Perimeter,
+			WallIds:   r.WallIDs,
+			Properties: &pb.RoomProperties{
+				HasWetZone:     r.Properties.HasWetZone,
+				HasVentilation: r.Properties.HasVentilation,
+				HasWindow:      r.Properties.HasWindow,
+				MinAllowedArea: r.Properties.MinAllowedArea,
+				CeilingHeight:  r.Properties.CeilingHeight,
+			},
+			RoomMetadata: &pb.RoomMetadata{
+				Confidence:  r.Metadata.Confidence,
+				LabelOnPlan: r.Metadata.LabelOnPlan,
+				AreaOnPlan:  r.Metadata.AreaOnPlan,
+			},
+		}
+		for _, p := range r.Polygon {
+			pbRoom.Polygon = append(pbRoom.Polygon, &pb.Point2D{X: p.X, Y: p.Y})
+		}
+		pbModel.Elements.Rooms = append(pbModel.Elements.Rooms, pbRoom)
+	}
+
+	// Convert furniture
+	for _, f := range model.Elements.Furniture {
+		pbModel.Elements.Furniture = append(pbModel.Elements.Furniture, &pb.Furniture{
+			Id:            f.ID,
+			Type:          f.Type,
+			Name:          f.Name,
+			FurnitureType: f.FurnitureType,
+			Position:      &pb.Point3D{X: f.Position.X, Y: f.Position.Y, Z: f.Position.Z},
+			Rotation:      &pb.Rotation3D{X: f.Rotation.X, Y: f.Rotation.Y, Z: f.Rotation.Z},
+			Dimensions:    &pb.Dimensions3D{Width: f.Dimensions.Width, Height: f.Dimensions.Height, Depth: f.Dimensions.Depth},
+			RoomId:        f.RoomID,
+			Properties: &pb.FurnitureProperties{
+				CanRelocate:   f.Properties.CanRelocate,
+				Category:      f.Properties.Category,
+				RequiresWater: f.Properties.RequiresWater,
+				RequiresGas:   f.Properties.RequiresGas,
+				RequiresDrain: f.Properties.RequiresDrain,
+			},
+		})
+	}
+
+	// Convert utilities
+	for _, u := range model.Elements.Utilities {
+		pbModel.Elements.Utilities = append(pbModel.Elements.Utilities, &pb.Utility{
+			Id:          u.ID,
+			Type:        u.Type,
+			Name:        u.Name,
+			UtilityType: u.UtilityType,
+			Position:    &pb.Point3D{X: u.Position.X, Y: u.Position.Y, Z: u.Position.Z},
+			Dimensions: &pb.UtilityDimensions{
+				Diameter: u.Dimensions.Diameter,
+				Width:    u.Dimensions.Width,
+				Depth:    u.Dimensions.Depth,
+			},
+			RoomId: u.RoomID,
+			Properties: &pb.UtilityProperties{
+				CanRelocate:         u.Properties.CanRelocate,
+				ProtectionZone:      u.Properties.ProtectionZone,
+				SharedWithNeighbors: u.Properties.SharedWithNeighbors,
+			},
+		})
+	}
+
+	return pbModel
 }
 

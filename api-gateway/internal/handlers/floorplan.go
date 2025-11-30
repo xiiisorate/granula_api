@@ -241,8 +241,22 @@ func (h *FloorPlanHandler) Get(c *fiber.Ctx) error {
 		return HandleGRPCError(err)
 	}
 
+	// Convert to response
+	result := floorPlanToResponse(resp.FloorPlan)
+
+	// If floor plan has recognition job and is recognized, fetch the model
+	if resp.FloorPlan != nil && resp.FloorPlan.RecognitionJobId != nil {
+		statusReq := &floorplanpb.GetRecognitionStatusRequest{
+			JobId: *resp.FloorPlan.RecognitionJobId,
+		}
+		statusResp, err := h.client.GetRecognitionStatus(ctx, statusReq)
+		if err == nil && statusResp.Model != nil {
+			result["model"] = recognitionModelToResponse(statusResp.Model)
+		}
+	}
+
 	// Return response
-	return SuccessResponseData(c, floorPlanToResponse(resp.FloorPlan))
+	return SuccessResponseData(c, result)
 }
 
 // =============================================================================
@@ -439,12 +453,12 @@ func (h *FloorPlanHandler) StartRecognition(c *fiber.Ctx) error {
 // GetRecognitionStatus возвращает статус задачи распознавания.
 //
 // @Summary Статус распознавания
-// @Description Получить текущий статус задачи AI распознавания.
+// @Description Получить текущий статус задачи AI распознавания и модель планировки.
 // @Tags floor-plans
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "ID планировки"
-// @Success 200 {object} RecognitionStatusResponse "Статус распознавания"
+// @Success 200 {object} RecognitionStatusResponse "Статус распознавания с моделью"
 // @Failure 401 {object} ErrorResponse "Не авторизован"
 // @Failure 404 {object} ErrorResponse "Задача не найдена"
 // @Router /floor-plans/{id}/recognition-status [get]
@@ -470,14 +484,22 @@ func (h *FloorPlanHandler) GetRecognitionStatus(c *fiber.Ctx) error {
 		return HandleGRPCError(err)
 	}
 
+	// Build response
+	data := fiber.Map{
+		"job_id":   resp.JobId,
+		"status":   resp.Status,
+		"progress": resp.Progress,
+		"error":    resp.Error,
+	}
+
+	// Include model if available
+	if resp.Model != nil {
+		data["model"] = recognitionModelToResponse(resp.Model)
+	}
+
 	// Return response
 	return c.JSON(fiber.Map{
-		"data": fiber.Map{
-			"job_id":   resp.JobId,
-			"status":   resp.Status,
-			"progress": resp.Progress,
-			"error":    resp.Error,
-		},
+		"data":       data,
 		"request_id": c.GetRespHeader("X-Request-ID"),
 	})
 }
@@ -663,4 +685,203 @@ type DownloadURLResponse struct {
 type DownloadURLData struct {
 	URL       string `json:"url"`
 	ExpiresIn int32  `json:"expires_in"`
+}
+
+// recognitionModelToResponse converts proto recognition model to API response.
+func recognitionModelToResponse(model *floorplanpb.RecognitionModel) fiber.Map {
+	if model == nil {
+		return nil
+	}
+
+	result := fiber.Map{
+		"confidence":         model.Confidence,
+		"total_area":         model.TotalArea,
+		"warnings":           model.Warnings,
+		"processing_time_ms": model.ProcessingTimeMs,
+	}
+
+	// Add bounds
+	if model.Bounds != nil {
+		result["bounds"] = fiber.Map{
+			"width":  model.Bounds.Width,
+			"height": model.Bounds.Height,
+			"depth":  model.Bounds.Depth,
+		}
+	}
+
+	// Add recognition metadata
+	if model.Recognition != nil {
+		result["recognition"] = fiber.Map{
+			"source_type":     model.Recognition.SourceType,
+			"quality":         model.Recognition.Quality,
+			"scale":           model.Recognition.Scale,
+			"orientation":     model.Recognition.Orientation,
+			"has_dimensions":  model.Recognition.HasDimensions,
+			"has_annotations": model.Recognition.HasAnnotations,
+			"building_type":   model.Recognition.BuildingType,
+		}
+	}
+
+	// Add elements
+	if model.Elements != nil {
+		elements := fiber.Map{}
+
+		// Convert walls
+		walls := make([]fiber.Map, 0, len(model.Elements.Walls))
+		for _, w := range model.Elements.Walls {
+			wall := fiber.Map{
+				"id":        w.Id,
+				"type":      w.Type,
+				"name":      w.Name,
+				"height":    w.Height,
+				"thickness": w.Thickness,
+			}
+			if w.Start != nil {
+				wall["start"] = fiber.Map{"x": w.Start.X, "y": w.Start.Y, "z": w.Start.Z}
+			}
+			if w.End != nil {
+				wall["end"] = fiber.Map{"x": w.End.X, "y": w.End.Y, "z": w.End.Z}
+			}
+			if w.Properties != nil {
+				wall["properties"] = fiber.Map{
+					"is_load_bearing": w.Properties.IsLoadBearing,
+					"material":        w.Properties.Material,
+					"can_demolish":    w.Properties.CanDemolish,
+					"structural_type": w.Properties.StructuralType,
+				}
+			}
+			if w.Metadata != nil {
+				wall["metadata"] = fiber.Map{
+					"confidence": w.Metadata.Confidence,
+					"source":     w.Metadata.Source,
+					"locked":     w.Metadata.Locked,
+					"visible":    w.Metadata.Visible,
+				}
+			}
+			// Convert openings
+			if len(w.Openings) > 0 {
+				openings := make([]fiber.Map, 0, len(w.Openings))
+				for _, o := range w.Openings {
+					openings = append(openings, fiber.Map{
+						"id":             o.Id,
+						"type":           o.Type,
+						"subtype":        o.Subtype,
+						"position":       o.Position,
+						"width":          o.Width,
+						"height":         o.Height,
+						"elevation":      o.Elevation,
+						"opens_to":       o.OpensTo,
+						"has_door":       o.HasDoor,
+						"connects_rooms": o.ConnectsRooms,
+					})
+				}
+				wall["openings"] = openings
+			}
+			walls = append(walls, wall)
+		}
+		elements["walls"] = walls
+
+		// Convert rooms
+		rooms := make([]fiber.Map, 0, len(model.Elements.Rooms))
+		for _, r := range model.Elements.Rooms {
+			room := fiber.Map{
+				"id":        r.Id,
+				"type":      r.Type,
+				"name":      r.Name,
+				"room_type": r.RoomType,
+				"area":      r.Area,
+				"perimeter": r.Perimeter,
+				"wall_ids":  r.WallIds,
+			}
+			// Convert polygon
+			if len(r.Polygon) > 0 {
+				polygon := make([]fiber.Map, 0, len(r.Polygon))
+				for _, p := range r.Polygon {
+					polygon = append(polygon, fiber.Map{"x": p.X, "y": p.Y})
+				}
+				room["polygon"] = polygon
+			}
+			if r.Properties != nil {
+				room["properties"] = fiber.Map{
+					"has_wet_zone":     r.Properties.HasWetZone,
+					"has_ventilation":  r.Properties.HasVentilation,
+					"has_window":       r.Properties.HasWindow,
+					"min_allowed_area": r.Properties.MinAllowedArea,
+					"ceiling_height":   r.Properties.CeilingHeight,
+				}
+			}
+			if r.RoomMetadata != nil {
+				room["metadata"] = fiber.Map{
+					"confidence":    r.RoomMetadata.Confidence,
+					"label_on_plan": r.RoomMetadata.LabelOnPlan,
+					"area_on_plan":  r.RoomMetadata.AreaOnPlan,
+				}
+			}
+			rooms = append(rooms, room)
+		}
+		elements["rooms"] = rooms
+
+		// Convert furniture
+		furniture := make([]fiber.Map, 0, len(model.Elements.Furniture))
+		for _, f := range model.Elements.Furniture {
+			item := fiber.Map{
+				"id":             f.Id,
+				"type":           f.Type,
+				"name":           f.Name,
+				"furniture_type": f.FurnitureType,
+				"room_id":        f.RoomId,
+			}
+			if f.Position != nil {
+				item["position"] = fiber.Map{"x": f.Position.X, "y": f.Position.Y, "z": f.Position.Z}
+			}
+			if f.Rotation != nil {
+				item["rotation"] = fiber.Map{"x": f.Rotation.X, "y": f.Rotation.Y, "z": f.Rotation.Z}
+			}
+			if f.Dimensions != nil {
+				item["dimensions"] = fiber.Map{"width": f.Dimensions.Width, "height": f.Dimensions.Height, "depth": f.Dimensions.Depth}
+			}
+			if f.Properties != nil {
+				item["properties"] = fiber.Map{
+					"can_relocate":   f.Properties.CanRelocate,
+					"category":       f.Properties.Category,
+					"requires_water": f.Properties.RequiresWater,
+					"requires_gas":   f.Properties.RequiresGas,
+					"requires_drain": f.Properties.RequiresDrain,
+				}
+			}
+			furniture = append(furniture, item)
+		}
+		elements["furniture"] = furniture
+
+		// Convert utilities
+		utilities := make([]fiber.Map, 0, len(model.Elements.Utilities))
+		for _, u := range model.Elements.Utilities {
+			item := fiber.Map{
+				"id":           u.Id,
+				"type":         u.Type,
+				"name":         u.Name,
+				"utility_type": u.UtilityType,
+				"room_id":      u.RoomId,
+			}
+			if u.Position != nil {
+				item["position"] = fiber.Map{"x": u.Position.X, "y": u.Position.Y, "z": u.Position.Z}
+			}
+			if u.Dimensions != nil {
+				item["dimensions"] = fiber.Map{"diameter": u.Dimensions.Diameter, "width": u.Dimensions.Width, "depth": u.Dimensions.Depth}
+			}
+			if u.Properties != nil {
+				item["properties"] = fiber.Map{
+					"can_relocate":          u.Properties.CanRelocate,
+					"protection_zone":       u.Properties.ProtectionZone,
+					"shared_with_neighbors": u.Properties.SharedWithNeighbors,
+				}
+			}
+			utilities = append(utilities, item)
+		}
+		elements["utilities"] = utilities
+
+		result["elements"] = elements
+	}
+
+	return result
 }
