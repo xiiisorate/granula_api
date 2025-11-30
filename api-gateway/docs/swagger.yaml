@@ -114,6 +114,15 @@ info:
     
     Для получения модели используйте `floor_plan_id`, НЕ `job_id`!
 
+    ## Потеряли ID? Как восстановить
+
+    | Что потеряли | Как найти |
+    |--------------|-----------|
+    | `floor_plan_id` | `GET /floor-plans?workspace_id={workspace_id}` → список планировок, берём `data.floor_plans[].id` |
+    | `workspace_id` | `GET /workspaces` → список воркспейсов, берём `data.workspaces[].id` |
+    | `scene_id` | `GET /workspaces/{workspace_id}/scenes` → список сцен, берём `data.scenes[].id` |
+    | `job_id` | ❌ Нельзя восстановить! Запустите распознавание заново: `POST /ai/recognize` |
+
     ## Аутентификация
 
     API использует JWT (JSON Web Tokens) для аутентификации.
