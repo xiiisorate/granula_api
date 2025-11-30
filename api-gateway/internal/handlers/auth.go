@@ -294,9 +294,13 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /auth/logout-all [post]
 func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "invalid user ID")
 	}
 
 	// Call Auth Service via gRPC

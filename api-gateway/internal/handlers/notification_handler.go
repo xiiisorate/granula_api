@@ -47,9 +47,13 @@ func NewNotificationHandler(conn *grpc.ClientConn) *NotificationHandler {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /notifications [get]
 func (h *NotificationHandler) GetNotifications(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "invalid user ID")
 	}
 
 	page := c.QueryInt("page", 1)
@@ -112,9 +116,13 @@ func (h *NotificationHandler) GetNotifications(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /notifications/count [get]
 func (h *NotificationHandler) GetUnreadCount(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "invalid user ID")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -150,7 +158,7 @@ func (h *NotificationHandler) GetUnreadCount(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /notifications/{id}/read [post]
 func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
-	_, ok := c.Locals("userID").(uuid.UUID)
+	_, ok := c.Locals("user_id").(string)
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -189,9 +197,13 @@ func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /notifications/read-all [post]
 func (h *NotificationHandler) MarkAllAsRead(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "invalid user ID")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -226,7 +238,7 @@ func (h *NotificationHandler) MarkAllAsRead(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /notifications/{id} [delete]
 func (h *NotificationHandler) DeleteNotification(c *fiber.Ctx) error {
-	_, ok := c.Locals("userID").(uuid.UUID)
+	_, ok := c.Locals("user_id").(string)
 	if !ok {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -265,9 +277,13 @@ func (h *NotificationHandler) DeleteNotification(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /notifications [delete]
 func (h *NotificationHandler) DeleteAllRead(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "invalid user ID")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -287,4 +303,3 @@ func (h *NotificationHandler) DeleteAllRead(c *fiber.Ctx) error {
 		"request_id":    c.GetRespHeader("X-Request-ID"),
 	})
 }
-

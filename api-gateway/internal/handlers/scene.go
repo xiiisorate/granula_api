@@ -49,7 +49,14 @@ func (h *SceneHandler) CreateScene(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid workspace ID")
 	}
 
-	userID := c.Locals("userID").(uuid.UUID)
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid user ID")
+	}
 
 	var input CreateSceneInput
 	if err := c.BodyParser(&input); err != nil {
