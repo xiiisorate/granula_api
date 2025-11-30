@@ -160,7 +160,7 @@ jobs:
             echo "  Migrations completed!"
             echo "========================================="
           '
-      
+
       - name: Restart services after migrations
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} '

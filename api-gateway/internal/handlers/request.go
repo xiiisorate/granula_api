@@ -109,8 +109,12 @@ type ContactInput struct {
 // @Failure 401 {object} ErrorResponse "Не авторизован"
 // @Router /requests [post]
 func (h *RequestHandler) Create(c *fiber.Ctx) error {
-	// Extract user ID from context
-	userID := GetUserIDFromContext(c)
+	// Extract user ID from context (set by auth middleware)
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+	userID := userIDStr
 
 	// Parse request body
 	var input CreateRequestInput
@@ -156,6 +160,7 @@ func (h *RequestHandler) Create(c *fiber.Ctx) error {
 		},
 		PreferredTime: input.PreferredTime,
 		Comment:       input.Comment,
+		UserId:        userID,
 	}
 
 	// Call gRPC service

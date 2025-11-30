@@ -270,6 +270,9 @@ message CreateRequestRequest {
   // Приоритет
   RequestPriority priority = 7;
   
+  // ID пользователя (обязательно)
+  string user_id = 11;
+  
   // Контактная информация
   Contact contact = 8;
   
