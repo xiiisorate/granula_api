@@ -23,6 +23,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"google.golang.org/grpc"
 
+	aipb "github.com/xiiisorate/granula_api/shared/gen/ai/v1"
 	floorplanpb "github.com/xiiisorate/granula_api/shared/gen/floorplan/v1"
 )
 
@@ -35,18 +36,22 @@ import (
 type FloorPlanHandler struct {
 	// client is the gRPC client for FloorPlanService.
 	client floorplanpb.FloorPlanServiceClient
+	// aiClient is the gRPC client for AIService (for recognition results).
+	aiClient aipb.AIServiceClient
 }
 
 // NewFloorPlanHandler creates a new FloorPlanHandler.
 //
 // Parameters:
 //   - conn: gRPC connection to the FloorPlan service
+//   - aiConn: gRPC connection to the AI service (for recognition results)
 //
 // Returns:
 //   - *FloorPlanHandler: New handler instance
-func NewFloorPlanHandler(conn *grpc.ClientConn) *FloorPlanHandler {
+func NewFloorPlanHandler(conn *grpc.ClientConn, aiConn *grpc.ClientConn) *FloorPlanHandler {
 	return &FloorPlanHandler{
-		client: floorplanpb.NewFloorPlanServiceClient(conn),
+		client:   floorplanpb.NewFloorPlanServiceClient(conn),
+		aiClient: aipb.NewAIServiceClient(aiConn),
 	}
 }
 
@@ -244,14 +249,14 @@ func (h *FloorPlanHandler) Get(c *fiber.Ctx) error {
 	// Convert to response
 	result := floorPlanToResponse(resp.FloorPlan)
 
-	// If floor plan has recognition job and is recognized, fetch the model
-	if resp.FloorPlan != nil && resp.FloorPlan.RecognitionJobId != nil {
-		statusReq := &floorplanpb.GetRecognitionStatusRequest{
+	// If floor plan has recognition job, fetch the result directly from AI Service
+	if resp.FloorPlan != nil && resp.FloorPlan.RecognitionJobId != nil && *resp.FloorPlan.RecognitionJobId != "" {
+		aiResp, err := h.aiClient.GetRecognitionStatus(ctx, &aipb.GetRecognitionStatusRequest{
 			JobId: *resp.FloorPlan.RecognitionJobId,
-		}
-		statusResp, err := h.client.GetRecognitionStatus(ctx, statusReq)
-		if err == nil && statusResp.Model != nil {
-			result["model"] = recognitionModelToResponse(statusResp.Model)
+		})
+		if err == nil && aiResp.Status == aipb.JobStatus_JOB_STATUS_COMPLETED && aiResp.Scene != nil {
+			// Use the same format as /ai/recognize/{job_id}/status
+			result["model"] = convertAISceneToResponse(aiResp.Scene)
 		}
 	}
 
@@ -696,6 +701,118 @@ type DownloadURLResponse struct {
 type DownloadURLData struct {
 	URL       string `json:"url"`
 	ExpiresIn int32  `json:"expires_in"`
+}
+
+// convertAISceneToResponse converts AI recognized scene to API response.
+// Uses the same format as /ai/recognize/{job_id}/status for consistency.
+func convertAISceneToResponse(scene *aipb.RecognizedScene) fiber.Map {
+	if scene == nil {
+		return nil
+	}
+
+	// Convert walls
+	walls := make([]fiber.Map, 0, len(scene.Walls))
+	for _, w := range scene.Walls {
+		wall := fiber.Map{
+			"temp_id":                 w.TempId,
+			"thickness":               w.Thickness,
+			"is_load_bearing":         w.IsLoadBearing,
+			"confidence":              w.Confidence,
+			"load_bearing_confidence": w.LoadBearingConfidence,
+		}
+		if w.Start != nil {
+			wall["start"] = fiber.Map{"x": w.Start.X, "y": w.Start.Y}
+		}
+		if w.End != nil {
+			wall["end"] = fiber.Map{"x": w.End.X, "y": w.End.Y}
+		}
+		walls = append(walls, wall)
+	}
+
+	// Convert rooms
+	rooms := make([]fiber.Map, 0, len(scene.Rooms))
+	for _, r := range scene.Rooms {
+		room := fiber.Map{
+			"temp_id":     r.TempId,
+			"type":        r.Type.String(),
+			"area":        r.Area,
+			"is_wet_zone": r.IsWetZone,
+			"confidence":  r.Confidence,
+			"wall_ids":    r.WallIds,
+		}
+		if r.Boundary != nil && len(r.Boundary.Vertices) > 0 {
+			vertices := make([]fiber.Map, 0, len(r.Boundary.Vertices))
+			for _, v := range r.Boundary.Vertices {
+				vertices = append(vertices, fiber.Map{"x": v.X, "y": v.Y})
+			}
+			room["boundary"] = vertices
+		}
+		rooms = append(rooms, room)
+	}
+
+	// Convert openings
+	openings := make([]fiber.Map, 0, len(scene.Openings))
+	for _, o := range scene.Openings {
+		opening := fiber.Map{
+			"temp_id":    o.TempId,
+			"type":       o.Type.String(),
+			"width":      o.Width,
+			"wall_id":    o.WallId,
+			"confidence": o.Confidence,
+		}
+		if o.Position != nil {
+			opening["position"] = fiber.Map{"x": o.Position.X, "y": o.Position.Y}
+		}
+		openings = append(openings, opening)
+	}
+
+	// Convert elements (furniture, etc)
+	elements := make([]fiber.Map, 0, len(scene.Elements))
+	for _, e := range scene.Elements {
+		elem := fiber.Map{
+			"temp_id":      e.TempId,
+			"element_type": e.ElementType,
+			"room_id":      e.RoomId,
+			"confidence":   e.Confidence,
+			"rotation":     e.Rotation,
+		}
+		if e.Position != nil {
+			elem["position"] = fiber.Map{"x": e.Position.X, "y": e.Position.Y}
+		}
+		if e.Dimensions != nil {
+			elem["dimensions"] = fiber.Map{
+				"width":  e.Dimensions.Width,
+				"height": e.Dimensions.Height,
+			}
+		}
+		elements = append(elements, elem)
+	}
+
+	result := fiber.Map{
+		"total_area": scene.TotalArea,
+		"walls":      walls,
+		"rooms":      rooms,
+		"openings":   openings,
+		"elements":   elements,
+	}
+
+	// Add dimensions if present
+	if scene.Dimensions != nil {
+		result["dimensions"] = fiber.Map{
+			"width":  scene.Dimensions.Width,
+			"height": scene.Dimensions.Height,
+		}
+	}
+
+	// Add metadata if present
+	if scene.Metadata != nil {
+		result["metadata"] = fiber.Map{
+			"model_version":      scene.Metadata.ModelVersion,
+			"processing_time_ms": scene.Metadata.ProcessingTimeMs,
+		}
+	}
+
+	return result
 }
 
 // recognitionModelToResponse converts proto recognition model to API response.

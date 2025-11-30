@@ -82,7 +82,7 @@ func main() {
 	aiHandler := handlers.NewAIHandler(grpcClients.AIConn)
 
 	// New handlers for FloorPlan, Branch, Compliance, Request
-	floorPlanHandler := handlers.NewFloorPlanHandler(grpcClients.FloorPlanConn)
+	floorPlanHandler := handlers.NewFloorPlanHandler(grpcClients.FloorPlanConn, grpcClients.AIConn)
 	branchHandler := handlers.NewBranchHandler(grpcClients.BranchConn)
 	complianceHandler := handlers.NewComplianceHandler(grpcClients.ComplianceConn)
 	requestHandler := handlers.NewRequestHandler(grpcClients.RequestConn)
