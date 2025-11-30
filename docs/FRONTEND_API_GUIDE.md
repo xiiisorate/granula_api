@@ -347,16 +347,15 @@ Content-Type: application/json
     "workspace_id": "workspace-uuid",
     "name": "Основная планировка",
     "floor_plan_id": "floor-plan-uuid",
-    "walls": [...],
-    "rooms": [...],
-    "openings": [...],
-    "furniture": [...],
+    "main_branch_id": "branch-uuid",
     "created_at": "2024-01-15T10:40:00Z"
   }
 }
 ```
 
 ### Получить сцену
+
+> ⚠️ **ВАЖНО:** Путь `/scenes/{scene_id}`, а НЕ `/workspaces/{id}/scenes/{scene_id}`!
 
 ```http
 GET /scenes/{scene_id}

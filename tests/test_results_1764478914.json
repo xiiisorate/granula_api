@@ -1,0 +1,964 @@
+{
+  "timestamp": "2025-11-30T08:01:54.520929",
+  "api_base": "https://api.granula.raitokyokai.tech/api/v1",
+  "test_email": "debug_1764478914@test.ru",
+  "steps": [
+    {
+      "label": "POST /auth/register",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/auth/register",
+      "body": {
+        "data": {
+          "user_id": "ce5204af-0823-4993-becf-1b1f3ca5ffe0",
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiY2U1MjA0YWYtMDgyMy00OTkzLWJlY2YtMWIxZjNjYTVmZmUwIiwiZW1haWwiOiJkZWJ1Z18xNzY0NDc4OTE0QHRlc3QucnUiLCJyb2xlIjoidXNlciIsImV4cCI6MTc2NDQ3OTgxNiwibmJmIjoxNzY0NDc4OTE2LCJpYXQiOjE3NjQ0Nzg5MTZ9.IiEIwpLdnAyDJAeO9E0rmNVEQevUKPI5yCi2VxPD9Jc",
+          "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiY2U1MjA0YWYtMDgyMy00OTkzLWJlY2YtMWIxZjNjYTVmZmUwIiwiZW1haWwiOiJkZWJ1Z18xNzY0NDc4OTE0QHRlc3QucnUiLCJyb2xlIjoidXNlciIsImV4cCI6MTc2NTA4MzcxNiwibmJmIjoxNzY0NDc4OTE2LCJpYXQiOjE3NjQ0Nzg5MTYsImp0aSI6IjFkNmQ2Y2UyLTIzYzMtNDIwNC04ZWNiLTNmOTNiNTkzNjJkMSJ9.ICLfXDkcEfi-lwy8LBEUNm0qH2htUiuMWibgV-N4eBs",
+          "expires_in": 900
+        },
+        "message": "User registered successfully",
+        "request_id": "fadec467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "POST /workspaces",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/workspaces",
+      "body": {
+        "data": {
+          "address": "",
+          "created_at": "2025-11-30T05:01:57.662301115Z",
+          "description": "Тест распознавания",
+          "floor_plans_count": 0,
+          "id": "01afb418-d22d-47a3-82da-4ef297f762db",
+          "members": [
+            {
+              "avatar_url": "",
+              "email": "",
+              "invited_by": "00000000-0000-0000-0000-000000000000",
+              "joined_at": "2025-11-30T05:01:57.662301115Z",
+              "name": "",
+              "role": "owner",
+              "user_id": "ce5204af-0823-4993-becf-1b1f3ca5ffe0"
+            }
+          ],
+          "name": "Debug Workspace 1764478914",
+          "owner_id": "ce5204af-0823-4993-becf-1b1f3ca5ffe0",
+          "preview_url": "",
+          "rooms_count": 0,
+          "scenes_count": 0,
+          "settings": {
+            "auto_compliance_check": false,
+            "currency": "",
+            "default_ceiling_height": 0,
+            "default_wall_thickness": 0,
+            "notifications_enabled": false,
+            "project_type": "",
+            "property_type": "",
+            "region": "",
+            "units": "metric"
+          },
+          "status": "unknown",
+          "total_area": 0,
+          "updated_at": "2025-11-30T05:01:57.66231998Z"
+        },
+        "message": "Workspace created successfully",
+        "request_id": "fddec467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "POST /floor-plans",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/floor-plans",
+      "body": {
+        "data": {
+          "created_at": "2025-11-30T05:01:59.535694649Z",
+          "description": "",
+          "file_info": {
+            "height": 0,
+            "id": "84e03948-556f-4f26-8ad2-39a20b235034",
+            "mime_type": "image/jpeg",
+            "original_name": "1.jpg",
+            "size": 574840,
+            "width": 0
+          },
+          "id": "139cbdc0-5ec4-4b3d-b940-fdf3477ddba5",
+          "name": "План 1.jpg",
+          "owner_id": "ce5204af-0823-4993-becf-1b1f3ca5ffe0",
+          "status": "uploaded",
+          "updated_at": "2025-11-30T05:01:59.535694649Z",
+          "workspace_id": "01afb418-d22d-47a3-82da-4ef297f762db"
+        },
+        "message": "Floor plan uploaded successfully",
+        "request_id": "ffdec467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "POST /ai/recognize",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize",
+      "body": {
+        "data": {
+          "confidence": 0,
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "status": "pending",
+          "success": true,
+          "warnings": null
+        },
+        "request_id": "00dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "01dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "03dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "09dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "0adfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "0bdfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "0cdfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "0fdfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "10dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "12dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 30,
+          "status": "processing"
+        },
+        "request_id": "14dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/recognize/2a345570-7a46-4bed-bf8c-eb8608359424/status",
+      "body": {
+        "data": {
+          "error": "",
+          "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+          "progress": 100,
+          "result": {
+            "dimensions": {
+              "height": 11.49,
+              "width": 17.52
+            },
+            "elements": [],
+            "metadata": {
+              "detected_orientation": 0,
+              "detected_scale": 0,
+              "model_version": "1.0.0",
+              "processing_time_ms": 43690
+            },
+            "openings": [
+              {
+                "confidence": 0.9,
+                "position": {
+                  "x": 1.78,
+                  "y": 0
+                },
+                "temp_id": "opening_001",
+                "type": "door",
+                "wall_id": "wall_001",
+                "width": 0.9
+              },
+              {
+                "confidence": 0.85,
+                "position": {
+                  "x": 4.68,
+                  "y": 0
+                },
+                "temp_id": "opening_002",
+                "type": "door",
+                "wall_id": "wall_001",
+                "width": 0.6
+              },
+              {
+                "confidence": 0.85,
+                "position": {
+                  "x": 6.8,
+                  "y": 0
+                },
+                "temp_id": "opening_003",
+                "type": "door",
+                "wall_id": "wall_001",
+                "width": 0.6
+              },
+              {
+                "confidence": 0.9,
+                "position": {
+                  "x": 9.65,
+                  "y": 0
+                },
+                "temp_id": "opening_004",
+                "type": "window",
+                "wall_id": "wall_001",
+                "width": 1.5
+              },
+              {
+                "confidence": 0.9,
+                "position": {
+                  "x": 3.9,
+                  "y": 11.49
+                },
+                "temp_id": "opening_005",
+                "type": "window",
+                "wall_id": "wall_003",
+                "width": 2.4
+              },
+              {
+                "confidence": 0.8,
+                "position": {
+                  "x": 11.49,
+                  "y": 8.08
+                },
+                "temp_id": "opening_006",
+                "type": "door",
+                "wall_id": "wall_009",
+                "width": 0.8
+              }
+            ],
+            "rooms": [
+              {
+                "area": 11.5,
+                "confidence": 0.9,
+                "is_wet_zone": false,
+                "temp_id": "room_001",
+                "type": "unknown",
+                "wall_ids": [
+                  "wall_001",
+                  "wall_004",
+                  "wall_005"
+                ]
+              },
+              {
+                "area": 3.8,
+                "confidence": 0.85,
+                "is_wet_zone": true,
+                "temp_id": "room_002",
+                "type": "unknown",
+                "wall_ids": [
+                  "wall_001",
+                  "wall_005"
+                ]
+              },
+              {
+                "area": 6.5,
+                "confidence": 0.85,
+                "is_wet_zone": true,
+                "temp_id": "room_003",
+                "type": "unknown",
+                "wall_ids": [
+                  "wall_001",
+                  "wall_006",
+                  "wall_007"
+                ]
+              },
+              {
+                "area": 25,
+                "confidence": 0.9,
+                "is_wet_zone": true,
+                "temp_id": "room_004",
+                "type": "unknown",
+                "wall_ids": [
+                  "wall_001",
+                  "wall_007",
+                  "wall_008",
+                  "wall_009"
+                ]
+              },
+              {
+                "area": 64.4,
+                "confidence": 0.85,
+                "is_wet_zone": false,
+                "temp_id": "room_005",
+                "type": "unknown",
+                "wall_ids": [
+                  "wall_003",
+                  "wall_004",
+                  "wall_006",
+                  "wall_007"
+                ]
+              },
+              {
+                "area": 15.7,
+                "confidence": 0.8,
+                "is_wet_zone": false,
+                "temp_id": "room_006",
+                "type": "unknown",
+                "wall_ids": [
+                  "wall_002",
+                  "wall_009",
+                  "wall_010"
+                ]
+              }
+            ],
+            "total_area": 68.5,
+            "walls": [
+              {
+                "confidence": 0.95,
+                "end": {
+                  "x": 17.52,
+                  "y": 0
+                },
+                "is_load_bearing": true,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 0,
+                  "y": 0
+                },
+                "temp_id": "wall_001",
+                "thickness": 0.25
+              },
+              {
+                "confidence": 0.95,
+                "end": {
+                  "x": 17.52,
+                  "y": 11.49
+                },
+                "is_load_bearing": true,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 17.52,
+                  "y": 0
+                },
+                "temp_id": "wall_002",
+                "thickness": 0.25
+              },
+              {
+                "confidence": 0.95,
+                "end": {
+                  "x": 0,
+                  "y": 11.49
+                },
+                "is_load_bearing": true,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 17.52,
+                  "y": 11.49
+                },
+                "temp_id": "wall_003",
+                "thickness": 0.25
+              },
+              {
+                "confidence": 0.95,
+                "end": {
+                  "x": 0,
+                  "y": 0
+                },
+                "is_load_bearing": true,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 0,
+                  "y": 11.49
+                },
+                "temp_id": "wall_004",
+                "thickness": 0.25
+              },
+              {
+                "confidence": 0.85,
+                "end": {
+                  "x": 3.56,
+                  "y": 3.24
+                },
+                "is_load_bearing": false,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 3.56,
+                  "y": 0
+                },
+                "temp_id": "wall_005",
+                "thickness": 0.12
+              },
+              {
+                "confidence": 0.85,
+                "end": {
+                  "x": 7.8,
+                  "y": 3.24
+                },
+                "is_load_bearing": false,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 3.56,
+                  "y": 3.24
+                },
+                "temp_id": "wall_006",
+                "thickness": 0.12
+              },
+              {
+                "confidence": 0.85,
+                "end": {
+                  "x": 7.8,
+                  "y": 6.78
+                },
+                "is_load_bearing": false,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 7.8,
+                  "y": 3.24
+                },
+                "temp_id": "wall_007",
+                "thickness": 0.12
+              },
+              {
+                "confidence": 0.85,
+                "end": {
+                  "x": 11.49,
+                  "y": 6.78
+                },
+                "is_load_bearing": false,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 7.8,
+                  "y": 6.78
+                },
+                "temp_id": "wall_008",
+                "thickness": 0.12
+              },
+              {
+                "confidence": 0.85,
+                "end": {
+                  "x": 11.49,
+                  "y": 9.38
+                },
+                "is_load_bearing": false,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 11.49,
+                  "y": 6.78
+                },
+                "temp_id": "wall_009",
+                "thickness": 0.12
+              },
+              {
+                "confidence": 0.85,
+                "end": {
+                  "x": 14.13,
+                  "y": 9.38
+                },
+                "is_load_bearing": false,
+                "load_bearing_confidence": 0,
+                "start": {
+                  "x": 11.49,
+                  "y": 9.38
+                },
+                "temp_id": "wall_010",
+                "thickness": 0.12
+              }
+            ]
+          },
+          "status": "completed"
+        },
+        "request_id": "15dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "POST /workspaces/01afb418-d22d-47a3-82da-4ef297f762db/scenes",
+      "status_code": 201,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/workspaces/01afb418-d22d-47a3-82da-4ef297f762db/scenes",
+      "body": {
+        "data": {
+          "created_at": "2025-11-30T05:02:48.064580525Z",
+          "description": "Created from recognition result",
+          "dimensions": {
+            "height": 0,
+            "width": 0
+          },
+          "floor_plan_id": "139cbdc0-5ec4-4b3d-b940-fdf3477ddba5",
+          "id": "edb8378a-6a06-4842-9790-3526334b468b",
+          "main_branch_id": "28ea4edc-60e1-4cc1-a2fb-484ac29bd384",
+          "name": "Scene from 1.jpg",
+          "owner_id": "ce5204af-0823-4993-becf-1b1f3ca5ffe0",
+          "updated_at": "2025-11-30T05:02:48.064580525Z",
+          "workspace_id": "01afb418-d22d-47a3-82da-4ef297f762db"
+        },
+        "message": "Scene created successfully",
+        "request_id": "16dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "GET /scenes/edb8378a-6a06-4842-9790-3526334b468b",
+      "status_code": 200,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/scenes/edb8378a-6a06-4842-9790-3526334b468b",
+      "body": {
+        "data": {
+          "created_at": "2025-11-30T05:02:48.064Z",
+          "description": "Created from recognition result",
+          "dimensions": {
+            "height": 0,
+            "width": 0
+          },
+          "floor_plan_id": "139cbdc0-5ec4-4b3d-b940-fdf3477ddba5",
+          "id": "edb8378a-6a06-4842-9790-3526334b468b",
+          "main_branch_id": "28ea4edc-60e1-4cc1-a2fb-484ac29bd384",
+          "name": "Scene from 1.jpg",
+          "owner_id": "ce5204af-0823-4993-becf-1b1f3ca5ffe0",
+          "updated_at": "2025-11-30T05:02:48.064Z",
+          "workspace_id": "01afb418-d22d-47a3-82da-4ef297f762db"
+        },
+        "request_id": "18dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    },
+    {
+      "label": "POST /ai/chat",
+      "status_code": 500,
+      "url": "https://api.granula.raitokyokai.tech/api/v1/ai/chat",
+      "body": {
+        "error": "internal_error",
+        "request_id": "19dfc467-6a6d-499d-8f93-880720daf53e"
+      }
+    }
+  ],
+  "recognition_result": {
+    "dimensions": {
+      "height": 11.49,
+      "width": 17.52
+    },
+    "elements": [],
+    "metadata": {
+      "detected_orientation": 0,
+      "detected_scale": 0,
+      "model_version": "1.0.0",
+      "processing_time_ms": 43690
+    },
+    "openings": [
+      {
+        "confidence": 0.9,
+        "position": {
+          "x": 1.78,
+          "y": 0
+        },
+        "temp_id": "opening_001",
+        "type": "door",
+        "wall_id": "wall_001",
+        "width": 0.9
+      },
+      {
+        "confidence": 0.85,
+        "position": {
+          "x": 4.68,
+          "y": 0
+        },
+        "temp_id": "opening_002",
+        "type": "door",
+        "wall_id": "wall_001",
+        "width": 0.6
+      },
+      {
+        "confidence": 0.85,
+        "position": {
+          "x": 6.8,
+          "y": 0
+        },
+        "temp_id": "opening_003",
+        "type": "door",
+        "wall_id": "wall_001",
+        "width": 0.6
+      },
+      {
+        "confidence": 0.9,
+        "position": {
+          "x": 9.65,
+          "y": 0
+        },
+        "temp_id": "opening_004",
+        "type": "window",
+        "wall_id": "wall_001",
+        "width": 1.5
+      },
+      {
+        "confidence": 0.9,
+        "position": {
+          "x": 3.9,
+          "y": 11.49
+        },
+        "temp_id": "opening_005",
+        "type": "window",
+        "wall_id": "wall_003",
+        "width": 2.4
+      },
+      {
+        "confidence": 0.8,
+        "position": {
+          "x": 11.49,
+          "y": 8.08
+        },
+        "temp_id": "opening_006",
+        "type": "door",
+        "wall_id": "wall_009",
+        "width": 0.8
+      }
+    ],
+    "rooms": [
+      {
+        "area": 11.5,
+        "confidence": 0.9,
+        "is_wet_zone": false,
+        "temp_id": "room_001",
+        "type": "unknown",
+        "wall_ids": [
+          "wall_001",
+          "wall_004",
+          "wall_005"
+        ]
+      },
+      {
+        "area": 3.8,
+        "confidence": 0.85,
+        "is_wet_zone": true,
+        "temp_id": "room_002",
+        "type": "unknown",
+        "wall_ids": [
+          "wall_001",
+          "wall_005"
+        ]
+      },
+      {
+        "area": 6.5,
+        "confidence": 0.85,
+        "is_wet_zone": true,
+        "temp_id": "room_003",
+        "type": "unknown",
+        "wall_ids": [
+          "wall_001",
+          "wall_006",
+          "wall_007"
+        ]
+      },
+      {
+        "area": 25,
+        "confidence": 0.9,
+        "is_wet_zone": true,
+        "temp_id": "room_004",
+        "type": "unknown",
+        "wall_ids": [
+          "wall_001",
+          "wall_007",
+          "wall_008",
+          "wall_009"
+        ]
+      },
+      {
+        "area": 64.4,
+        "confidence": 0.85,
+        "is_wet_zone": false,
+        "temp_id": "room_005",
+        "type": "unknown",
+        "wall_ids": [
+          "wall_003",
+          "wall_004",
+          "wall_006",
+          "wall_007"
+        ]
+      },
+      {
+        "area": 15.7,
+        "confidence": 0.8,
+        "is_wet_zone": false,
+        "temp_id": "room_006",
+        "type": "unknown",
+        "wall_ids": [
+          "wall_002",
+          "wall_009",
+          "wall_010"
+        ]
+      }
+    ],
+    "total_area": 68.5,
+    "walls": [
+      {
+        "confidence": 0.95,
+        "end": {
+          "x": 17.52,
+          "y": 0
+        },
+        "is_load_bearing": true,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 0,
+          "y": 0
+        },
+        "temp_id": "wall_001",
+        "thickness": 0.25
+      },
+      {
+        "confidence": 0.95,
+        "end": {
+          "x": 17.52,
+          "y": 11.49
+        },
+        "is_load_bearing": true,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 17.52,
+          "y": 0
+        },
+        "temp_id": "wall_002",
+        "thickness": 0.25
+      },
+      {
+        "confidence": 0.95,
+        "end": {
+          "x": 0,
+          "y": 11.49
+        },
+        "is_load_bearing": true,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 17.52,
+          "y": 11.49
+        },
+        "temp_id": "wall_003",
+        "thickness": 0.25
+      },
+      {
+        "confidence": 0.95,
+        "end": {
+          "x": 0,
+          "y": 0
+        },
+        "is_load_bearing": true,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 0,
+          "y": 11.49
+        },
+        "temp_id": "wall_004",
+        "thickness": 0.25
+      },
+      {
+        "confidence": 0.85,
+        "end": {
+          "x": 3.56,
+          "y": 3.24
+        },
+        "is_load_bearing": false,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 3.56,
+          "y": 0
+        },
+        "temp_id": "wall_005",
+        "thickness": 0.12
+      },
+      {
+        "confidence": 0.85,
+        "end": {
+          "x": 7.8,
+          "y": 3.24
+        },
+        "is_load_bearing": false,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 3.56,
+          "y": 3.24
+        },
+        "temp_id": "wall_006",
+        "thickness": 0.12
+      },
+      {
+        "confidence": 0.85,
+        "end": {
+          "x": 7.8,
+          "y": 6.78
+        },
+        "is_load_bearing": false,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 7.8,
+          "y": 3.24
+        },
+        "temp_id": "wall_007",
+        "thickness": 0.12
+      },
+      {
+        "confidence": 0.85,
+        "end": {
+          "x": 11.49,
+          "y": 6.78
+        },
+        "is_load_bearing": false,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 7.8,
+          "y": 6.78
+        },
+        "temp_id": "wall_008",
+        "thickness": 0.12
+      },
+      {
+        "confidence": 0.85,
+        "end": {
+          "x": 11.49,
+          "y": 9.38
+        },
+        "is_load_bearing": false,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 11.49,
+          "y": 6.78
+        },
+        "temp_id": "wall_009",
+        "thickness": 0.12
+      },
+      {
+        "confidence": 0.85,
+        "end": {
+          "x": 14.13,
+          "y": 9.38
+        },
+        "is_load_bearing": false,
+        "load_bearing_confidence": 0,
+        "start": {
+          "x": 11.49,
+          "y": 9.38
+        },
+        "temp_id": "wall_010",
+        "thickness": 0.12
+      }
+    ]
+  },
+  "scene_data": {
+    "created_at": "2025-11-30T05:02:48.064Z",
+    "description": "Created from recognition result",
+    "dimensions": {
+      "height": 0,
+      "width": 0
+    },
+    "floor_plan_id": "139cbdc0-5ec4-4b3d-b940-fdf3477ddba5",
+    "id": "edb8378a-6a06-4842-9790-3526334b468b",
+    "main_branch_id": "28ea4edc-60e1-4cc1-a2fb-484ac29bd384",
+    "name": "Scene from 1.jpg",
+    "owner_id": "ce5204af-0823-4993-becf-1b1f3ca5ffe0",
+    "updated_at": "2025-11-30T05:02:48.064Z",
+    "workspace_id": "01afb418-d22d-47a3-82da-4ef297f762db"
+  },
+  "summary": {
+    "success": true,
+    "errors": []
+  },
+  "test_image": "1.jpg",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkI...",
+  "workspace_id": "01afb418-d22d-47a3-82da-4ef297f762db",
+  "floor_plan_id": "139cbdc0-5ec4-4b3d-b940-fdf3477ddba5",
+  "job_id": "2a345570-7a46-4bed-bf8c-eb8608359424",
+  "scene_id": "edb8378a-6a06-4842-9790-3526334b468b"
+}

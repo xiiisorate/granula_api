@@ -122,8 +122,8 @@ func (s *RecognitionService) processRecognition(ctx context.Context, job *entity
 	// Using Claude 3.5 Sonnet which has excellent vision capabilities
 	resp, err := s.client.ChatCompletionWithImages(ctx, messages, openrouter.ChatOptions{
 		SystemPrompt: prompts.GetRecognitionPrompt(),
-		MaxTokens:    8192,                          // Large response for detailed JSON
-		Temperature:  0.2,                           // Low temperature for consistent output
+		MaxTokens:    8192,                        // Large response for detailed JSON
+		Temperature:  0.2,                         // Low temperature for consistent output
 		Model:        "anthropic/claude-sonnet-4", // Claude Sonnet 4 with Vision
 	})
 	if err != nil {

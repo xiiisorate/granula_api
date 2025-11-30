@@ -1,0 +1,309 @@
+{
+  "dimensions": {
+    "height": 11.49,
+    "width": 17.52
+  },
+  "elements": [],
+  "metadata": {
+    "detected_orientation": 0,
+    "detected_scale": 0,
+    "model_version": "1.0.0",
+    "processing_time_ms": 43690
+  },
+  "openings": [
+    {
+      "confidence": 0.9,
+      "position": {
+        "x": 1.78,
+        "y": 0
+      },
+      "temp_id": "opening_001",
+      "type": "door",
+      "wall_id": "wall_001",
+      "width": 0.9
+    },
+    {
+      "confidence": 0.85,
+      "position": {
+        "x": 4.68,
+        "y": 0
+      },
+      "temp_id": "opening_002",
+      "type": "door",
+      "wall_id": "wall_001",
+      "width": 0.6
+    },
+    {
+      "confidence": 0.85,
+      "position": {
+        "x": 6.8,
+        "y": 0
+      },
+      "temp_id": "opening_003",
+      "type": "door",
+      "wall_id": "wall_001",
+      "width": 0.6
+    },
+    {
+      "confidence": 0.9,
+      "position": {
+        "x": 9.65,
+        "y": 0
+      },
+      "temp_id": "opening_004",
+      "type": "window",
+      "wall_id": "wall_001",
+      "width": 1.5
+    },
+    {
+      "confidence": 0.9,
+      "position": {
+        "x": 3.9,
+        "y": 11.49
+      },
+      "temp_id": "opening_005",
+      "type": "window",
+      "wall_id": "wall_003",
+      "width": 2.4
+    },
+    {
+      "confidence": 0.8,
+      "position": {
+        "x": 11.49,
+        "y": 8.08
+      },
+      "temp_id": "opening_006",
+      "type": "door",
+      "wall_id": "wall_009",
+      "width": 0.8
+    }
+  ],
+  "rooms": [
+    {
+      "area": 11.5,
+      "confidence": 0.9,
+      "is_wet_zone": false,
+      "temp_id": "room_001",
+      "type": "unknown",
+      "wall_ids": [
+        "wall_001",
+        "wall_004",
+        "wall_005"
+      ]
+    },
+    {
+      "area": 3.8,
+      "confidence": 0.85,
+      "is_wet_zone": true,
+      "temp_id": "room_002",
+      "type": "unknown",
+      "wall_ids": [
+        "wall_001",
+        "wall_005"
+      ]
+    },
+    {
+      "area": 6.5,
+      "confidence": 0.85,
+      "is_wet_zone": true,
+      "temp_id": "room_003",
+      "type": "unknown",
+      "wall_ids": [
+        "wall_001",
+        "wall_006",
+        "wall_007"
+      ]
+    },
+    {
+      "area": 25,
+      "confidence": 0.9,
+      "is_wet_zone": true,
+      "temp_id": "room_004",
+      "type": "unknown",
+      "wall_ids": [
+        "wall_001",
+        "wall_007",
+        "wall_008",
+        "wall_009"
+      ]
+    },
+    {
+      "area": 64.4,
+      "confidence": 0.85,
+      "is_wet_zone": false,
+      "temp_id": "room_005",
+      "type": "unknown",
+      "wall_ids": [
+        "wall_003",
+        "wall_004",
+        "wall_006",
+        "wall_007"
+      ]
+    },
+    {
+      "area": 15.7,
+      "confidence": 0.8,
+      "is_wet_zone": false,
+      "temp_id": "room_006",
+      "type": "unknown",
+      "wall_ids": [
+        "wall_002",
+        "wall_009",
+        "wall_010"
+      ]
+    }
+  ],
+  "total_area": 68.5,
+  "walls": [
+    {
+      "confidence": 0.95,
+      "end": {
+        "x": 17.52,
+        "y": 0
+      },
+      "is_load_bearing": true,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 0,
+        "y": 0
+      },
+      "temp_id": "wall_001",
+      "thickness": 0.25
+    },
+    {
+      "confidence": 0.95,
+      "end": {
+        "x": 17.52,
+        "y": 11.49
+      },
+      "is_load_bearing": true,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 17.52,
+        "y": 0
+      },
+      "temp_id": "wall_002",
+      "thickness": 0.25
+    },
+    {
+      "confidence": 0.95,
+      "end": {
+        "x": 0,
+        "y": 11.49
+      },
+      "is_load_bearing": true,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 17.52,
+        "y": 11.49
+      },
+      "temp_id": "wall_003",
+      "thickness": 0.25
+    },
+    {
+      "confidence": 0.95,
+      "end": {
+        "x": 0,
+        "y": 0
+      },
+      "is_load_bearing": true,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 0,
+        "y": 11.49
+      },
+      "temp_id": "wall_004",
+      "thickness": 0.25
+    },
+    {
+      "confidence": 0.85,
+      "end": {
+        "x": 3.56,
+        "y": 3.24
+      },
+      "is_load_bearing": false,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 3.56,
+        "y": 0
+      },
+      "temp_id": "wall_005",
+      "thickness": 0.12
+    },
+    {
+      "confidence": 0.85,
+      "end": {
+        "x": 7.8,
+        "y": 3.24
+      },
+      "is_load_bearing": false,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 3.56,
+        "y": 3.24
+      },
+      "temp_id": "wall_006",
+      "thickness": 0.12
+    },
+    {
+      "confidence": 0.85,
+      "end": {
+        "x": 7.8,
+        "y": 6.78
+      },
+      "is_load_bearing": false,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 7.8,
+        "y": 3.24
+      },
+      "temp_id": "wall_007",
+      "thickness": 0.12
+    },
+    {
+      "confidence": 0.85,
+      "end": {
+        "x": 11.49,
+        "y": 6.78
+      },
+      "is_load_bearing": false,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 7.8,
+        "y": 6.78
+      },
+      "temp_id": "wall_008",
+      "thickness": 0.12
+    },
+    {
+      "confidence": 0.85,
+      "end": {
+        "x": 11.49,
+        "y": 9.38
+      },
+      "is_load_bearing": false,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 11.49,
+        "y": 6.78
+      },
+      "temp_id": "wall_009",
+      "thickness": 0.12
+    },
+    {
+      "confidence": 0.85,
+      "end": {
+        "x": 14.13,
+        "y": 9.38
+      },
+      "is_load_bearing": false,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 11.49,
+        "y": 9.38
+      },
+      "temp_id": "wall_010",
+      "thickness": 0.12
+    }
+  ]
+}
