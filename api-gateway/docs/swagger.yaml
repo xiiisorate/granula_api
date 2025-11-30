@@ -462,6 +462,9 @@ components:
           format: uuid
         recognition_result:
           $ref: "#/components/schemas/RecognitionResult"
+        model:
+          $ref: "#/components/schemas/RecognitionModel"
+          description: Полная 3D модель планировки (доступна после распознавания)
         created_at:
           type: string
           format: date-time
@@ -536,10 +539,337 @@ components:
             progress:
               type: integer
               description: Progress 0-100
-            result:
-              $ref: "#/components/schemas/AIRecognitionResult"
+            model:
+              $ref: "#/components/schemas/RecognitionModel"
+              description: Полная 3D модель (доступна при status=completed)
             error:
               type: string
+    
+    RecognitionModel:
+      type: object
+      description: Полная 3D модель планировки после распознавания
+      properties:
+        bounds:
+          type: object
+          description: Габариты квартиры в метрах
+          properties:
+            width:
+              type: number
+              description: Ширина по X
+            height:
+              type: number
+              description: Высота потолков
+            depth:
+              type: number
+              description: Глубина по Z
+        total_area:
+          type: number
+          description: Общая площадь в м²
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Уверенность распознавания (0-1)
+        processing_time_ms:
+          type: integer
+          description: Время обработки в мс
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Предупреждения при распознавании
+        recognition:
+          type: object
+          description: Метаданные распознавания
+          properties:
+            source_type:
+              type: string
+              enum: [BTI, technical_passport, architect_plan, sketch, photo]
+            quality:
+              type: string
+              enum: [high, medium, low]
+            scale:
+              type: string
+            orientation:
+              type: integer
+            has_dimensions:
+              type: boolean
+            has_annotations:
+              type: boolean
+            building_type:
+              type: string
+              enum: [panel, brick, monolith, block, frame, unknown]
+        elements:
+          $ref: "#/components/schemas/SceneElements"
+    
+    SceneElements:
+      type: object
+      description: Элементы 3D сцены планировки
+      properties:
+        walls:
+          type: array
+          items:
+            $ref: "#/components/schemas/Wall3D"
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Room3DModel"
+        furniture:
+          type: array
+          items:
+            $ref: "#/components/schemas/FurnitureModel"
+        utilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/UtilityModel"
+    
+    Wall3D:
+      type: object
+      description: 3D стена
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: wall
+        name:
+          type: string
+        start:
+          $ref: "#/components/schemas/Point3D"
+        end:
+          $ref: "#/components/schemas/Point3D"
+        height:
+          type: number
+          description: Высота стены в метрах
+        thickness:
+          type: number
+          description: Толщина стены в метрах (0.08-0.50)
+        properties:
+          type: object
+          properties:
+            is_load_bearing:
+              type: boolean
+              description: Является ли несущей
+            material:
+              type: string
+              enum: [brick, concrete, drywall, block, panel, foam_block, gas_block]
+            can_demolish:
+              type: boolean
+            structural_type:
+              type: string
+              enum: [external, internal_bearing, partition]
+        openings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Opening3D"
+        metadata:
+          $ref: "#/components/schemas/ElementMetadata"
+    
+    Point3D:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+    
+    Point2DModel:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+    
+    Opening3D:
+      type: object
+      description: Проём (дверь/окно) в стене
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [door, window, passage, arch]
+        subtype:
+          type: string
+          enum: [single_swing, double_swing, sliding, entrance, balcony, panoramic]
+        position:
+          type: number
+          description: Позиция от начала стены в метрах
+        width:
+          type: number
+        height:
+          type: number
+        elevation:
+          type: number
+          description: Высота от пола (0 для дверей, 0.85 для окон)
+        opens_to:
+          type: string
+          enum: [left, right, inward, outward]
+        has_door:
+          type: boolean
+        connects_rooms:
+          type: array
+          items:
+            type: string
+          description: ID комнат, которые соединяет проём
+    
+    Room3DModel:
+      type: object
+      description: 3D комната
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: room
+        name:
+          type: string
+          example: Кухня
+        room_type:
+          type: string
+          enum: [living, bedroom, kitchen, bathroom, toilet, combined_bathroom, hallway, corridor, storage, balcony, loggia, children, office, dining]
+        polygon:
+          type: array
+          description: Контур комнаты (замкнутый полигон)
+          items:
+            $ref: "#/components/schemas/Point2DModel"
+        area:
+          type: number
+          description: Площадь в м²
+        perimeter:
+          type: number
+          description: Периметр в метрах
+        properties:
+          type: object
+          properties:
+            has_wet_zone:
+              type: boolean
+            has_ventilation:
+              type: boolean
+            has_window:
+              type: boolean
+            min_allowed_area:
+              type: number
+              description: Минимальная площадь по СНиП
+            ceiling_height:
+              type: number
+        wall_ids:
+          type: array
+          items:
+            type: string
+          description: ID стен, образующих комнату
+        metadata:
+          type: object
+          properties:
+            confidence:
+              type: number
+            label_on_plan:
+              type: string
+              description: Надпись на плане
+            area_on_plan:
+              type: number
+              description: Площадь указанная на плане
+    
+    FurnitureModel:
+      type: object
+      description: Мебель или сантехника
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: furniture
+        name:
+          type: string
+        furniture_type:
+          type: string
+          enum: [sink, toilet, bathtub, shower, gas_stove, electric_stove, refrigerator, washing_machine, dishwasher, bed, sofa, table, wardrobe, desk]
+        position:
+          $ref: "#/components/schemas/Point3D"
+        rotation:
+          $ref: "#/components/schemas/Point3D"
+        dimensions:
+          type: object
+          properties:
+            width:
+              type: number
+            height:
+              type: number
+            depth:
+              type: number
+        room_id:
+          type: string
+        properties:
+          type: object
+          properties:
+            can_relocate:
+              type: boolean
+            category:
+              type: string
+              enum: [bathroom, kitchen, living, bedroom]
+            requires_water:
+              type: boolean
+            requires_gas:
+              type: boolean
+            requires_drain:
+              type: boolean
+    
+    UtilityModel:
+      type: object
+      description: Инженерные коммуникации (стояки, вентиляция)
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: utility
+        name:
+          type: string
+        utility_type:
+          type: string
+          enum: [water_riser, sewer_riser, gas_riser, ventilation, electrical_panel]
+        position:
+          $ref: "#/components/schemas/Point3D"
+        dimensions:
+          type: object
+          properties:
+            diameter:
+              type: number
+              description: Диаметр (для круглых)
+            width:
+              type: number
+            depth:
+              type: number
+        room_id:
+          type: string
+        properties:
+          type: object
+          properties:
+            can_relocate:
+              type: boolean
+            protection_zone:
+              type: number
+              description: Защитная зона в метрах
+            shared_with_neighbors:
+              type: boolean
+    
+    ElementMetadata:
+      type: object
+      properties:
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        source:
+          type: string
+          enum: [recognition, manual, generated]
+        locked:
+          type: boolean
+        visible:
+          type: boolean
 
     # -------------------------------------------------------------------------
     # Scene Schemas
@@ -2130,7 +2460,14 @@ paths:
   /floor-plans/{id}:
     get:
       tags: [floor-plans]
-      summary: Получить планировку
+      summary: Получить планировку с моделью
+      description: |
+        Получить детальную информацию о планировке.
+        
+        **После успешного распознавания** в ответе будет поле `model` с полной 3D моделью планировки,
+        включающей стены, комнаты, проёмы, мебель и инженерные коммуникации.
+        
+        Это позволяет получить все данные для 3D редактора в одном запросе.
       operationId: getFloorPlan
       security:
         - BearerAuth: []
@@ -2143,7 +2480,7 @@ paths:
             format: uuid
       responses:
         "200":
-          description: Данные планировки
+          description: Данные планировки с моделью (если распознана)
           content:
             application/json:
               schema:
@@ -2250,7 +2587,19 @@ paths:
   /floor-plans/{id}/recognition-status:
     get:
       tags: [floor-plans, ai]
-      summary: Статус распознавания планировки
+      summary: Статус распознавания с моделью
+      description: |
+        Получить текущий статус задачи AI распознавания.
+        
+        **При завершении распознавания** (status=completed) в ответе будет поле `model` 
+        с полной 3D моделью планировки.
+        
+        Модель включает:
+        - **bounds** - габариты квартиры
+        - **elements.walls** - стены с проёмами
+        - **elements.rooms** - комнаты с полигонами
+        - **elements.furniture** - мебель и сантехника
+        - **elements.utilities** - стояки и вентиляция
       operationId: getFloorPlanRecognitionStatus
       security:
         - BearerAuth: []
@@ -2263,7 +2612,7 @@ paths:
             format: uuid
       responses:
         "200":
-          description: Статус распознавания
+          description: Статус распознавания с моделью
           content:
             application/json:
               schema:
