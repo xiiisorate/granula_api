@@ -157,11 +157,13 @@ func (r *WorkspaceRepository) Create(ctx context.Context, workspace *entity.Work
 //   - *entity.Workspace: Found workspace entity
 //   - error: entity.ErrWorkspaceNotFound if not found, or database error
 func (r *WorkspaceRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Workspace, error) {
+	// NOTE: floor_plans count is obtained via gRPC from floorplan-service, not directly from DB
+	// This is a microservices architecture - each service has its own database
 	query := `
 		SELECT 
 			id, owner_id, name, description, created_at, updated_at,
 			(SELECT COUNT(*) FROM workspace_members WHERE workspace_id = w.id) as member_count,
-			(SELECT COUNT(*) FROM floor_plans WHERE workspace_id = w.id) as project_count
+			0 as project_count
 		FROM workspaces w
 		WHERE id = $1
 	`
@@ -335,11 +337,13 @@ func (r *WorkspaceRepository) List(ctx context.Context, opts ListOptions) ([]*en
 	}
 
 	// Build query
+	// NOTE: floor_plans count is obtained via gRPC from floorplan-service, not directly from DB
+	// This is a microservices architecture - each service has its own database
 	query := `
 		SELECT 
 			w.id, w.owner_id, w.name, w.description, w.created_at, w.updated_at,
 			(SELECT COUNT(*) FROM workspace_members WHERE workspace_id = w.id) as member_count,
-			(SELECT COUNT(*) FROM floor_plans WHERE workspace_id = w.id) as project_count
+			0 as project_count
 		FROM workspaces w
 		INNER JOIN workspace_members wm ON wm.workspace_id = w.id
 		WHERE wm.user_id = $1

@@ -20,8 +20,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/xiiisorate/granula_api/request-service/internal/config"
+	grpcserver "github.com/xiiisorate/granula_api/request-service/internal/grpc"
 	"github.com/xiiisorate/granula_api/request-service/internal/repository/postgres"
 	"github.com/xiiisorate/granula_api/request-service/internal/service"
+	requestpb "github.com/xiiisorate/granula_api/shared/gen/request/v1"
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -79,9 +81,9 @@ func main() {
 		),
 	)
 
-	// Register service (when proto is generated)
-	// pb.RegisterRequestServiceServer(grpcSrv, grpcserver.NewRequestServer(requestService, log))
-	_ = requestService // Placeholder until proto generation
+	// Register request service adapter (proto interface)
+	requestAdapter := grpcserver.NewRequestServiceAdapter(requestService, log)
+	requestpb.RegisterRequestServiceServer(grpcSrv, requestAdapter)
 
 	// Register health check
 	healthServer := health.NewServer()

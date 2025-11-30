@@ -844,6 +844,8 @@ type CreateRequestRequest struct {
 	Category RequestCategory `protobuf:"varint,6,opt,name=category,proto3,enum=request.v1.RequestCategory" json:"category,omitempty"`
 	// Приоритет
 	Priority RequestPriority `protobuf:"varint,7,opt,name=priority,proto3,enum=request.v1.RequestPriority" json:"priority,omitempty"`
+	// ID пользователя (обязательно)
+	UserId string `protobuf:"bytes,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Контактная информация
 	Contact *Contact `protobuf:"bytes,8,opt,name=contact,proto3" json:"contact,omitempty"`
 	// Предпочтительное время связи
@@ -931,6 +933,13 @@ func (x *CreateRequestRequest) GetPriority() RequestPriority {
 		return x.Priority
 	}
 	return RequestPriority_REQUEST_PRIORITY_UNSPECIFIED
+}
+
+func (x *CreateRequestRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
 }
 
 func (x *CreateRequestRequest) GetContact() *Contact {
@@ -2300,7 +2309,7 @@ const file_request_v1_request_proto_rawDesc = "" +
 	"\n" +
 	"changed_by\x18\x03 \x01(\tR\tchangedBy\x129\n" +
 	"\n" +
-	"changed_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\"\x8b\x03\n" +
+	"changed_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\"\xa4\x03\n" +
 	"\x14CreateRequestRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12\x19\n" +
 	"\bscene_id\x18\x02 \x01(\tR\asceneId\x12\x1b\n" +
@@ -2308,7 +2317,8 @@ const file_request_v1_request_proto_rawDesc = "" +
 	"\x05title\x18\x04 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x127\n" +
 	"\bcategory\x18\x06 \x01(\x0e2\x1b.request.v1.RequestCategoryR\bcategory\x127\n" +
-	"\bpriority\x18\a \x01(\x0e2\x1b.request.v1.RequestPriorityR\bpriority\x12-\n" +
+	"\bpriority\x18\a \x01(\x0e2\x1b.request.v1.RequestPriorityR\bpriority\x12\x17\n" +
+	"\auser_id\x18\v \x01(\tR\x06userId\x12-\n" +
 	"\acontact\x18\b \x01(\v2\x13.request.v1.ContactR\acontact\x12%\n" +
 	"\x0epreferred_time\x18\t \x01(\tR\rpreferredTime\x12\x18\n" +
 	"\acomment\x18\n" +
