@@ -1,4 +1,11 @@
+// =============================================================================
 // Package service provides business logic for Branch Service.
+// =============================================================================
+// This package implements the core business operations for branch management,
+// including branch creation from parent branches, element copying, and merging.
+//
+// Integrates with Scene Service for element operations.
+// =============================================================================
 package service
 
 import (
@@ -11,20 +18,69 @@ import (
 	"github.com/xiiisorate/granula_api/shared/pkg/logger"
 )
 
+// =============================================================================
+// Interfaces
+// =============================================================================
+
+// SceneElementsProvider is an interface for managing scene elements.
+// This allows for easier testing and decoupling from the scene client implementation.
+type SceneElementsProvider interface {
+	CopyElementsToBranch(ctx context.Context, sceneID, sourceBranchID, targetBranchID uuid.UUID) (int, error)
+	DeleteBranchElements(ctx context.Context, branchID uuid.UUID) (int, error)
+	CheckSceneCompliance(ctx context.Context, sceneID, branchID uuid.UUID) (bool, []string, error)
+}
+
+// =============================================================================
+// BranchService
+// =============================================================================
+
 // BranchService handles branch operations.
+// It integrates with Scene Service for element copying and compliance checks.
+//
+// Thread Safety: Safe for concurrent use.
 type BranchService struct {
-	repo *mongodb.BranchRepository
-	log  *logger.Logger
+	repo        *mongodb.BranchRepository
+	sceneClient SceneElementsProvider // Optional: nil if scene service is unavailable
+	log         *logger.Logger
 }
 
 // NewBranchService creates a new BranchService.
-func NewBranchService(repo *mongodb.BranchRepository, log *logger.Logger) *BranchService {
-	return &BranchService{repo: repo, log: log}
+//
+// Parameters:
+//   - repo: MongoDB repository for branch persistence
+//   - sceneClient: Scene Service client for element operations (can be nil)
+//   - log: Logger instance for operational logging
+//
+// Returns:
+//   - *BranchService: Initialized service ready for use
+//
+// Note: If sceneClient is nil, element copying will be skipped.
+func NewBranchService(repo *mongodb.BranchRepository, sceneClient SceneElementsProvider, log *logger.Logger) *BranchService {
+	return &BranchService{
+		repo:        repo,
+		sceneClient: sceneClient,
+		log:         log,
+	}
 }
 
 // CreateBranch creates a new branch.
+// If parentID is provided, copies all elements from the parent branch.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout
+//   - sceneID: UUID of the scene containing this branch
+//   - name: Display name for the branch
+//   - description: Optional description of branch purpose
+//   - parentID: Optional UUID of parent branch to copy elements from
+//
+// Returns:
+//   - *entity.Branch: Created branch entity
+//   - error: Validation or database error
 func (s *BranchService) CreateBranch(ctx context.Context, sceneID uuid.UUID, name, description string, parentID *uuid.UUID) (*entity.Branch, error) {
-	s.log.Info("creating branch", logger.String("scene_id", sceneID.String()), logger.String("name", name))
+	s.log.Info("creating branch",
+		logger.String("scene_id", sceneID.String()),
+		logger.String("name", name),
+	)
 
 	branch := entity.NewBranch(sceneID, name, parentID)
 	branch.Description = description
@@ -33,7 +89,33 @@ func (s *BranchService) CreateBranch(ctx context.Context, sceneID uuid.UUID, nam
 		return nil, err
 	}
 
-	// TODO: Copy elements from parent branch if parentID is set
+	// Copy elements from parent branch if parentID is set
+	if parentID != nil && s.sceneClient != nil {
+		s.log.Info("copying elements from parent branch",
+			logger.String("parent_id", parentID.String()),
+			logger.String("new_branch_id", branch.ID.String()),
+		)
+
+		// Use goroutine to not block branch creation on element copy
+		go func() {
+			// Use background context as the request context may be cancelled
+			ctx := context.Background()
+			copiedCount, err := s.sceneClient.CopyElementsToBranch(ctx, sceneID, *parentID, branch.ID)
+			if err != nil {
+				s.log.Warn("failed to copy elements from parent branch",
+					logger.Err(err),
+					logger.String("parent_id", parentID.String()),
+					logger.String("new_branch_id", branch.ID.String()),
+				)
+			} else {
+				s.log.Info("elements copied from parent branch",
+					logger.String("parent_id", parentID.String()),
+					logger.String("new_branch_id", branch.ID.String()),
+					logger.Int("copied_count", copiedCount),
+				)
+			}
+		}()
+	}
 
 	return branch, nil
 }

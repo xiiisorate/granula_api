@@ -57,7 +57,21 @@ func main() {
 
 	db := mongoClient.Database(cfg.MongoDB.Database)
 	repo := mongodb.NewBranchRepository(db)
-	svc := service.NewBranchService(repo, log)
+
+	// Initialize Scene Client (optional - continues without if unavailable)
+	var sceneClient *branchgrpc.SceneClient
+	sceneClient, err = branchgrpc.NewSceneClient(cfg.Services.SceneServiceAddr, log)
+	if err != nil {
+		log.Warn("scene service unavailable, element copying will be disabled",
+			logger.String("address", cfg.Services.SceneServiceAddr),
+			logger.Err(err),
+		)
+		sceneClient = nil
+	} else {
+		defer sceneClient.Close()
+	}
+
+	svc := service.NewBranchService(repo, sceneClient, log)
 
 	grpcServer, err := sharedgrpc.NewServer(sharedgrpc.ServerConfig{
 		Port:             cfg.Service.GRPCPort,

@@ -62,8 +62,20 @@ var (
 // WorkspaceService
 // =============================================================================
 
+// NotificationSender is an interface for sending workspace notifications.
+// This allows for easier testing and decoupling from the notification client implementation.
+type NotificationSender interface {
+	SendMemberAdded(ctx context.Context, userID, workspaceID, workspaceName, role, addedByName string) error
+	SendInvitation(ctx context.Context, inviteeEmail, inviteeUserID, workspaceID, workspaceName, inviterName, role, inviteToken string) error
+	SendMemberRemoved(ctx context.Context, userID, workspaceID, workspaceName string) error
+	SendRoleChanged(ctx context.Context, userID, workspaceID, workspaceName, oldRole, newRole string) error
+	SendWorkspaceCreated(ctx context.Context, ownerID, workspaceID, workspaceName string) error
+	SendWorkspaceDeleted(ctx context.Context, memberUserIDs []string, workspaceID, workspaceName string) error
+}
+
 // WorkspaceService provides business operations for workspace management.
 // It encapsulates all business logic and coordinates with the repository layer.
+// Integrates with Notification Service for member notifications.
 //
 // Thread Safety:
 //
@@ -72,25 +84,30 @@ var (
 //
 // Usage Example:
 //
-//	svc := service.NewWorkspaceService(repo, log)
+//	svc := service.NewWorkspaceService(repo, notificationClient, log)
 //	ws, err := svc.CreateWorkspace(ctx, userID, "My Workspace", "Description")
 type WorkspaceService struct {
-	repo *postgres.WorkspaceRepository
-	log  *logger.Logger
+	repo         *postgres.WorkspaceRepository
+	notification NotificationSender // Optional: nil if notifications are disabled
+	log          *logger.Logger
 }
 
 // NewWorkspaceService creates a new WorkspaceService instance.
 //
 // Parameters:
 //   - repo: PostgreSQL repository for data persistence
+//   - notification: Notification client for sending alerts (can be nil)
 //   - log: Logger instance for operational logging
 //
 // Returns:
 //   - *WorkspaceService: Initialized service ready for use
-func NewWorkspaceService(repo *postgres.WorkspaceRepository, log *logger.Logger) *WorkspaceService {
+//
+// Note: If notification is nil, notifications will be silently skipped.
+func NewWorkspaceService(repo *postgres.WorkspaceRepository, notification NotificationSender, log *logger.Logger) *WorkspaceService {
 	return &WorkspaceService{
-		repo: repo,
-		log:  log,
+		repo:         repo,
+		notification: notification,
+		log:          log,
 	}
 }
 
@@ -151,7 +168,15 @@ func (s *WorkspaceService) CreateWorkspace(ctx context.Context, ownerID uuid.UUI
 		logger.String("owner_id", ownerID.String()),
 	)
 
-	// TODO: Publish workspace.created event
+	// Send notification about workspace creation
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			if err := s.notification.SendWorkspaceCreated(ctx, ownerID.String(), ws.ID.String(), ws.Name); err != nil {
+				s.log.Warn("failed to send workspace_created notification", logger.Err(err))
+			}
+		}()
+	}
 
 	return ws, nil
 }
@@ -342,7 +367,24 @@ func (s *WorkspaceService) DeleteWorkspace(ctx context.Context, workspaceID, use
 		logger.String("workspace_id", workspaceID.String()),
 	)
 
-	// TODO: Publish workspace.deleted event
+	// Send notification to all members about workspace deletion
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			// Collect member IDs (excluding owner who deleted it)
+			memberIDs := make([]string, 0)
+			for _, member := range ws.Members {
+				if member.UserID != userID {
+					memberIDs = append(memberIDs, member.UserID.String())
+				}
+			}
+			if len(memberIDs) > 0 {
+				if err := s.notification.SendWorkspaceDeleted(ctx, memberIDs, workspaceID.String(), ws.Name); err != nil {
+					s.log.Warn("failed to send workspace_deleted notifications", logger.Err(err))
+				}
+			}
+		}()
+	}
 
 	return nil
 }
@@ -412,7 +454,24 @@ func (s *WorkspaceService) AddMember(ctx context.Context, workspaceID, userID, m
 		logger.String("member_id", member.ID.String()),
 	)
 
-	// TODO: Send notification to new member
+	// Send notification to new member
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			// Get workspace name for notification
+			ws, err := s.repo.GetByID(ctx, workspaceID)
+			if err != nil {
+				s.log.Warn("failed to get workspace for notification", logger.Err(err))
+				return
+			}
+			// Note: In production, fetch adder's name from User Service
+			// For now, use userID as placeholder
+			addedByName := userID.String()
+			if err := s.notification.SendMemberAdded(ctx, memberUserID.String(), workspaceID.String(), ws.Name, string(role), addedByName); err != nil {
+				s.log.Warn("failed to send member_added notification", logger.Err(err))
+			}
+		}()
+	}
 
 	return member, nil
 }
@@ -598,7 +657,26 @@ func (s *WorkspaceService) InviteMember(ctx context.Context, workspaceID, invite
 		logger.String("invite_id", invite.ID.String()),
 	)
 
-	// TODO: Send notification to invitee
+	// Send notification to invitee
+	if s.notification != nil {
+		go func() {
+			ctx := context.Background()
+			// Get workspace name for notification
+			ws, err := s.repo.GetByID(ctx, workspaceID)
+			if err != nil {
+				s.log.Warn("failed to get workspace for invitation notification", logger.Err(err))
+				return
+			}
+			// Note: In production, fetch inviter's name from User Service
+			// For now, use inviterID as placeholder
+			inviterName := inviterID.String()
+			// The inviteeID is used here, but we'd need to get email from User Service in production
+			// For now, send in-app notification only
+			if err := s.notification.SendInvitation(ctx, "", inviteeID.String(), workspaceID.String(), ws.Name, inviterName, string(role), invite.ID.String()); err != nil {
+				s.log.Warn("failed to send invitation notification", logger.Err(err))
+			}
+		}()
+	}
 
 	return invite, nil
 }
