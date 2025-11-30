@@ -1,0 +1,96 @@
+{
+  "dimensions": {
+    "height": 9.2,
+    "width": 17.52
+  },
+  "elements": [],
+  "metadata": {
+    "detected_orientation": 0,
+    "detected_scale": 0,
+    "model_version": "1.0.0",
+    "processing_time_ms": 19968
+  },
+  "openings": [
+    {
+      "confidence": 0.9,
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "temp_id": "opening_001",
+      "type": "door",
+      "wall_id": "",
+      "width": 0.9
+    },
+    {
+      "confidence": 0.8,
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "temp_id": "opening_002",
+      "type": "window",
+      "wall_id": "",
+      "width": 1.5
+    }
+  ],
+  "rooms": [
+    {
+      "area": 9.8,
+      "confidence": 0.8,
+      "is_wet_zone": false,
+      "temp_id": "room_001",
+      "type": "hallway",
+      "wall_ids": null
+    },
+    {
+      "area": 4.3,
+      "confidence": 0.9,
+      "is_wet_zone": true,
+      "temp_id": "room_002",
+      "type": "unknown",
+      "wall_ids": null
+    },
+    {
+      "area": 10,
+      "confidence": 0.9,
+      "is_wet_zone": true,
+      "temp_id": "room_003",
+      "type": "kitchen",
+      "wall_ids": null
+    }
+  ],
+  "total_area": 78.4,
+  "walls": [
+    {
+      "confidence": 0.9,
+      "end": {
+        "x": 17.52,
+        "y": 0
+      },
+      "is_load_bearing": true,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 0,
+        "y": 0
+      },
+      "temp_id": "wall_001",
+      "thickness": 0.4
+    },
+    {
+      "confidence": 0.9,
+      "end": {
+        "x": 17.52,
+        "y": 9.2
+      },
+      "is_load_bearing": true,
+      "load_bearing_confidence": 0,
+      "start": {
+        "x": 0,
+        "y": 9.2
+      },
+      "temp_id": "wall_002",
+      "thickness": 0.4
+    }
+  ]
+}

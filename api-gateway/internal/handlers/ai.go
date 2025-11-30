@@ -109,7 +109,7 @@ func (h *AIHandler) RecognizeFloorPlan(c *fiber.Ctx) error {
 					base64Data = base64Data[commaIdx+1:]
 				}
 			}
-			
+
 			imageData, err = base64.StdEncoding.DecodeString(base64Data)
 			if err != nil {
 				return fiber.NewError(fiber.StatusBadRequest, "invalid base64 image data: "+err.Error())
@@ -867,9 +867,9 @@ func (h *AIHandler) SelectSuggestion(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"data": fiber.Map{
-			"selected_branch_id":    resp.SelectedBranchId,
-			"branch_activated":      resp.BranchActivated,
-			"confirmation_message":  resp.ConfirmationMessage,
+			"selected_branch_id":   resp.SelectedBranchId,
+			"branch_activated":     resp.BranchActivated,
+			"confirmation_message": resp.ConfirmationMessage,
 		},
 		"request_id": c.GetRespHeader("X-Request-ID"),
 	})
@@ -970,4 +970,3 @@ type UpdateContextInput struct {
 	BranchID string `json:"branch_id,omitempty"`
 	Force    bool   `json:"force,omitempty"`
 }
-

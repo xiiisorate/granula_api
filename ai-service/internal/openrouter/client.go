@@ -487,7 +487,7 @@ func (c *Client) ChatCompletionWithImages(ctx context.Context, messages []Multim
 	}
 
 	// Use vision-capable model (Claude Sonnet 4 by default)
-	model := "anthropic/claude-sonnet-4-20250514"
+	model := "anthropic/claude-sonnet-4"
 	if opts.Model != "" {
 		model = opts.Model
 	}
