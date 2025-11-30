@@ -82,8 +82,8 @@ func Load() (*Config, error) {
 	cfg.OpenRouter = config.OpenRouterConfig{
 		BaseURL:         "https://openrouter.ai/api/v1",
 		Model:           "anthropic/claude-sonnet-4",
-		Timeout:         300 * time.Second, // 5 min for Vision API with large images + prompts
-		MaxTokens:       16512,
+		Timeout:         60 * time.Second,
+		MaxTokens:       4096,
 		Temperature:     0.7,
 		MaxRetries:      3,
 		RateLimitPerMin: 60,
@@ -99,7 +99,7 @@ func Load() (*Config, error) {
 	cfg.Worker = WorkerConfig{
 		PoolSize:   5,
 		QueueSize:  100,
-		JobTimeout: 300 * time.Second, // 5 min for complex recognition
+		JobTimeout: 120 * time.Second,
 	}
 
 	cfg.Logger = LoggerConfig{

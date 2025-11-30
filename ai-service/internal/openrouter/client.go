@@ -33,9 +33,10 @@ import (
 
 // Client is the OpenRouter API client.
 type Client struct {
-	cfg        config.OpenRouterConfig
-	httpClient *http.Client
-	log        *logger.Logger
+	cfg              config.OpenRouterConfig
+	httpClient       *http.Client // Standard HTTP client for chat requests
+	visionHttpClient *http.Client // Extended timeout client for vision/multimodal requests
+	log              *logger.Logger
 
 	// Rate limiting
 	mu           sync.Mutex
@@ -43,11 +44,23 @@ type Client struct {
 }
 
 // NewClient creates a new OpenRouter client.
+// Creates two HTTP clients:
+// - httpClient: for regular chat completions (default timeout)
+// - visionHttpClient: for vision/multimodal requests (extended timeout, default 300s)
 func NewClient(cfg config.OpenRouterConfig, log *logger.Logger) *Client {
+	// Default vision timeout to 300s if not set
+	visionTimeout := cfg.VisionTimeout
+	if visionTimeout == 0 {
+		visionTimeout = 300 * time.Second
+	}
+
 	return &Client{
 		cfg: cfg,
 		httpClient: &http.Client{
 			Timeout: cfg.Timeout,
+		},
+		visionHttpClient: &http.Client{
+			Timeout: visionTimeout,
 		},
 		log:          log,
 		requestTimes: make([]time.Time, 0),
@@ -557,6 +570,7 @@ func (c *Client) ChatCompletionWithImages(ctx context.Context, messages []Multim
 }
 
 // doMultimodalRequest performs the actual HTTP request for multimodal (vision) completions.
+// Uses visionHttpClient with extended timeout (300s by default) for vision requests.
 func (c *Client) doMultimodalRequest(ctx context.Context, req MultimodalChatRequest) (*ChatResponse, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -576,11 +590,13 @@ func (c *Client) doMultimodalRequest(ctx context.Context, req MultimodalChatRequ
 	c.log.Debug("sending OpenRouter multimodal request",
 		logger.String("model", req.Model),
 		logger.Int("messages", len(req.Messages)),
+		logger.String("timeout", c.visionHttpClient.Timeout.String()),
 	)
 
-	resp, err := c.httpClient.Do(httpReq)
+	// Use visionHttpClient with extended timeout for vision/multimodal requests
+	resp, err := c.visionHttpClient.Do(httpReq)
 	if err != nil {
-		return nil, apperrors.Unavailable("openrouter").WithCause(err)
+		return nil, apperrors.Unavailable("openrouter vision request failed").WithCause(err)
 	}
 	defer resp.Body.Close()
 

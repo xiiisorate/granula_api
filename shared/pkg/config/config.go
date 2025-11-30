@@ -321,6 +321,7 @@ type OpenRouterConfig struct {
 	Model           string        `mapstructure:"model" default:"anthropic/claude-sonnet-4"`
 	BaseURL         string        `mapstructure:"base_url" default:"https://openrouter.ai/api/v1"`
 	Timeout         time.Duration `mapstructure:"timeout" default:"60s"`
+	VisionTimeout   time.Duration `mapstructure:"vision_timeout" default:"300s"` // Extended timeout for vision/multimodal
 	MaxTokens       int           `mapstructure:"max_tokens" default:"4096"`
 	Temperature     float64       `mapstructure:"temperature" default:"0.7"`
 	MaxRetries      int           `mapstructure:"max_retries" default:"3"`
