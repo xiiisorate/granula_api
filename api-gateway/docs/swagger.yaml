@@ -26,6 +26,52 @@ info:
     - 💡 **AI генерация** - Генерация вариантов планировки с помощью AI
     - 📋 **Заявки экспертам** - Подача заявок на консультации специалистов БТИ
 
+    ## Типичный Flow работы
+
+    ### 1. Регистрация и авторизация
+    ```
+    POST /auth/register → получаем access_token
+    ```
+
+    ### 2. Создание проекта
+    ```
+    POST /workspaces → создаём воркспейс (проект квартиры)
+    ```
+
+    ### 3. Загрузка и распознавание планировки
+    ```
+    POST /floor-plans (с файлом) → получаем floor_plan_id
+    POST /ai/recognize (с floor_plan_id) → получаем job_id
+    GET /ai/recognize/{job_id}/status → polling пока status != "completed"
+    ```
+
+    ### 4. Получение результата распознавания
+    ```
+    GET /floor-plans/{floor_plan_id} → получаем планировку с полем "model"
+    ```
+    или
+    ```
+    GET /floor-plans/{floor_plan_id}/recognition-status → статус + model
+    ```
+
+    ### 5. Работа с 3D редактором
+    ```
+    POST /workspaces/{workspace_id}/scenes → создаём сцену из планировки
+    GET /scenes/{scene_id} → данные сцены для редактора
+    ```
+
+    ## Важно: Различие ID
+
+    | Сущность | Поле | Где получить |
+    |----------|------|--------------|
+    | Планировка | `floor_plan_id` | POST /floor-plans → response.data.id |
+    | Задача распознавания | `job_id` | POST /ai/recognize → response.data.job_id |
+    | Воркспейс | `workspace_id` | POST /workspaces → response.data.id |
+    | Сцена | `scene_id` | POST /workspaces/{id}/scenes → response.data.id |
+    | Заявка | `request_id` | POST /requests → response.data.id |
+
+    ⚠️ **НЕ ПУТАТЬ:** `floor_plan_id` и `job_id` - это РАЗНЫЕ идентификаторы!
+
     ## Аутентификация
 
     API использует JWT (JSON Web Tokens) для аутентификации.
@@ -432,16 +478,29 @@ components:
     # -------------------------------------------------------------------------
     FloorPlan:
       type: object
+      description: |
+        Планировка квартиры.
+        
+        **Статусы:**
+        - `uploaded` - файл загружен, распознавание не запущено
+        - `processing` - идёт распознавание
+        - `recognized` - распознавание завершено, поле `model` заполнено
+        - `failed` - ошибка распознавания
       properties:
         id:
           type: string
           format: uuid
+          description: |
+            ID планировки (floor_plan_id).
+            Используйте для всех операций с планировкой.
         workspace_id:
           type: string
           format: uuid
+          description: ID воркспейса, к которому привязана планировка
         user_id:
           type: string
           format: uuid
+          description: ID владельца планировки
         name:
           type: string
         description:
@@ -451,20 +510,27 @@ components:
         status:
           type: string
           enum: [uploaded, processing, recognized, failed]
+          description: Текущий статус планировки
         image_url:
           type: string
           format: uri
+          description: URL оригинального изображения
         thumbnail_url:
           type: string
           format: uri
+          description: URL превью
         scene_id:
           type: string
           format: uuid
+          description: ID созданной 3D сцены (если создана)
         recognition_result:
           $ref: "#/components/schemas/RecognitionResult"
+          description: Краткая сводка результатов распознавания
         model:
           $ref: "#/components/schemas/RecognitionModel"
-          description: Полная 3D модель планировки (доступна после распознавания)
+          description: |
+            Полная 3D модель планировки.
+            ⚠️ Заполняется ТОЛЬКО после успешного распознавания (status="recognized")
         created_at:
           type: string
           format: date-time
@@ -526,6 +592,14 @@ components:
 
     RecognitionStatus:
       type: object
+      description: |
+        Статус задачи распознавания.
+        
+        **Статусы:**
+        - `pending` - в очереди
+        - `processing` - обрабатывается (смотрите progress)
+        - `completed` - готово, поле `model` содержит результат
+        - `failed` - ошибка, смотрите поле `error`
       properties:
         data:
           type: object
@@ -533,17 +607,24 @@ components:
             job_id:
               type: string
               format: uuid
+              description: ID задачи распознавания
             status:
               type: string
               enum: [pending, processing, completed, failed]
+              description: |
+                Текущий статус.
+                Делайте polling пока status != "completed" и status != "failed"
             progress:
               type: integer
-              description: Progress 0-100
+              description: Прогресс 0-100%. Показывает % выполнения при status="processing"
             model:
               $ref: "#/components/schemas/RecognitionModel"
-              description: Полная 3D модель (доступна при status=completed)
+              description: |
+                Полная 3D модель планировки.
+                ⚠️ Доступна ТОЛЬКО при status="completed"
             error:
               type: string
+              description: Описание ошибки (при status="failed")
     
     RecognitionModel:
       type: object
@@ -906,15 +987,24 @@ components:
 
     CreateSceneRequest:
       type: object
+      description: |
+        Создание 3D сцены.
+        
+        **Рекомендуется** передавать `floor_plan_id` с уже распознанной планировкой - 
+        тогда сцена автоматически заполнится данными из model.
       required: [name]
       properties:
         name:
           type: string
+          description: Название сцены
         description:
           type: string
         floor_plan_id:
           type: string
           format: uuid
+          description: |
+            ID распознанной планировки.
+            Если передан - сцена создаётся с данными из планировки.
 
     UpdateSceneRequest:
       type: object
@@ -1307,10 +1397,18 @@ components:
         floor_plan_id:
           type: string
           format: uuid
-          description: ID планировки для распознавания
+          description: |
+            ID планировки для распознавания.
+            Получаете из POST /floor-plans → response.data.id
         image_base64:
           type: string
-          description: Base64-encoded изображение (альтернатива floor_plan_id)
+          description: |
+            Base64-encoded изображение (альтернатива floor_plan_id).
+            Формат: data:image/jpeg;base64,/9j/4AAQ...
+        image_type:
+          type: string
+          description: MIME-тип изображения (image/jpeg, image/png)
+          example: image/jpeg
         options:
           type: object
           properties:
@@ -1335,6 +1433,10 @@ components:
 
     RecognizeResponse:
       type: object
+      description: |
+        Ответ на запуск распознавания.
+        
+        ⚠️ **Сохраните job_id** - он нужен для polling статуса!
       properties:
         data:
           type: object
@@ -1342,9 +1444,13 @@ components:
             job_id:
               type: string
               format: uuid
+              description: |
+                ID задачи распознавания.
+                Используйте для GET /ai/recognize/{job_id}/status
             status:
               type: string
               enum: [pending, processing, completed, failed]
+              description: Начальный статус (обычно "pending" или "processing")
             success:
               type: boolean
 
@@ -1917,6 +2023,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: ID уведомления (notification_id)
           schema:
             type: string
             format: uuid
@@ -2043,6 +2150,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: ID воркспейса (workspace_id). Получаете из POST /workspaces или GET /workspaces
           schema:
             type: string
             format: uuid
@@ -2277,6 +2385,10 @@ paths:
     get:
       tags: [scenes]
       summary: Получить сцену
+      description: |
+        Получить данные 3D сцены для редактора.
+        
+        Сцена создаётся из планировки через POST /workspaces/{workspace_id}/scenes
       operationId: getScene
       security:
         - BearerAuth: []
@@ -2284,6 +2396,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: ID сцены (scene_id). Получаете из POST /workspaces/{workspace_id}/scenes
           schema:
             type: string
             format: uuid
@@ -2423,6 +2536,15 @@ paths:
     post:
       tags: [floor-plans]
       summary: Загрузить планировку
+      description: |
+        Загружает изображение планировки.
+        
+        **Поддерживаемые форматы:** JPEG, PNG, WebP
+        **Максимальный размер:** 10 MB
+        
+        **После загрузки:**
+        1. Сохраните `id` из ответа (это floor_plan_id)
+        2. Запустите распознавание: POST /ai/recognize с этим floor_plan_id
       operationId: uploadFloorPlan
       security:
         - BearerAuth: []
@@ -2437,18 +2559,25 @@ paths:
                 workspace_id:
                   type: string
                   format: uuid
+                  description: ID воркспейса, куда загружается планировка
                 name:
                   type: string
+                  description: Название планировки
                 description:
                   type: string
                 address:
                   type: string
+                  description: Адрес квартиры
                 file:
                   type: string
                   format: binary
+                  description: Файл изображения (JPEG, PNG, WebP)
       responses:
         "201":
-          description: Планировка загружена
+          description: |
+            Планировка загружена.
+            
+            ⚠️ **Сохраните `data.id`** - это floor_plan_id для дальнейших операций!
           content:
             application/json:
               schema:
@@ -2468,6 +2597,8 @@ paths:
         включающей стены, комнаты, проёмы, мебель и инженерные коммуникации.
         
         Это позволяет получить все данные для 3D редактора в одном запросе.
+        
+        ⚠️ Если распознавание ещё не завершено, поле `model` будет отсутствовать.
       operationId: getFloorPlan
       security:
         - BearerAuth: []
@@ -2475,6 +2606,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: ID планировки (floor_plan_id). Получаете из POST /floor-plans
           schema:
             type: string
             format: uuid
@@ -2544,6 +2676,14 @@ paths:
     post:
       tags: [floor-plans, ai]
       summary: Запустить распознавание планировки
+      description: |
+        Запускает AI распознавание загруженной планировки.
+        
+        **Альтернатива:** POST /ai/recognize - если нужно передать изображение напрямую.
+        
+        После запуска используйте polling:
+        - GET /ai/recognize/{job_id}/status - по job_id из ответа
+        - GET /floor-plans/{id}/recognition-status - по floor_plan_id
       operationId: startFloorPlanRecognition
       security:
         - BearerAuth: []
@@ -2551,6 +2691,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: ID планировки (floor_plan_id)
           schema:
             type: string
             format: uuid
@@ -2662,6 +2803,15 @@ paths:
     get:
       tags: [branches]
       summary: Список веток сцены
+      description: |
+        Ветки позволяют создавать разные варианты планировки в рамках одной сцены.
+        
+        **Пример использования:**
+        1. Создаёте сцену из планировки
+        2. Создаёте ветку "Вариант 1"
+        3. Создаёте ветку "Вариант 2"
+        4. Сравниваете ветки через /compare
+        5. Мерджите лучший вариант в main
       operationId: listBranches
       security:
         - BearerAuth: []
@@ -2669,6 +2819,7 @@ paths:
         - name: scene_id
           in: path
           required: true
+          description: ID сцены
           schema:
             type: string
             format: uuid
@@ -2734,12 +2885,14 @@ paths:
         - name: scene_id
           in: path
           required: true
+          description: ID сцены
           schema:
             type: string
             format: uuid
         - name: id
           in: path
           required: true
+          description: ID ветки (branch_id)
           schema:
             type: string
             format: uuid
@@ -2970,6 +3123,21 @@ paths:
     post:
       tags: [ai]
       summary: Распознать планировку
+      description: |
+        Запускает AI распознавание планировки.
+        
+        **Можно передать:**
+        - `floor_plan_id` - ID уже загруженной планировки
+        - `image_base64` - изображение в base64 (data:image/jpeg;base64,...)
+        
+        **После запуска:**
+        1. Получаете `job_id` в ответе
+        2. Делаете polling: GET /ai/recognize/{job_id}/status
+        3. Когда status="completed" - модель готова
+        
+        **Получить результат:**
+        - GET /floor-plans/{floor_plan_id} → поле `model`
+        - GET /floor-plans/{floor_plan_id}/recognition-status → поле `model`
       operationId: recognizeFloorPlan
       security:
         - BearerAuth: []
@@ -2981,7 +3149,10 @@ paths:
               $ref: "#/components/schemas/RecognizeRequest"
       responses:
         "202":
-          description: Задача распознавания создана
+          description: |
+            Задача распознавания создана.
+            
+            ⚠️ **Важно:** Сохраните `job_id` из ответа для polling статуса!
           content:
             application/json:
               schema:
@@ -2990,7 +3161,16 @@ paths:
   /ai/recognize/{job_id}/status:
     get:
       tags: [ai]
-      summary: Статус распознавания
+      summary: Статус распознавания по job_id
+      description: |
+        Получить статус задачи распознавания по её ID (job_id).
+        
+        ⚠️ **job_id получаете из ответа POST /ai/recognize**
+        
+        Используйте этот endpoint для polling статуса после запуска распознавания.
+        
+        Альтернатива: `/floor-plans/{floor_plan_id}/recognition-status` - 
+        если знаете только ID планировки.
       operationId: getRecognitionStatus
       security:
         - BearerAuth: []
@@ -2998,6 +3178,9 @@ paths:
         - name: job_id
           in: path
           required: true
+          description: |
+            ID задачи распознавания (НЕ floor_plan_id!).
+            Получаете из ответа POST /ai/recognize → data.job_id
           schema:
             type: string
             format: uuid
@@ -3013,6 +3196,14 @@ paths:
     post:
       tags: [ai]
       summary: Сгенерировать варианты планировки
+      description: |
+        AI генерирует несколько вариантов перепланировки на основе вашей сцены.
+        
+        **Как использовать:**
+        1. Сначала создайте сцену с распознанной планировкой
+        2. Запустите генерацию с scene_id
+        3. Делайте polling: GET /ai/generate/{job_id}/status
+        4. Получите варианты как отдельные ветки
       operationId: generateVariants
       security:
         - BearerAuth: []
@@ -3024,7 +3215,10 @@ paths:
               $ref: "#/components/schemas/GenerateVariantsRequest"
       responses:
         "202":
-          description: Генерация запущена
+          description: |
+            Генерация запущена.
+            
+            Используйте job_id для polling: GET /ai/generate/{job_id}/status
           content:
             application/json:
               schema:
@@ -3056,6 +3250,15 @@ paths:
     post:
       tags: [ai]
       summary: Отправить сообщение AI-ассистенту
+      description: |
+        Чат с AI-ассистентом по планировке.
+        
+        **Примеры вопросов:**
+        - "Можно ли снести стену между кухней и гостиной?"
+        - "Как увеличить площадь ванной?"
+        - "Предложи варианты перепланировки"
+        
+        **Для контекста** передавайте `scene_id` - AI будет учитывать вашу планировку.
       operationId: sendChatMessage
       security:
         - BearerAuth: []
@@ -3276,6 +3479,16 @@ paths:
     post:
       tags: [compliance]
       summary: Проверить соответствие нормам
+      description: |
+        Проверяет планировку на соответствие СНиП, ЖК РФ и другим нормам.
+        
+        **Что проверяется:**
+        - Минимальные площади комнат
+        - Расположение мокрых зон
+        - Несущие стены
+        - Вентиляция и инженерные коммуникации
+        
+        **Результат:** список нарушений с рекомендациями
       operationId: checkCompliance
       security:
         - BearerAuth: []
@@ -3500,6 +3713,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: ID заявки (request_id). Получаете из POST /requests или GET /requests
           schema:
             type: string
             format: uuid
